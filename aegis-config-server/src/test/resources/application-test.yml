@@ -1,0 +1,17 @@
+spring:
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://example.com/test-config.git
+          username: testuser
+          password: testtoken
+          clone-on-start: false
+  security:
+    user:
+      name: testuser
+      password: testpass
+
+eureka:
+  client:
+    enabled: false

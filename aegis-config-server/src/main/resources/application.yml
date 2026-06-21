@@ -1,0 +1,34 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: aegis-config-server
+  security:
+    user:
+      name: ${CONFIG_SERVER_USER}
+      password: ${CONFIG_SERVER_PASSWORD}
+  cloud:
+    config:
+      server:
+        git:
+          uri: ${CONFIG_REPO_URI}
+          username: ${CONFIG_REPO_USERNAME}
+          password: ${CONFIG_REPO_TOKEN}
+          default-label: main
+          clone-on-start: true
+          search-paths: []
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
