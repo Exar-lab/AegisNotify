@@ -23,6 +23,7 @@
 
     <modules>
         <module>aegis-eureka-server</module>
+        <module>aegis-config-server</module>
         <module>aegis-notification-service</module>
     </modules>
 
