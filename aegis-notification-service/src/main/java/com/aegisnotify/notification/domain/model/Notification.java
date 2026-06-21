@@ -85,6 +85,7 @@ public final class Notification {
           throw new InvalidRecipientException(channel, recipient);
         }
       }
+      default -> throw new InvalidRecipientException(channel, recipient);
     }
   }
 
