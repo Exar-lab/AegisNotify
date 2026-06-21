@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.2.0...aegisnotify-v0.2.1) (2026-06-21)
+
+
+### Bug Fixes
+
+* **notification:** restore default branch in switch for checkstyle compliance ([d72e085](https://github.com/Exar-lab/AegisNotify/commit/d72e085c59db32fcf079be90a674cbda12dd2b20))
+
+
+### Documentation
+
+* add README for project and modules ([2bf5eda](https://github.com/Exar-lab/AegisNotify/commit/2bf5edaea7e10af6ba9e31d732acdebda17f872e))
+* add README for project root and each module ([725126c](https://github.com/Exar-lab/AegisNotify/commit/725126c362310e0d8f768078fc50cfe6b664908d))
+
 ## [0.2.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.1.0...aegisnotify-v0.2.0) (2026-06-21)
 
 
