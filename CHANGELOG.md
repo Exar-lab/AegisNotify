@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.2.1...aegisnotify-v0.3.0) (2026-06-22)
+
+
+### Features
+
+* **notification:** add 9 application use cases ([010ccb3](https://github.com/Exar-lab/AegisNotify/commit/010ccb33ba704378b6d555dfcac5b0e7920826a6))
+* **notification:** add 9 application use cases with ports and domain transitions ([5296ef4](https://github.com/Exar-lab/AegisNotify/commit/5296ef4263ca9f677e253f572639707c2d125ced))
+
+
+### Tests
+
+* **notification:** mock pending outbound ports in context test ([cbaff1d](https://github.com/Exar-lab/AegisNotify/commit/cbaff1d6e98e41fa959604560d9ff3d68af3fab4))
+
 ## [0.2.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.2.0...aegisnotify-v0.2.1) (2026-06-21)
 
 
