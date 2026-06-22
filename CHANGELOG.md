@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.3.0...aegisnotify-v0.4.0) (2026-06-22)
+
+
+### Features
+
+* **audit:** add aegis-audit-service module — domain and application layer ([26583aa](https://github.com/Exar-lab/AegisNotify/commit/26583aaff13362a643bc72400209ddfc69b5fc16))
+* **audit:** add aegis-audit-service module with domain and application layer ([47dfd2b](https://github.com/Exar-lab/AegisNotify/commit/47dfd2bdcaddd90ccab93fb5e9224f827de1954b))
+
+
+### Bug Fixes
+
+* **audit:** align parent version with main (0.3.1-SNAPSHOT) ([7504c25](https://github.com/Exar-lab/AegisNotify/commit/7504c250aa9e9dd85789ce55cfba61d816257b23))
+
 ## [0.3.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.2.1...aegisnotify-v0.3.0) (2026-06-22)
 
 
