@@ -7,5 +7,6 @@ public enum NotificationStatus {
   SENT,
   SENT_VIA_FALLBACK,
   FAILED,
-  FAILED_CRITICAL
+  FAILED_CRITICAL,
+  CANCELLED
 }

@@ -89,6 +89,62 @@ public final class Notification {
     }
   }
 
+  public Notification markQueued() {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.QUEUED, providerUsed, errorDetail,
+        createdAt, Instant.now());
+  }
+
+  public Notification markProcessing() {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.PROCESSING, providerUsed, errorDetail,
+        createdAt, Instant.now());
+  }
+
+  public Notification markSent(String provider) {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.SENT, provider, null,
+        createdAt, Instant.now());
+  }
+
+  public Notification markSentViaFallback(String provider) {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.SENT_VIA_FALLBACK, provider, null,
+        createdAt, Instant.now());
+  }
+
+  public Notification markFailed(String error) {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.FAILED, providerUsed, error,
+        createdAt, Instant.now());
+  }
+
+  public Notification markFailedCritical(String error) {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.FAILED_CRITICAL, providerUsed, error,
+        createdAt, Instant.now());
+  }
+
+  public Notification markCancelled() {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.CANCELLED, providerUsed, errorDetail,
+        createdAt, Instant.now());
+  }
+
+  public Notification resetToPending() {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        priority, NotificationStatus.PENDING, null, null,
+        createdAt, Instant.now());
+  }
+
+  public boolean canCancel() {
+    return status == NotificationStatus.PENDING || status == NotificationStatus.QUEUED;
+  }
+
+  public boolean canRetry() {
+    return status == NotificationStatus.FAILED;
+  }
+
   public UUID getId() {
     return id;
   }
