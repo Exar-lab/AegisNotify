@@ -25,6 +25,7 @@
         <module>aegis-eureka-server</module>
         <module>aegis-config-server</module>
         <module>aegis-notification-service</module>
+        <module>aegis-audit-service</module>
     </modules>
 
     <build>
