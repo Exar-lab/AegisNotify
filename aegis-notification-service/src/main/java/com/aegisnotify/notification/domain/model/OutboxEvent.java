@@ -69,6 +69,11 @@ public final class OutboxEvent {
     return createdAt;
   }
 
+  public OutboxEvent markProcessed() {
+    return reconstitute(id, notificationId, payload, OutboxStatus.PROCESSED,
+        retryCount, createdAt, Instant.now());
+  }
+
   public Instant getProcessedAt() {
     return processedAt;
   }
