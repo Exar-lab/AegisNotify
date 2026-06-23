@@ -37,6 +37,14 @@ class AesGcmEncryptionAdapterTest {
   }
 
   @Test
+  void constructor_blankKey_failsFast() {
+    IllegalStateException exception = assertThrows(IllegalStateException.class,
+        () -> new AesGcmEncryptionAdapter(" "));
+
+    assertTrue(exception.getMessage().contains("must not be blank"));
+  }
+
+  @Test
   void encrypt_roundTrip_withPhoneNumber() {
     String plainText = "+34600000000";
 

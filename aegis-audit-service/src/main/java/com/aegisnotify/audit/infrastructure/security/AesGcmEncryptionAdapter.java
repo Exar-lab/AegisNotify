@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Objects;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -30,7 +31,27 @@ public class AesGcmEncryptionAdapter implements EncryptionPort {
 
   public AesGcmEncryptionAdapter(
       @Value("${audit.encryption.key}") String base64Key) {
-    byte[] keyBytes = Base64.getDecoder().decode(base64Key);
+    String normalizedKey = Objects.requireNonNull(base64Key,
+        "audit.encryption.key must be configured").trim();
+    if (normalizedKey.isEmpty()) {
+      throw new IllegalStateException(
+          "audit.encryption.key must not be blank");
+    }
+
+    byte[] keyBytes;
+    try {
+      keyBytes = Base64.getDecoder().decode(normalizedKey);
+    } catch (IllegalArgumentException ex) {
+      throw new IllegalStateException(
+          "audit.encryption.key must be a valid Base64-encoded AES key",
+          ex);
+    }
+
+    if (keyBytes.length != 32) {
+      throw new IllegalStateException(
+          "audit.encryption.key must decode to a 32-byte AES-256 key");
+    }
+
     this.secretKey = new SecretKeySpec(keyBytes, "AES");
     this.secureRandom = new SecureRandom();
   }
