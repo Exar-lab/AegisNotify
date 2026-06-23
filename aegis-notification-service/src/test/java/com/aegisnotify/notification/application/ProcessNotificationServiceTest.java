@@ -10,8 +10,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -33,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,6 +57,9 @@ class ProcessNotificationServiceTest {
 
   @Mock
   private NotificationProviderPort notificationProviderPort;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private ProcessNotificationService service;
@@ -194,5 +200,123 @@ class ProcessNotificationServiceTest {
     assertThrows(TemplateNotFoundException.class,
         () -> service.process(notificationId));
     verify(notificationProviderPort, never()).send(any(), anyString(), anyString(), any());
+  }
+
+  @Test
+  void process_sentSuccessfully_publishesProcessingAndSentAuditEvents() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello {{name}}", List.of("name"),
+        true, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("welcome"))
+        .thenReturn(Optional.of(template));
+    when(templateRenderer.render(anyString(), anyMap()))
+        .thenReturn("Hello John");
+    when(notificationProviderPort.send(any(), anyString(), anyString(), anyString()))
+        .thenReturn(new ProviderResult(ProviderResult.Outcome.SENT, "SendGrid", null));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.process(notificationId);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort, org.mockito.Mockito.atLeast(2)).publish(captor.capture());
+
+    java.util.List<AuditEventMessage> events = captor.getAllValues();
+    assertEquals("PROCESSING", events.get(0).status());
+    assertEquals("SENT", events.get(1).status());
+    assertEquals("EMAIL", events.get(1).channel());
+    assertEquals("user@example.com", events.get(1).recipient());
+  }
+
+  @Test
+  void process_failedOutcome_publishesProviderFailAuditStatus() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.SMS, "+34600000000", "otp",
+        Map.of("code", "1234"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "otp", Channel.SMS,
+        null, "Code: {{code}}", List.of("code"),
+        true, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("otp"))
+        .thenReturn(Optional.of(template));
+    when(templateRenderer.render(anyString(), anyMap()))
+        .thenReturn("Code: 1234");
+    when(notificationProviderPort.send(any(), anyString(), anyString(), any()))
+        .thenReturn(new ProviderResult(
+            ProviderResult.Outcome.FAILED, "TwilioPrimary", "Connection timeout"));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.process(notificationId);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort, org.mockito.Mockito.atLeast(2)).publish(captor.capture());
+
+    java.util.List<AuditEventMessage> events = captor.getAllValues();
+    assertEquals("PROCESSING", events.get(0).status());
+    assertEquals("PROVIDER_A_FAIL", events.get(1).status());
+  }
+
+  @Test
+  void process_failedCriticalOutcome_publishesFailedCriticalAuditStatus() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of(), Priority.LOW, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello", List.of(),
+        true, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("welcome"))
+        .thenReturn(Optional.of(template));
+    when(templateRenderer.render(anyString(), anyMap()))
+        .thenReturn("Hello");
+    when(notificationProviderPort.send(any(), anyString(), anyString(), anyString()))
+        .thenReturn(new ProviderResult(
+            ProviderResult.Outcome.FAILED_CRITICAL, null, "All providers exhausted"));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.process(notificationId);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort, org.mockito.Mockito.atLeast(2)).publish(captor.capture());
+
+    java.util.List<AuditEventMessage> events = captor.getAllValues();
+    assertEquals("PROCESSING", events.get(0).status());
+    assertEquals("FAILED_CRITICAL", events.get(1).status());
   }
 }

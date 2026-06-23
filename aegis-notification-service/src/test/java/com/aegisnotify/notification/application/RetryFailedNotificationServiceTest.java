@@ -7,7 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -41,6 +44,9 @@ class RetryFailedNotificationServiceTest {
 
   @Mock
   private OutboxEventRepository outboxEventRepository;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private RetryFailedNotificationService service;
@@ -115,5 +121,36 @@ class RetryFailedNotificationServiceTest {
 
     assertThrows(NotificationNotFoundException.class,
         () -> service.retry(notificationId));
+  }
+
+  @Test
+  void retry_failedNotification_publishesPendingAuditEvent() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH, NotificationStatus.FAILED,
+        "SendGrid", "Timeout", Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.retry(notificationId);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort).publish(captor.capture());
+
+    AuditEventMessage captured = captor.getValue();
+    assertEquals(notificationId, captured.notificationId());
+    assertEquals("PENDING", captured.status());
+    assertEquals("Retry initiated", captured.details());
+    assertEquals("EMAIL", captured.channel());
   }
 }

@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -26,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,6 +47,9 @@ class PublishOutboxEventServiceTest {
 
   @Mock
   private NotificationRepository notificationRepository;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private PublishOutboxEventService service;
@@ -142,5 +148,43 @@ class PublishOutboxEventServiceTest {
     verify(messageBrokerPort).publish(eq("high-priority-topic"), any());
     verify(messageBrokerPort).publish(eq("medium-priority-topic"), any());
     verify(messageBrokerPort).publish(eq("low-priority-topic"), any());
+  }
+
+  @Test
+  void publishPending_withPendingEvents_publishesAuditEventWithQueuedStatus() {
+    UUID notificationId = UUID.randomUUID();
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("id", notificationId.toString());
+    payload.put("priority", "HIGH");
+
+    OutboxEvent event = OutboxEvent.create(notificationId, payload);
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of(), Priority.HIGH, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.publishPending();
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort).publish(captor.capture());
+
+    AuditEventMessage captured = captor.getValue();
+    assertEquals(notificationId, captured.notificationId());
+    assertEquals("QUEUED", captured.status());
+    assertEquals("EMAIL", captured.channel());
+    assertEquals("user@example.com", captured.recipient());
+    assertEquals("HIGH", captured.priority());
   }
 }

@@ -1,7 +1,9 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
@@ -11,6 +13,7 @@ import com.aegisnotify.notification.domain.exception.NotificationNotRetryableExc
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,13 +26,16 @@ public class RetryFailedNotificationService implements RetryFailedNotificationUs
   private final NotificationRepository notificationRepository;
   private final NotificationLogRepository notificationLogRepository;
   private final OutboxEventRepository outboxEventRepository;
+  private final AuditEventPublisherPort auditEventPublisherPort;
 
   public RetryFailedNotificationService(NotificationRepository notificationRepository,
       NotificationLogRepository notificationLogRepository,
-      OutboxEventRepository outboxEventRepository) {
+      OutboxEventRepository outboxEventRepository,
+      AuditEventPublisherPort auditEventPublisherPort) {
     this.notificationRepository = notificationRepository;
     this.notificationLogRepository = notificationLogRepository;
     this.outboxEventRepository = outboxEventRepository;
+    this.auditEventPublisherPort = auditEventPublisherPort;
   }
 
   @Override
@@ -58,6 +64,16 @@ public class RetryFailedNotificationService implements RetryFailedNotificationUs
     payload.put("priority", reset.getPriority().name());
 
     outboxEventRepository.save(OutboxEvent.create(reset.getId(), payload));
+
+    auditEventPublisherPort.publish(new AuditEventMessage(
+        reset.getId(),
+        AuditStatusMapper.toAuditStatus(reset.getStatus()),
+        "Retry initiated",
+        reset.getChannel().name(),
+        reset.getRecipient(),
+        reset.getPriority().name(),
+        Instant.now()
+    ));
 
     return new NotificationResponse(reset.getId(), reset.getStatus());
   }

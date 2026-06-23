@@ -13,3 +13,7 @@ spring:
 eureka:
   client:
     enabled: false
+
+audit:
+  publishing:
+    enabled: false

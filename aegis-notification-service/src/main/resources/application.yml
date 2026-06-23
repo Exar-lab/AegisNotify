@@ -14,6 +14,8 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 eureka:
   client:
@@ -21,6 +23,11 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+
+audit:
+  publishing:
+    enabled: true
+  topic: notification-audit-events
 
 management:
   endpoints:
