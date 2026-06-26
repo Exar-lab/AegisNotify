@@ -6,6 +6,7 @@
         <groupId>com.aegisnotify</groupId>
         <artifactId>aegis-parent</artifactId>
         <version>0.3.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>aegis-api-gateway</artifactId>
