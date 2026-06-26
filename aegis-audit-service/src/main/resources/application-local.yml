@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+audit:
+  encryption:
+    # Local-development fallback only; production must provide AUDIT_ENCRYPTION_KEY.
+    key: ${AUDIT_ENCRYPTION_KEY:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}

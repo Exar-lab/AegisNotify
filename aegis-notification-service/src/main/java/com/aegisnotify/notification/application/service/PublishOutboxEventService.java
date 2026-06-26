@@ -1,6 +1,8 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.port.in.PublishOutboxEventUseCase;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -10,6 +12,7 @@ import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -28,15 +31,18 @@ public class PublishOutboxEventService implements PublishOutboxEventUseCase {
   private final MessageBrokerPort messageBrokerPort;
   private final NotificationLogRepository notificationLogRepository;
   private final NotificationRepository notificationRepository;
+  private final AuditEventPublisherPort auditEventPublisherPort;
 
   public PublishOutboxEventService(OutboxEventRepository outboxEventRepository,
       MessageBrokerPort messageBrokerPort,
       NotificationLogRepository notificationLogRepository,
-      NotificationRepository notificationRepository) {
+      NotificationRepository notificationRepository,
+      AuditEventPublisherPort auditEventPublisherPort) {
     this.outboxEventRepository = outboxEventRepository;
     this.messageBrokerPort = messageBrokerPort;
     this.notificationLogRepository = notificationLogRepository;
     this.notificationRepository = notificationRepository;
+    this.auditEventPublisherPort = auditEventPublisherPort;
   }
 
   @Override
@@ -62,6 +68,16 @@ public class PublishOutboxEventService implements PublishOutboxEventUseCase {
           .ifPresent(notification -> {
             Notification queued = notification.markQueued();
             notificationRepository.save(queued);
+
+            auditEventPublisherPort.publish(new AuditEventMessage(
+                queued.getId(),
+                AuditStatusMapper.toAuditStatus(queued.getStatus()),
+                "Published to " + topic,
+                queued.getChannel().name(),
+                queued.getRecipient(),
+                queued.getPriority().name(),
+                Instant.now()
+            ));
           });
     }
 

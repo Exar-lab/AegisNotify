@@ -8,7 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -25,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,6 +43,9 @@ class SendToDlqServiceTest {
 
   @Mock
   private DeadLetterQueuePort deadLetterQueuePort;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private SendToDlqService service;
@@ -81,5 +87,34 @@ class SendToDlqServiceTest {
 
     verify(notificationRepository, never()).save(any(Notification.class));
     verify(deadLetterQueuePort, never()).sendToDlq(any(), any(), any());
+  }
+
+  @Test
+  void sendToDlq_existingNotification_publishesFailedCriticalAuditEvent() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH, NotificationStatus.PROCESSING,
+        null, null, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.sendToDlq(notificationId, "Manual intervention");
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort).publish(captor.capture());
+
+    AuditEventMessage captured = captor.getValue();
+    assertEquals(notificationId, captured.notificationId());
+    assertEquals("FAILED_CRITICAL", captured.status());
+    assertEquals("EMAIL", captured.channel());
+    assertEquals("user@example.com", captured.recipient());
   }
 }
