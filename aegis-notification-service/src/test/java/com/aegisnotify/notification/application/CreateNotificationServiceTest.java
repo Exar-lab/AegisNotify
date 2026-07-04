@@ -8,8 +8,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.CreateNotificationCommand;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -49,6 +52,9 @@ class CreateNotificationServiceTest {
 
   @Mock
   private NotificationLogRepository notificationLogRepository;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private CreateNotificationService service;
@@ -115,5 +121,42 @@ class CreateNotificationServiceTest {
 
     assertThrows(InvalidRecipientException.class, () -> service.create(command));
     verify(notificationRepository, never()).save(any(Notification.class));
+  }
+
+  @Test
+  void create_happyPath_publishesAuditEventWithPendingStatus() {
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello {{name}}", List.of("name"),
+        true, Instant.now(), Instant.now()
+    );
+    when(templateRepository.findActiveByName("welcome"))
+        .thenReturn(Optional.of(template));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    CreateNotificationCommand command = new CreateNotificationCommand(
+        Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH
+    );
+
+    service.create(command);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort).publish(captor.capture());
+
+    AuditEventMessage captured = captor.getValue();
+    assertNotNull(captured.notificationId());
+    assertEquals("PENDING", captured.status());
+    assertEquals("Notification created", captured.details());
+    assertEquals("EMAIL", captured.channel());
+    assertEquals("user@example.com", captured.recipient());
+    assertEquals("HIGH", captured.priority());
+    assertNotNull(captured.timestamp());
   }
 }

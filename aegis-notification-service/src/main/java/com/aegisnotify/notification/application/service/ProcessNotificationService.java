@@ -1,8 +1,10 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.port.in.ProcessNotificationUseCase;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -14,6 +16,7 @@ import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import com.aegisnotify.notification.domain.model.Template;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +29,20 @@ public class ProcessNotificationService implements ProcessNotificationUseCase {
   private final TemplateRepository templateRepository;
   private final TemplateRenderer templateRenderer;
   private final NotificationProviderPort notificationProviderPort;
+  private final AuditEventPublisherPort auditEventPublisherPort;
 
   public ProcessNotificationService(NotificationRepository notificationRepository,
       NotificationLogRepository notificationLogRepository,
       TemplateRepository templateRepository,
       TemplateRenderer templateRenderer,
-      NotificationProviderPort notificationProviderPort) {
+      NotificationProviderPort notificationProviderPort,
+      AuditEventPublisherPort auditEventPublisherPort) {
     this.notificationRepository = notificationRepository;
     this.notificationLogRepository = notificationLogRepository;
     this.templateRepository = templateRepository;
     this.templateRenderer = templateRenderer;
     this.notificationProviderPort = notificationProviderPort;
+    this.auditEventPublisherPort = auditEventPublisherPort;
   }
 
   @Override
@@ -50,6 +56,9 @@ public class ProcessNotificationService implements ProcessNotificationUseCase {
     notificationLogRepository.save(
         NotificationLog.create(notificationId, LogStatus.PROCESSING, "Processing started")
     );
+
+    publishAuditEvent(processing, AuditStatusMapper.toAuditStatus(processing.getStatus()),
+        "Processing started");
 
     Template template = templateRepository.findActiveByName(processing.getTemplateName())
         .orElseThrow(() -> new TemplateNotFoundException(processing.getTemplateName()));
@@ -67,6 +76,8 @@ public class ProcessNotificationService implements ProcessNotificationUseCase {
         NotificationLog.create(notificationId, toLogStatus(result.outcome()),
             buildLogDetail(result))
     );
+
+    publishAuditEvent(updated, toAuditStatusFromResult(result), buildLogDetail(result));
 
     return new NotificationResponse(updated.getId(), updated.getStatus());
   }
@@ -96,5 +107,29 @@ public class ProcessNotificationService implements ProcessNotificationUseCase {
       case FAILED -> "Delivery failed: " + result.errorDetail();
       case FAILED_CRITICAL -> "Critical failure, sent to DLQ: " + result.errorDetail();
     };
+  }
+
+  private String toAuditStatusFromResult(ProviderResult result) {
+    return switch (result.outcome()) {
+      case SENT -> AuditStatusMapper.toAuditStatus(
+          com.aegisnotify.notification.domain.enums.NotificationStatus.SENT);
+      case SENT_VIA_FALLBACK -> AuditStatusMapper.toAuditStatus(
+          com.aegisnotify.notification.domain.enums.NotificationStatus.SENT_VIA_FALLBACK);
+      case FAILED -> AuditStatusMapper.toProviderFailStatus(true);
+      case FAILED_CRITICAL -> AuditStatusMapper.toAuditStatus(
+          com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED_CRITICAL);
+    };
+  }
+
+  private void publishAuditEvent(Notification notification, String status, String details) {
+    auditEventPublisherPort.publish(new AuditEventMessage(
+        notification.getId(),
+        status,
+        details,
+        notification.getChannel().name(),
+        notification.getRecipient(),
+        notification.getPriority().name(),
+        Instant.now()
+    ));
   }
 }

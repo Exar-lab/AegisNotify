@@ -1,0 +1,33 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: aegis-audit-service
+  config:
+    import: "optional:configserver:"
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/aegisnotify-audit}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+audit:
+  topic: notification-audit-events
+  consumer:
+    group-id: audit-service
+  encryption:
+    key: ${AUDIT_ENCRYPTION_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

@@ -7,7 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.service.CancelNotificationService;
@@ -24,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,6 +39,9 @@ class CancelNotificationServiceTest {
 
   @Mock
   private NotificationLogRepository notificationLogRepository;
+
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
 
   @InjectMocks
   private CancelNotificationService service;
@@ -127,5 +133,34 @@ class CancelNotificationServiceTest {
 
     assertThrows(NotificationNotFoundException.class,
         () -> service.cancel(notificationId));
+  }
+
+  @Test
+  void cancel_pendingNotification_publishesCancelledAuditEvent() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    service.cancel(notificationId);
+
+    ArgumentCaptor<AuditEventMessage> captor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort).publish(captor.capture());
+
+    AuditEventMessage captured = captor.getValue();
+    assertEquals(notificationId, captured.notificationId());
+    assertEquals("CANCELLED", captured.status());
+    assertEquals("Notification cancelled", captured.details());
+    assertEquals("EMAIL", captured.channel());
   }
 }

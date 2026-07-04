@@ -1,0 +1,28 @@
+spring:
+  config:
+    import: ""
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: "http://localhost:0/certs"
+  cloud:
+    gateway:
+      default-filters: []
+      routes:
+        - id: notification-submit
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/notifications
+            - Method=POST
+        - id: notification-status
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/notifications/*/status
+            - Method=GET
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false

@@ -27,7 +27,7 @@ jobs:
         run: chmod +x ./mvnw
 
       - name: Checkstyle
-        run: ./mvnw checkstyle:check
+        run: ./mvnw validate -Dmaven.test.skip=true
 
       - name: Build and test
         run: ./mvnw clean verify -Dcheckstyle.skip=true

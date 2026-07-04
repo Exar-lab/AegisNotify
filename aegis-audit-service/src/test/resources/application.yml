@@ -1,0 +1,23 @@
+spring:
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      enabled: false
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/audit-test
+  kafka:
+    bootstrap-servers: localhost:9092
+
+eureka:
+  client:
+    enabled: false
+
+audit:
+  encryption:
+    # Test-only key — NOT for production use
+    key: b44csZrjEgmHvxR/WuBXoIlOxRv63gwzWxwkiiQMPFE=
+  topic: notification-audit-events
+  consumer:
+    group-id: audit-service-test

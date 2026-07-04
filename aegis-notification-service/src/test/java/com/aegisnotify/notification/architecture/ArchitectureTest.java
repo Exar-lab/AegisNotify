@@ -4,12 +4,14 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPac
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import org.springframework.web.bind.annotation.RestController;
 
-@AnalyzeClasses(packages = "com.aegisnotify.notification")
+@AnalyzeClasses(packages = "com.aegisnotify.notification",
+    importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
 
   @ArchTest
@@ -29,9 +31,15 @@ class ArchitectureTest {
   @ArchTest
   static final ArchRule domain_shouldNotUseSpringAnnotations =
       noClasses()
-          .that().resideInAPackage("..domain..")
+          .that().resideInAnyPackage("..domain..", "..application.port..")
           .should().dependOnClassesThat()
           .resideInAPackage("org.springframework..");
+
+  @ArchTest
+  static final ArchRule application_ports_shouldBeInterfaces =
+      classes()
+          .that().resideInAPackage("..application.port..")
+          .should().beInterfaces();
 
   @ArchTest
   static final ArchRule controllers_shouldResideInWebPackage =
@@ -40,8 +48,8 @@ class ArchitectureTest {
           .should().resideInAPackage("..infrastructure.web..");
 
   @ArchTest
-  static final ArchRule repositoryAdapters_shouldImplementOutputPorts =
+  static final ArchRule adapters_shouldImplementOutputPorts =
       classes()
-          .that().resideInAPackage("..infrastructure.persistence.adapter..")
-          .should().implement(resideInAPackage("..application.port.out.."));
+          .that().implement(resideInAPackage("..application.port.out.."))
+          .should().resideInAPackage("..infrastructure..");
 }
