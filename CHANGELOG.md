@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.6.0...aegisnotify-v0.7.0) (2026-07-07)
+
+
+### Features
+
+* **audit:** add SecurityConfig to protect audit endpoints ([2b13660](https://github.com/Exar-lab/AegisNotify/commit/2b136603f81642b995ea5cf296ef3d7f129a0b34))
+
+
+### Bug Fixes
+
+* **audit:** use dummy jwk-set-uri in test config ([8755b29](https://github.com/Exar-lab/AegisNotify/commit/8755b2963db0802dcd6362bee8acffdd5744dfc8))
+
 ## [0.6.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.5.1...aegisnotify-v0.6.0) (2026-07-07)
 
 
