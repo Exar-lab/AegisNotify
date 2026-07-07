@@ -9,6 +9,11 @@ spring:
       uri: mongodb://localhost:27017/audit-test
   kafka:
     bootstrap-servers: localhost:9092
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8088/realms/aegis/protocol/openid-connect/certs
 
 eureka:
   client:
