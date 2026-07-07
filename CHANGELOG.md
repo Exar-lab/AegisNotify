@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.5.1...aegisnotify-v0.6.0) (2026-07-07)
+
+
+### Features
+
+* **notification:** add SecurityConfig with OAuth2 Resource Server JWT validation ([e5c6be1](https://github.com/Exar-lab/AegisNotify/commit/e5c6be185a83a60e77efc839dc3132cdda064dd4))
+
+
+### Bug Fixes
+
+* **notification:** address Copilot review on SecurityConfig ([a3fd592](https://github.com/Exar-lab/AegisNotify/commit/a3fd592a086f4c01d81e5e5bfa4c5af06f4f1e69))
+
 ## [0.5.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.5.0...aegisnotify-v0.5.1) (2026-07-07)
 
 
