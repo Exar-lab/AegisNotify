@@ -11,6 +11,11 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/aegisnotify-audit}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8088/realms/aegis/protocol/openid-connect/certs}
 
 eureka:
   client:
