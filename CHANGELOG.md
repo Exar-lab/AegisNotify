@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.4.0...aegisnotify-v0.5.0) (2026-07-04)
+
+
+### Features
+
+* **audit:** add audit-service infrastructure layer ([fa42878](https://github.com/Exar-lab/AegisNotify/commit/fa42878fab5a288627722b90fb8b1abaf7497115))
+* **audit:** add cross-module verification ([605f117](https://github.com/Exar-lab/AegisNotify/commit/605f1170431a290def4ed7bc5b616667080bb965))
+* **gateway:** add aegis-api-gateway module with centralized JWT validation ([5b3e066](https://github.com/Exar-lab/AegisNotify/commit/5b3e066da0fc0cdddc7f5bb5f6504ea0f36e701d))
+* **gateway:** add aegis-api-gateway module with JWT validation and routing ([74c1339](https://github.com/Exar-lab/AegisNotify/commit/74c13399ac78dc9d8dbbb2d0f6291029ca0fb668))
+* **notification:** add audit event publishing via Kafka ([758afd4](https://github.com/Exar-lab/AegisNotify/commit/758afd46eebb8dcbe1d485c30ce872a0c2846308))
+
+
+### Bug Fixes
+
+* **gateway:** add explicit relativePath to parent POM for CI resolution ([4b78069](https://github.com/Exar-lab/AegisNotify/commit/4b780692a0bd6fed6fd16efd144d9569a3d604d7))
+
+
+### CI/CD
+
+* use validate lifecycle phase for checkstyle to fix reactor parent resolution ([a94816b](https://github.com/Exar-lab/AegisNotify/commit/a94816b406977cc6457dc40c7c8e79275fd878b1))
+
 ## [0.4.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.3.0...aegisnotify-v0.4.0) (2026-06-22)
 
 
