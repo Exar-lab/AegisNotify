@@ -14,6 +14,7 @@ import com.aegisnotify.notification.application.port.out.NotificationLogReposito
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.service.CancelNotificationService;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.NotificationNotCancellableException;
@@ -67,7 +68,11 @@ class CancelNotificationServiceTest {
     assertEquals(notificationId, response.id());
     assertEquals(NotificationStatus.CANCELLED, response.status());
     verify(notificationRepository).save(any(Notification.class));
-    verify(notificationLogRepository).save(any(NotificationLog.class));
+
+    ArgumentCaptor<NotificationLog> logCaptor = ArgumentCaptor.forClass(NotificationLog.class);
+    verify(notificationLogRepository).save(logCaptor.capture());
+    assertEquals(LogStatus.CANCELLED, logCaptor.getValue().getStatus());
+    assertEquals(notificationId, logCaptor.getValue().getNotificationId());
   }
 
   @Test
