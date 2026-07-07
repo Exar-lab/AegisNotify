@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.5.0...aegisnotify-v0.5.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **notification:** add CANCELLED to notification_logs status constraint ([b1d5214](https://github.com/Exar-lab/AegisNotify/commit/b1d52146880adec6cd9ec810bbb9fb9665f225b6))
+* **notification:** add CANCELLED to notification_logs status constraint ([ccf70ce](https://github.com/Exar-lab/AegisNotify/commit/ccf70ceb9fa6d14c53fcaf088bed92c445448cf3))
+
 ## [0.5.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.4.0...aegisnotify-v0.5.0) (2026-07-04)
 
 
