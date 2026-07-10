@@ -34,6 +34,27 @@ audit:
     enabled: true
   topic: notification-audit-events
 
+notification:
+  providers:
+    email:
+      base-url: ${SENDGRID_BASE_URL:https://api.sendgrid.com}
+      api-key: ${SENDGRID_API_KEY:}
+      from-address: ${SENDGRID_FROM_ADDRESS:noreply@aegisnotify.com}
+    sms:
+      base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_SMS_FROM_NUMBER:}
+    whatsapp:
+      base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_WHATSAPP_FROM_NUMBER:}
+    push:
+      base-url: ${FCM_BASE_URL:https://fcm.googleapis.com}
+      project-id: ${FCM_PROJECT_ID:}
+      access-token: ${FCM_ACCESS_TOKEN:}
+
 management:
   endpoints:
     web:

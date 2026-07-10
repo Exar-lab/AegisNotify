@@ -24,3 +24,17 @@ eureka:
 audit:
   publishing:
     enabled: false
+
+notification:
+  providers:
+    email:
+      api-key: test-sendgrid-key
+    sms:
+      account-sid: test-account-sid
+      auth-token: test-auth-token
+    whatsapp:
+      account-sid: test-account-sid
+      auth-token: test-auth-token
+    push:
+      project-id: test-project-id
+      access-token: test-access-token
