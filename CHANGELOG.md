@@ -1,11 +1,13 @@
 # Changelog
 
-## [0.7.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.6.0...aegisnotify-v0.7.0) (2026-07-07)
+## [0.7.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.6.0...aegisnotify-v0.7.0) (2026-07-10)
 
 
 ### Features
 
 * **audit:** add SecurityConfig to protect audit endpoints ([2b13660](https://github.com/Exar-lab/AegisNotify/commit/2b136603f81642b995ea5cf296ef3d7f129a0b34))
+* **notification:** implement notification provider adapters ([b3a4f25](https://github.com/Exar-lab/AegisNotify/commit/b3a4f25ee1e2adb809a616ac972c3dabb0be268d))
+* **notification:** implement notification provider adapters ([fc62fd4](https://github.com/Exar-lab/AegisNotify/commit/fc62fd4046776d0e39e41f97e66a0f9bb3aa4d25))
 
 
 ### Bug Fixes
