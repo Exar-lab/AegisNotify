@@ -35,6 +35,20 @@ audit:
   topic: notification-audit-events
 
 notification:
+  kafka:
+    relay:
+      enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}
+    consumer:
+      enabled: ${NOTIFICATION_KAFKA_CONSUMER_ENABLED:false}
+      group-id: ${NOTIFICATION_KAFKA_CONSUMER_GROUP_ID:notification-service}
+    topics:
+      high-priority: ${NOTIFICATION_KAFKA_HIGH_PRIORITY_TOPIC:high-priority-topic}
+      medium-priority: ${NOTIFICATION_KAFKA_MEDIUM_PRIORITY_TOPIC:medium-priority-topic}
+      low-priority: ${NOTIFICATION_KAFKA_LOW_PRIORITY_TOPIC:low-priority-topic}
+      partitions: ${NOTIFICATION_KAFKA_TOPIC_PARTITIONS:3}
+      replication-factor: ${NOTIFICATION_KAFKA_TOPIC_REPLICATION_FACTOR:3}
+      min-in-sync-replicas: ${NOTIFICATION_KAFKA_TOPIC_MIN_IN_SYNC_REPLICAS:2}
+      dlt-suffix: ${NOTIFICATION_KAFKA_DLT_SUFFIX:-dlt}
   providers:
     email:
       base-url: ${SENDGRID_BASE_URL:https://api.sendgrid.com}
