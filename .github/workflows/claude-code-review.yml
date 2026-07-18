@@ -21,8 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
       id-token: write
 
     steps:
@@ -36,9 +35,23 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request for correctness, security, reliability,
+            maintainability, and meaningful test coverage. Focus only on the
+            changes introduced by this pull request and avoid speculative or
+            purely stylistic feedback.
+
+            Use `gh pr view` and `gh pr diff` to inspect the pull request.
+            Use `mcp__github_inline_comment__create_inline_comment` with
+            `confirmed: true` for specific actionable findings. Finish by using
+            `gh pr comment` to publish a concise review summary, including when
+            no actionable findings are found. Do not modify repository files.
+
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
