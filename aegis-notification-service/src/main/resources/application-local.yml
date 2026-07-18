@@ -1,0 +1,5 @@
+notification:
+  kafka:
+    topics:
+      replication-factor: 1
+      min-in-sync-replicas: 1
