@@ -70,6 +70,13 @@ class KafkaNotificationConsumerIntegrationTest {
     registry.add("audit.publishing.enabled", () -> false);
     registry.add("notification.kafka.consumer.enabled", () -> true);
     registry.add("notification.kafka.consumer.group-id", () -> "notification-service-it");
+    registry.add("notification.providers.email.api-key", () -> "test-sendgrid-key");
+    registry.add("notification.providers.sms.account-sid", () -> "test-account-sid");
+    registry.add("notification.providers.sms.auth-token", () -> "test-auth-token");
+    registry.add("notification.providers.whatsapp.account-sid", () -> "test-account-sid");
+    registry.add("notification.providers.whatsapp.auth-token", () -> "test-auth-token");
+    registry.add("notification.providers.push.project-id", () -> "test-project-id");
+    registry.add("notification.providers.push.access-token", () -> "test-access-token");
   }
 
   @TestConfiguration
