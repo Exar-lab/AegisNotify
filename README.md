@@ -99,3 +99,5 @@ Architectural rules are enforced at build time by ArchUnit tests.
 ## License
 
 This project is part of a personal portfolio. All rights reserved.
+
+<!-- ci-probe: transient claude-review flake diagnostic, safe to ignore -->
