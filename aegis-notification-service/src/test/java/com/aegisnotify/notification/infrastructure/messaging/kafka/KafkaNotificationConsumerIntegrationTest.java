@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.aegisnotify.notification.NotificationServiceApplication;
 import com.aegisnotify.notification.application.dto.NotificationEvent;
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
+import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.application.port.out.TemplateRenderer;
 import com.aegisnotify.notification.domain.enums.Channel;
@@ -102,6 +104,12 @@ class KafkaNotificationConsumerIntegrationTest {
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;
+
+  @MockitoBean
+  private DeadLetterQueuePort deadLetterQueuePort;
+
+  @MockitoBean
+  private MessageBrokerPort messageBrokerPort;
 
   @Test
   void publishMessage_consumerTransitionsNotificationToProcessing() throws Exception {
