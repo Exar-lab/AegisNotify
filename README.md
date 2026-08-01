@@ -1,5 +1,11 @@
 # AegisNotify
 
+[![CI status](https://github.com/Exar-lab/AegisNotify/actions/workflows/ci.yml/badge.svg)](https://github.com/Exar-lab/AegisNotify/actions/workflows/ci.yml)
+![Java 21](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
+![Spring Boot 3.4.1](https://img.shields.io/badge/Spring%20Boot-3.4.1-6DB33F?logo=springboot&logoColor=white)
+![Maven Wrapper](https://img.shields.io/badge/build-Maven%20Wrapper-C71A36?logo=apachemaven&logoColor=white)
+![Hexagonal Architecture](https://img.shields.io/badge/architecture-Hexagonal-4B5563)
+
 AegisNotify is a Java 21 notification orchestration platform for accepting template-based
 notifications, persisting their lifecycle, routing work by priority through Kafka, delivering
 messages through channel-specific providers, and recording a searchable audit trail.
@@ -9,6 +15,25 @@ Adapters) Architecture to the notification and audit domains. Email, SMS, WhatsA
 provider adapters are present. The complete asynchronous delivery path is still under active
 development; see [Current implementation status](#current-implementation-status) before trying
 to run the full platform.
+
+> [!IMPORTANT]
+> The repository contains the core services and most processing behavior, but it is not yet a
+> one-command runnable platform. The notification outbox still lacks its Kafka publishing adapter
+> and runtime trigger; see [Current implementation status](#current-implementation-status).
+
+## Navigate
+
+- [At a glance](#at-a-glance)
+- [Quick start](#quick-start)
+- [System topology](#system-topology)
+- [Notification processing](#notification-processing)
+- [Services and HTTP API](#services)
+- [Notification lifecycle](#notification-lifecycle)
+- [Kafka interfaces](#kafka-interfaces)
+- [Architecture and persistence](#architecture)
+- [Configuration and local operation](#configuration)
+- [Testing and quality checks](#testing-and-quality-checks)
+- [Current implementation status](#current-implementation-status)
 
 ## At a glance
 
@@ -23,7 +48,7 @@ to run the full platform.
 | Eureka discovery and Git-backed Config Server | Implemented |
 | Prometheus actuator endpoints and Kafka consumer counters | Implemented |
 | Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
-| Provider circuit breakers and secondary-account failover | Implemented, but still in progress and not production-ready |
+| Provider circuit breakers and secondary-account failover | Implemented and unit-tested; production and end-to-end validation remain |
 | RabbitMQ transport | Not implemented |
 | Docker Compose or bundled local infrastructure | Not provided |
 
@@ -80,22 +105,67 @@ service still requires concrete implementations of `MessageBrokerPort` and
 `DeadLetterQueuePort`, plus a trigger for `PublishOutboxEventUseCase`, before the repository can
 execute the complete submit-to-delivery flow without test doubles.
 
-## What happens to a notification
+## System topology
+
+The gateway, discovery server, and Config Server support two domain services. Dashed connections
+below identify runtime dependencies that must be supplied outside this repository.
+
+```mermaid
+flowchart LR
+    Client[API client] --> Gateway[API Gateway]
+    Gateway --> Notification[Notification Service]
+    Client --> Audit[Audit Service]
+
+    Gateway --> Eureka[Eureka Server]
+    Notification --> Eureka
+    Audit --> Eureka
+    Config[Config Server] -. configuration .-> Gateway
+    Config -. configuration .-> Notification
+    Config -. configuration .-> Audit
+
+    Notification -.-> Postgres[(PostgreSQL)]
+    Notification -.-> Kafka[(Kafka)]
+    Kafka -.-> Audit
+    Audit -.-> Mongo[(MongoDB)]
+    Notification -.-> Providers[SendGrid / Twilio / FCM]
+    Gateway -.-> IdP[OIDC provider]
+    Notification -.-> IdP
+    Audit -.-> IdP
+```
+
+The gateway currently routes notification submission and status requests only. Audit endpoints
+are called directly on port `8083`. Config Server use is optional, but its Git backend and
+credentials must be supplied when enabled.
+
+## Notification processing
 
 The intended flow is asynchronous so the HTTP request does not wait for an external provider:
 
 ```mermaid
-flowchart LR
-    Client[API client] -->|JWT + POST| Gateway[API Gateway :8080]
-    Gateway --> Notification[Notification Service :8082]
-    Notification -->|transaction| Postgres[(PostgreSQL)]
-    Postgres --> Outbox[(outbox_events)]
-    Outbox -. "relay in progress" .-> PriorityTopics[Kafka priority topics]
-    PriorityTopics --> Consumer[Notification Kafka consumer]
-    Consumer --> Providers[SendGrid / Twilio / FCM]
-    Notification -->|after commit| AuditTopic[Kafka audit topic]
-    AuditTopic --> Audit[Audit Service :8083]
-    Audit --> Mongo[(MongoDB)]
+sequenceDiagram
+    actor Client
+    participant Gateway as API Gateway
+    participant Service as Notification Service
+    participant DB as PostgreSQL
+    participant Kafka
+    participant Provider
+    participant Audit as Audit Service
+    participant Mongo as MongoDB
+
+    Client->>Gateway: POST notification + JWT
+    Gateway->>Service: Forward request
+    Service->>DB: Save notification, log, and outbox event
+    Service-->>Client: 202 Accepted (PENDING)
+    Note over DB,Kafka: Runtime outbox trigger and broker adapter are not implemented
+    Service-->>Kafka: Publish outbox event (planned runtime link)
+    Kafka->>Service: Consume notification event
+    Service->>Provider: Deliver outside DB transaction
+    Provider-->>Service: Primary or fallback result
+    Service->>DB: Save final status
+    Service-->>Kafka: Publish audit event after commit
+    Kafka->>Audit: Consume audit event
+    Audit->>Audit: Encrypt recipient
+    Audit->>Mongo: Append audit event
 ```
 
 1. `POST /api/v1/notifications` validates the request and recipient format.
@@ -127,9 +197,6 @@ needed to connect the entire path.
 | [`aegis-config-server`](aegis-config-server/) | 8888 | HTTP Basic-protected, Git-backed Spring Cloud Config server |
 | [`aegis-notification-service`](aegis-notification-service/) | 8082 | Notification API, domain lifecycle, PostgreSQL persistence, outbox use case, Kafka consumer, and provider delivery |
 | [`aegis-audit-service`](aegis-audit-service/) | 8083 | Kafka audit ingestion, recipient encryption, MongoDB persistence, and audit queries |
-
-The gateway currently routes only notification submission and status requests. Audit endpoints
-must be called directly on port `8083` unless another route is added.
 
 ## HTTP API
 
@@ -223,20 +290,28 @@ curl -G -H "Authorization: Bearer $ACCESS_TOKEN" \
 
 ## Notification lifecycle
 
-```text
-PENDING -> QUEUED -> PROCESSING -> SENT
-                                -> SENT_VIA_FALLBACK
-                                -> FAILED
-                                -> FAILED_CRITICAL
-
-PENDING or QUEUED -> CANCELLED
-FAILED -> PENDING (manual retry use case)
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: accepted
+    PENDING --> QUEUED: outbox published
+    QUEUED --> PROCESSING: consumer starts
+    PROCESSING --> SENT: primary succeeds
+    PROCESSING --> SENT_VIA_FALLBACK: secondary succeeds
+    PROCESSING --> FAILED: delivery fails
+    PROCESSING --> FAILED_CRITICAL: primary and secondary fail
+    PENDING --> CANCELLED: cancel
+    QUEUED --> CANCELLED: cancel
+    FAILED --> PENDING: manual retry
 ```
 
 Cancellation, manual retry, and manual DLT application use cases exist in source code, but they
 are not exposed by the current HTTP controller. `CANCELLED` is present in the domain model; the
 initial notification-table Flyway constraint does not yet include it, so cancellation persistence
 requires further migration work.
+
+> [!NOTE]
+> The diagram shows domain-supported transitions. The current HTTP surface supports submission
+> and status queries, not cancellation, retry, or manual DLT operations.
 
 ## Kafka interfaces
 
@@ -282,22 +357,43 @@ starts whenever the audit service starts.
 
 ## Architecture
 
-The notification and audit services use Hexagonal Architecture:
+The notification and audit services use Hexagonal Architecture. Dependencies point inward;
+infrastructure implements application ports rather than leaking framework concerns into the core.
 
-```text
-domain/
-  Pure entities, value objects, enums, state transitions, and domain exceptions
+```mermaid
+flowchart LR
+    HTTP[HTTP controllers] --> InPorts[Inbound ports]
+    KafkaIn[Kafka consumers] --> InPorts
+    InPorts --> UseCases[Application use cases]
+    UseCases --> Domain[Domain model]
+    UseCases --> OutPorts[Outbound ports]
+    JPA[JPA / Mongo adapters] --> OutPorts
+    KafkaOut[Kafka publishers] --> OutPorts
+    Provider[Provider adapters] --> OutPorts
 
-application/
-  Inbound use-case ports, outbound dependency ports, DTOs, and orchestration services
+    subgraph Core
+        Domain
+        UseCases
+        InPorts
+        OutPorts
+    end
 
-infrastructure/
-  HTTP and Kafka inbound adapters; JPA, MongoDB, Kafka, encryption, and provider outbound adapters;
-  Spring configuration and security
+    subgraph Infrastructure
+        HTTP
+        KafkaIn
+        JPA
+        KafkaOut
+        Provider
+    end
 ```
 
-Dependency direction points inward: infrastructure depends on application and domain contracts,
-while the domain does not import Spring or persistence frameworks. ArchUnit tests in both domain
+| Boundary | Responsibility |
+| --- | --- |
+| `domain/` | Pure entities, value objects, enums, state transitions, and domain exceptions |
+| `application/` | Inbound use-case ports, outbound dependency ports, DTOs, and orchestration services |
+| `infrastructure/` | HTTP and Kafka inbound adapters; JPA, MongoDB, Kafka, encryption, provider, Spring configuration, and security adapters |
+
+The domain does not import Spring or persistence frameworks. ArchUnit tests in both domain
 services enforce these boundaries.
 
 The notification workflow uses short transactions around state changes and deliberately performs
@@ -355,17 +451,18 @@ The provider adapters call:
 Each provider request has a five-second timeout and maps vendor or transport failures to a failed
 provider result.
 
-### In-progress resilience work
+### Circuit breakers and provider failover
 
-The current worktree contains an uncommitted `ResilientNotificationProviderAdapter`, Resilience4j
-dependency/configuration, per-channel circuit breakers, and optional secondary provider accounts.
-The design records primary failures in a circuit breaker, attempts a secondary account, returns
-`SENT_VIA_FALLBACK` on secondary success, and returns `FAILED_CRITICAL` when both attempts fail.
+`ResilientNotificationProviderAdapter` is the implemented `NotificationProviderPort` adapter. It
+wraps primary providers with one Resilience4j circuit breaker per channel and attempts an optional
+secondary account when the primary call fails or its circuit is open. Secondary success produces
+`SENT_VIA_FALLBACK`; failure of both attempts produces `FAILED_CRITICAL` for DLT handling.
 
-This work must be treated as **in progress**, not as a production guarantee. It changed
-concurrently with this documentation update and has not been validated here with the full test
-suite or an end-to-end provider environment. Secondary accounts are optional, while every primary
-provider credential is currently required at notification-service startup.
+Focused unit tests cover primary success, fallback success, dual failure, circuit opening, and
+half-open recovery. This is still **not a production guarantee**: no end-to-end provider
+environment, load behavior, operational thresholds, or production failover has been validated by
+this documentation change. Secondary accounts are optional, while every primary provider
+credential is required at notification-service startup.
 
 ## Configuration
 
@@ -415,10 +512,10 @@ Commands:
 ./mvnw -pl aegis-api-gateway spring-boot:run
 ```
 
-These commands match the Maven modules, but a full local startup is currently blocked by the
-unfinished notification outbound adapters described above. The Config Server also requires its
-Git repository and Basic Auth environment variables, and the domain services require their
-datastores, broker, identity provider, and secrets.
+These commands match the Maven modules, but the complete submit-to-delivery flow is blocked by the
+missing notification outbox broker adapter, DLT adapter, and relay trigger described above. The
+Config Server also requires its Git repository and Basic Auth environment variables, and the
+domain services require their datastores, broker, identity provider, and secrets.
 
 ## Observability
 
@@ -435,9 +532,9 @@ The notification service publishes these custom Micrometer counters with a `topi
 Spring Boot renders the names in Prometheus format, for example
 `notification_kafka_consumer_success_total`.
 
-The in-progress Resilience4j configuration registers circuit-breaker health indicators for the
-four provider channels. No Prometheus server, dashboards, alert rules, or distributed tracing
-collector are included in the repository.
+The Resilience4j configuration registers circuit-breaker health indicators for the four provider
+channels. No Prometheus server, dashboards, alert rules, or distributed tracing collector are
+included in the repository.
 
 ## Testing and quality checks
 
@@ -488,7 +585,8 @@ The following work remains before the documented asynchronous platform is comple
 - Add template provisioning through a migration, administrative API, or operational process.
 - Expose or intentionally remove the currently internal cancellation, manual retry, and manual DLT
   use cases.
-- Complete and validate the concurrent Resilience4j/secondary-provider work.
+- Validate Resilience4j and secondary-provider behavior in an end-to-end provider environment and
+  define production thresholds and operational procedures.
 - Add deployment assets and an end-to-end local environment if the project is intended to run as
   a complete stack from a fresh checkout.
 
@@ -501,7 +599,7 @@ The following work remains before the documented asynchronous platform is comple
 - Apache Kafka and Spring Kafka
 - Netflix Eureka and Spring Cloud Gateway/Config
 - Micrometer and Prometheus registry
-- Resilience4j 2.2.0 in the current in-progress notification-service changes
+- Resilience4j 2.2.0 for per-channel circuit breakers and secondary-account failover
 - JUnit 5, Spring Boot Test, Spring Kafka Test, Testcontainers, and ArchUnit
 - Maven Wrapper and Google Checkstyle
 
