@@ -1,100 +1,509 @@
 # AegisNotify
 
-Resilient notification orchestration platform built with Java 21 and Spring Boot 3.x. Centralizes delivery of Email, SMS, WhatsApp, and Push notifications with fault tolerance via circuit breakers, provider failover, and the Transactional Outbox pattern.
+AegisNotify is a Java 21 notification orchestration platform for accepting template-based
+notifications, persisting their lifecycle, routing work by priority through Kafka, delivering
+messages through channel-specific providers, and recording a searchable audit trail.
+
+The repository is organized as five Spring Boot services and applies Hexagonal (Ports and
+Adapters) Architecture to the notification and audit domains. Email, SMS, WhatsApp, and push
+provider adapters are present. The complete asynchronous delivery path is still under active
+development; see [Current implementation status](#current-implementation-status) before trying
+to run the full platform.
+
+## At a glance
+
+| Capability | Current state |
+| --- | --- |
+| Accept and query notifications over HTTP | Implemented |
+| PostgreSQL persistence and Flyway schema | Implemented |
+| Email, SMS, WhatsApp, and push provider adapters | Implemented |
+| Priority-based Kafka consumer and dead-letter topics | Implemented, disabled by default |
+| MongoDB-backed audit ingestion and search | Implemented |
+| JWT validation at the gateway and resource services | Implemented |
+| Eureka discovery and Git-backed Config Server | Implemented |
+| Prometheus actuator endpoints and Kafka consumer counters | Implemented |
+| Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
+| Provider circuit breakers and secondary-account failover | In progress in the current worktree; not production-ready |
+| RabbitMQ transport | Not implemented |
+| Docker Compose or bundled local infrastructure | Not provided |
+
+## Quick start
+
+### Prerequisites
+
+- JDK 21
+- Docker, if running Testcontainers-based integration tests
+- PostgreSQL 15 or newer for `aegis-notification-service`
+- Apache Kafka for notification processing and audit events
+- MongoDB for `aegis-audit-service`
+- An OpenID Connect provider that exposes a JWKS endpoint; the defaults expect a Keycloak realm
+  at `http://localhost:8088/realms/aegis`
+- Valid SendGrid, Twilio, and Firebase Cloud Messaging credentials to start the notification
+  service in its current configuration
+
+Maven does not need to be installed separately because the repository includes `mvnw` and
+`mvnw.cmd`.
+
+### Build the repository
+
+Linux, macOS, or Git Bash:
+
+```bash
+./mvnw clean package -DskipTests
+```
+
+Windows PowerShell or Command Prompt:
+
+```powershell
+.\mvnw.cmd clean package -DskipTests
+```
+
+Run all verification checks, including tests, Checkstyle, and architecture tests:
+
+```bash
+./mvnw clean verify
+```
+
+### Start a standalone module
+
+The Eureka server has no external datastore and is the simplest module to run:
+
+```bash
+./mvnw -pl aegis-eureka-server spring-boot:run
+```
+
+Open `http://localhost:8761` after it starts.
+
+The remaining services require the dependencies and environment variables described below.
+There is currently no Docker Compose file in the repository. In addition, the notification
+service still requires concrete implementations of `MessageBrokerPort` and
+`DeadLetterQueuePort`, plus a trigger for `PublishOutboxEventUseCase`, before the repository can
+execute the complete submit-to-delivery flow without test doubles.
+
+## What happens to a notification
+
+The intended flow is asynchronous so the HTTP request does not wait for an external provider:
+
+```mermaid
+flowchart LR
+    Client[API client] -->|JWT + POST| Gateway[API Gateway :8080]
+    Gateway --> Notification[Notification Service :8082]
+    Notification -->|transaction| Postgres[(PostgreSQL)]
+    Postgres --> Outbox[(outbox_events)]
+    Outbox -. "relay in progress" .-> PriorityTopics[Kafka priority topics]
+    PriorityTopics --> Consumer[Notification Kafka consumer]
+    Consumer --> Providers[SendGrid / Twilio / FCM]
+    Notification -->|after commit| AuditTopic[Kafka audit topic]
+    AuditTopic --> Audit[Audit Service :8083]
+    Audit --> Mongo[(MongoDB)]
+```
+
+1. `POST /api/v1/notifications` validates the request and recipient format.
+2. The notification service verifies that the requested template exists and is active.
+3. A notification, its initial log entry, and an outbox event are stored in one PostgreSQL
+   transaction. The API returns `202 Accepted` with the notification ID and `PENDING` status.
+4. `PublishOutboxEventService` maps `HIGH`, `MEDIUM`, and `LOW` priority events to separate Kafka
+   topics, marks the outbox event processed, and advances the notification to `QUEUED`.
+5. When enabled, `KafkaNotificationConsumer` consumes the priority topics with manual
+   acknowledgment and delegates processing to the application layer.
+6. The template is rendered, the notification becomes `PROCESSING`, and the channel provider is
+   called outside the database transaction.
+7. The final provider result is persisted as `SENT`, `SENT_VIA_FALLBACK`, `FAILED`, or
+   `FAILED_CRITICAL`.
+8. Lifecycle audit events are published to `notification-audit-events` after the surrounding
+   database transaction commits. The audit service encrypts the recipient and atomically appends
+   each event to a MongoDB audit-trail document.
+
+Steps 4 through 7 describe implemented application and consumer behavior, but the repository
+does not yet contain the runtime outbox trigger or the concrete outbound broker/DLT adapters
+needed to connect the entire path.
+
+## Services
+
+| Module | Default port | Responsibility |
+| --- | ---: | --- |
+| [`aegis-api-gateway`](aegis-api-gateway/) | 8080 | Reactive entry point, JWT validation, CORS, and Eureka load-balanced notification routes |
+| [`aegis-eureka-server`](aegis-eureka-server/) | 8761 | Netflix Eureka service registry |
+| [`aegis-config-server`](aegis-config-server/) | 8888 | HTTP Basic-protected, Git-backed Spring Cloud Config server |
+| [`aegis-notification-service`](aegis-notification-service/) | 8082 | Notification API, domain lifecycle, PostgreSQL persistence, outbox use case, Kafka consumer, and provider delivery |
+| [`aegis-audit-service`](aegis-audit-service/) | 8083 | Kafka audit ingestion, recipient encryption, MongoDB persistence, and audit queries |
+
+The gateway currently routes only notification submission and status requests. Audit endpoints
+must be called directly on port `8083` unless another route is added.
+
+## HTTP API
+
+All business endpoints require a bearer JWT. Requests sent directly to the notification service
+and audit service are validated again instead of relying only on gateway security.
+
+### Submit a notification
+
+`POST /api/v1/notifications`
+
+The token must include the `notification:write` scope when calling the notification service.
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/notifications \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "EMAIL",
+    "recipient": "user@example.com",
+    "templateName": "welcome-email",
+    "parameters": {
+      "name": "Ada"
+    },
+    "priority": "HIGH"
+  }'
+```
+
+Successful response: `202 Accepted`
+
+```json
+{
+  "id": "2a415e3e-a684-4ad7-897d-490c7c75be91",
+  "status": "PENDING"
+}
+```
+
+The response includes a `Location` header pointing to the status resource. `parameters` defaults
+to an empty object and `priority` defaults to `MEDIUM` when omitted.
+
+Supported request values:
+
+| Field | Values or constraint |
+| --- | --- |
+| `channel` | `EMAIL`, `SMS`, `WHATSAPP`, or `PUSH` |
+| `recipient` | Email address for email; E.164 number beginning with `+` for SMS/WhatsApp; non-blank device token for push |
+| `templateName` | Active template name, maximum 120 characters |
+| `parameters` | JSON object used during template rendering |
+| `priority` | `HIGH`, `MEDIUM`, or `LOW` |
+
+Templates are persisted in PostgreSQL, but the repository currently has no template management
+endpoint and no seed migration. At least one active template must be provisioned before a submit
+request can succeed.
+
+### Query notification status
+
+`GET /api/v1/notifications/{id}/status`
+
+```bash
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+  http://localhost:8080/api/v1/notifications/2a415e3e-a684-4ad7-897d-490c7c75be91/status
+```
+
+The response includes the notification identity, channel, recipient, template, current status,
+timestamps, and its PostgreSQL-backed notification log.
+
+### Query an audit trail
+
+`GET /api/v1/audit/{notificationId}`
+
+```bash
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+  http://localhost:8083/api/v1/audit/2a415e3e-a684-4ad7-897d-490c7c75be91
+```
+
+### Search audit trails
+
+`GET /api/v1/audit`
+
+Optional query parameters are `channel`, `status`, `from`, `to`, `page`, and `size`. Page numbers
+are zero-based, the default size is 20, and the repository adapter caps the effective size at
+100.
+
+```bash
+curl -G -H "Authorization: Bearer $ACCESS_TOKEN" \
+  --data-urlencode "channel=EMAIL" \
+  --data-urlencode "status=SENT" \
+  --data-urlencode "page=0" \
+  --data-urlencode "size=20" \
+  http://localhost:8083/api/v1/audit
+```
+
+## Notification lifecycle
+
+```text
+PENDING -> QUEUED -> PROCESSING -> SENT
+                                -> SENT_VIA_FALLBACK
+                                -> FAILED
+                                -> FAILED_CRITICAL
+
+PENDING or QUEUED -> CANCELLED
+FAILED -> PENDING (manual retry use case)
+```
+
+Cancellation, manual retry, and manual DLT application use cases exist in source code, but they
+are not exposed by the current HTTP controller. `CANCELLED` is present in the domain model; the
+initial notification-table Flyway constraint does not yet include it, so cancellation persistence
+requires further migration work.
+
+## Kafka interfaces
+
+### Notification topics
+
+| Purpose | Default topic |
+| --- | --- |
+| High-priority notifications | `high-priority-topic` |
+| Medium-priority notifications | `medium-priority-topic` |
+| Low-priority notifications | `low-priority-topic` |
+| Dead letters | Source topic plus `-dlt`, for example `high-priority-topic-dlt` |
+
+The configured topology uses three partitions, replication factor 3, and
+`min.insync.replicas=2`. Activate the `local` Spring profile for the notification service when
+using a single local broker; `application-local.yml` changes replication factor and minimum
+in-sync replicas to 1.
+
+The notification listener is disabled by default. Enable it with:
+
+```bash
+export NOTIFICATION_KAFKA_CONSUMER_ENABLED=true
+```
+
+The consumer uses manual acknowledgment, `auto.offset.reset=earliest`, two retries with a
+one-second fixed backoff, and then publishes to the corresponding `-dlt` topic. Micrometer
+counters record successful deliveries, failures, retries, and DLT publication by source topic.
+
+`NOTIFICATION_KAFKA_RELAY_ENABLED` exists in configuration, but no runtime component currently
+uses it to schedule or invoke the outbox publisher. Also note that `PublishOutboxEventService`
+currently maps priorities to the three default topic names directly rather than reading renamed
+topic values from configuration.
+
+### Audit topic
+
+The notification service publishes audit events to `notification-audit-events`, keyed by
+notification ID to preserve per-notification ordering. Publication is deferred until after a
+database transaction commits and is fire-and-forget; publishing can be disabled with
+`audit.publishing.enabled=false`, which activates a logging fallback.
+
+The audit service consumes with manual acknowledgment and retries failed records with a fixed
+one-second backoff before Spring Kafka's dead-letter recoverer handles them. The audit consumer
+starts whenever the audit service starts.
 
 ## Architecture
 
-```
-                    ┌──────────────────┐
-                    │   API Gateway    │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-   ┌──────────▼───┐  ┌──────▼──────┐  ┌────▼────────────┐
-   │ Eureka Server │  │Config Server│  │Notification Svc  │
-   │    :8761      │  │   :8888     │  │     :8082        │
-   └───────────────┘  └─────────────┘  └──────┬───────────┘
-                                              │
-                                    ┌─────────┼─────────┐
-                                    │         │         │
-                                ┌───▼──┐ ┌────▼──┐ ┌───▼───┐
-                                │Outbox│ │Broker │ │  DB   │
-                                │Worker│ │Kafka/ │ │Postgre│
-                                │      │ │Rabbit │ │  SQL  │
-                                └──────┘ └───────┘ └───────┘
+The notification and audit services use Hexagonal Architecture:
+
+```text
+domain/
+  Pure entities, value objects, enums, state transitions, and domain exceptions
+
+application/
+  Inbound use-case ports, outbound dependency ports, DTOs, and orchestration services
+
+infrastructure/
+  HTTP and Kafka inbound adapters; JPA, MongoDB, Kafka, encryption, and provider outbound adapters;
+  Spring configuration and security
 ```
 
-## Modules
+Dependency direction points inward: infrastructure depends on application and domain contracts,
+while the domain does not import Spring or persistence frameworks. ArchUnit tests in both domain
+services enforce these boundaries.
 
-| Module | Port | Description |
-|--------|------|-------------|
-| [`aegis-eureka-server`](aegis-eureka-server/) | 8761 | Service discovery (Netflix Eureka) |
-| [`aegis-config-server`](aegis-config-server/) | 8888 | Centralized configuration (Spring Cloud Config, Git-backed) |
-| `aegis-notification-service` | 8082 | Core notification microservice (Ingress API, Outbox, Providers) |
+The notification workflow uses short transactions around state changes and deliberately performs
+blocking provider HTTP calls outside a database transaction, avoiding long-held connections and
+row locks.
 
-## Tech Stack
+## Persistence
 
-- **Runtime**: Java 21, Spring Boot 3.4.1, Spring Cloud 2024.0.0
-- **Persistence**: PostgreSQL, Flyway, Spring Data JPA
-- **Messaging**: Apache Kafka / RabbitMQ (planned)
-- **Resilience**: Resilience4j (Circuit Breaker, Retry, TimeLimiter)
-- **Security**: Spring Security, OAuth2 Resource Server, Keycloak
-- **Observability**: Micrometer, Prometheus
-- **Testing**: JUnit 5, Testcontainers, ArchUnit
-- **Code Quality**: Checkstyle (Google style), ArchUnit (hexagonal layer enforcement)
+### PostgreSQL
 
-## Prerequisites
+Flyway migrations in
+[`aegis-notification-service/src/main/resources/db/migration`](aegis-notification-service/src/main/resources/db/migration/)
+create:
 
-- Java 21+
-- Maven 3.9+ (wrapper included)
-- Docker (for Testcontainers and local infrastructure)
-- PostgreSQL 15+ (or use Docker)
+- `templates` for channel-specific subject/body templates and variable declarations
+- `notifications` for current notification state and provider outcome
+- `outbox_events` for transactional message publication
+- `notification_logs` for the notification service's local lifecycle history
 
-## Build
+JPA validates the schema at startup (`ddl-auto: validate`); Flyway owns schema changes.
+
+### MongoDB
+
+The audit service stores one document per notification ID. Each consumed event is encrypted and
+atomically appended to the document's `events` array while `currentStatus` and `updatedAt` are
+updated. Search supports status, channel, and creation-time filters.
+
+Recipient values are encrypted with AES-GCM before persistence. Production startup requires
+`AUDIT_ENCRYPTION_KEY`; the `local` profile provides a development-only fallback key.
+
+## Security
+
+| Component | Behavior |
+| --- | --- |
+| API Gateway | JWT resource server; health and info are public; all other routes require authentication |
+| Notification service | Stateless JWT resource server; submit requires `SCOPE_notification:write`; status requires authentication |
+| Audit service | Stateless JWT resource server; audit queries require authentication |
+| Config Server | HTTP Basic authentication using environment-provided credentials |
+
+The default JWKS URI points to Keycloak, but Keycloak configuration is not included in this
+repository. Supply `JWKS_URI` to use another compatible OpenID Connect provider.
+
+Actuator `health`, `info`, and `prometheus` endpoints are public in the notification and audit
+services. Review that exposure before production deployment.
+
+## Resilience and delivery providers
+
+The provider adapters call:
+
+- SendGrid Mail Send API for `EMAIL`
+- Twilio Messages API for `SMS`
+- Twilio Messages API with `whatsapp:` addressing for `WHATSAPP`
+- Firebase Cloud Messaging HTTP v1 API for `PUSH`
+
+Each provider request has a five-second timeout and maps vendor or transport failures to a failed
+provider result.
+
+### In-progress resilience work
+
+The current worktree contains an uncommitted `ResilientNotificationProviderAdapter`, Resilience4j
+dependency/configuration, per-channel circuit breakers, and optional secondary provider accounts.
+The design records primary failures in a circuit breaker, attempts a secondary account, returns
+`SENT_VIA_FALLBACK` on secondary success, and returns `FAILED_CRITICAL` when both attempts fail.
+
+This work must be treated as **in progress**, not as a production guarantee. It changed
+concurrently with this documentation update and has not been validated here with the full test
+suite or an end-to-end provider environment. Secondary accounts are optional, while every primary
+provider credential is currently required at notification-service startup.
+
+## Configuration
+
+The most important environment variables are:
+
+| Variable | Default | Used by |
+| --- | --- | --- |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/aegisnotify` | Notification service |
+| `DB_USERNAME` / `DB_PASSWORD` | `aegis` / `aegis` | Notification service |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Notification and audit services |
+| `MONGODB_URI` | `mongodb://localhost:27017/aegisnotify-audit` | Audit service |
+| `AUDIT_ENCRYPTION_KEY` | None outside `local` profile | Audit service |
+| `JWKS_URI` | Keycloak realm at `localhost:8088` | Gateway, notification, and audit services |
+| `CONFIG_SERVER_USER` / `CONFIG_SERVER_PASSWORD` | None | Config Server |
+| `CONFIG_REPO_URI` | None | Config Server Git backend |
+| `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | API Gateway |
+| `SENDGRID_API_KEY` / `SENDGRID_FROM_ADDRESS` | Empty / `noreply@aegisnotify.com` | Email provider |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Empty | SMS and WhatsApp providers |
+| `TWILIO_SMS_FROM_NUMBER` / `TWILIO_WHATSAPP_FROM_NUMBER` | Empty | SMS and WhatsApp providers |
+| `FCM_PROJECT_ID` / `FCM_ACCESS_TOKEN` | Empty | Push provider |
+| `NOTIFICATION_KAFKA_CONSUMER_ENABLED` | `false` | Notification Kafka listener |
+| `NOTIFICATION_KAFKA_RELAY_ENABLED` | `false` | Reserved for the unfinished outbox relay runtime |
+
+Secondary provider variables follow the same names with a `_SECONDARY_` segment, for example
+`SENDGRID_SECONDARY_API_KEY`, `TWILIO_SECONDARY_AUTH_TOKEN`, and
+`FCM_SECONDARY_ACCESS_TOKEN`. See
+[`aegis-notification-service/src/main/resources/application.yml`](aegis-notification-service/src/main/resources/application.yml)
+for the complete topic, provider, and circuit-breaker configuration.
+
+## Running services locally
+
+Start external infrastructure first, then run repository modules in this order when needed:
+
+1. Eureka Server
+2. Config Server, if using centralized configuration
+3. Notification Service and Audit Service
+4. API Gateway
+
+Commands:
 
 ```bash
-# Build all modules (skip tests)
-./mvnw clean package -DskipTests
+./mvnw -pl aegis-eureka-server spring-boot:run
+./mvnw -pl aegis-config-server spring-boot:run
+./mvnw -pl aegis-notification-service spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw -pl aegis-audit-service spring-boot:run -Dspring-boot.run.profiles=local
+./mvnw -pl aegis-api-gateway spring-boot:run
+```
 
-# Build and run tests
+These commands match the Maven modules, but a full local startup is currently blocked by the
+unfinished notification outbound adapters described above. The Config Server also requires its
+Git repository and Basic Auth environment variables, and the domain services require their
+datastores, broker, identity provider, and secrets.
+
+## Observability
+
+The gateway, notification service, and audit service expose configured actuator endpoints under
+`/actuator`. Prometheus scraping is available at `/actuator/prometheus` where enabled.
+
+The notification service publishes these custom Micrometer counters with a `topic` tag:
+
+- `notification.kafka.consumer.success`
+- `notification.kafka.consumer.failure`
+- `notification.kafka.consumer.retry`
+- `notification.kafka.consumer.dlt`
+
+Spring Boot renders the names in Prometheus format, for example
+`notification_kafka_consumer_success_total`.
+
+The in-progress Resilience4j configuration registers circuit-breaker health indicators for the
+four provider channels. No Prometheus server, dashboards, alert rules, or distributed tracing
+collector are included in the repository.
+
+## Testing and quality checks
+
+```bash
+# Run all tests and build-time checks
 ./mvnw clean verify
 
-# Checkstyle validation
+# Run one module and its required reactor dependencies
+./mvnw -pl aegis-notification-service -am test
+
+# Run Checkstyle explicitly
 ./mvnw checkstyle:check
-
-# Run a specific module
-./mvnw spring-boot:run -pl aegis-eureka-server
 ```
 
-## Startup Order
+The test suite includes JUnit 5 unit and web-layer tests, Spring context tests, ArchUnit boundary
+tests, Kafka integration tests, Prometheus metric tests, and Testcontainers dependencies for
+PostgreSQL, Kafka, and MongoDB integration testing.
 
-1. **Eureka Server** — service registry must be available first
-2. **Config Server** — registers with Eureka, serves configuration
-3. **Notification Service** — fetches config, registers with Eureka
+## Project structure
 
-## Notification Lifecycle
-
-```
-PENDING → QUEUED → PROCESSING → SENT
-                              → SENT_VIA_FALLBACK
-                              → FAILED
-                              → FAILED_CRITICAL
-```
-
-Provider failover: Primary fails → circuit opens → fallback provider → if both fail → DLQ + `FAILED_CRITICAL`
-
-## Project Structure
-
-The project follows **Hexagonal (Ports & Adapters) Architecture** in the notification service:
-
-```
-domain/          → Entities, value objects, enums, business rules (zero framework deps)
-application/     → Use cases, ports, DTOs, orchestration (@Service + @Transactional)
-infrastructure/  → Controllers, JPA repos, adapters, security, resilience config
+```text
+AegisNotify/
+├── aegis-api-gateway/           # Reactive routing and centralized JWT validation
+├── aegis-audit-service/         # Kafka-to-MongoDB audit trail service
+├── aegis-config-server/         # Git-backed Spring Cloud Config server
+├── aegis-eureka-server/         # Service registry
+├── aegis-notification-service/  # Notification domain, API, outbox, Kafka, and providers
+├── mvnw                          # Unix Maven wrapper
+├── mvnw.cmd                      # Windows Maven wrapper
+└── pom.xml                       # Parent build and five-module reactor
 ```
 
-Architectural rules are enforced at build time by ArchUnit tests.
+## Current implementation status
+
+This repository is an active portfolio project, currently version `0.7.0`.
+
+Stable, source-backed building blocks include the domain models, HTTP contracts, PostgreSQL/Flyway
+and MongoDB persistence, audit encryption, Kafka consumers and error handling, provider HTTP
+adapters, service discovery, gateway routing, JWT validation, metrics, and architecture tests.
+
+The following work remains before the documented asynchronous platform is complete:
+
+- Implement `MessageBrokerPort` for publishing notification outbox events to Kafka.
+- Implement `DeadLetterQueuePort` for application-driven critical failures.
+- Add a runtime trigger that invokes `PublishOutboxEventUseCase` and honors
+  `notification.kafka.relay.enabled`.
+- Make the outbox publisher use configured topic names instead of hard-coded defaults.
+- Add template provisioning through a migration, administrative API, or operational process.
+- Expose or intentionally remove the currently internal cancellation, manual retry, and manual DLT
+  use cases.
+- Complete and validate the concurrent Resilience4j/secondary-provider work.
+- Add deployment assets and an end-to-end local environment if the project is intended to run as
+  a complete stack from a fresh checkout.
+
+## Technology stack
+
+- Java 21
+- Spring Boot 3.4.1 and Spring Cloud 2024.0.0
+- Spring MVC, Spring WebFlux/WebClient, Spring Security, and OAuth2 Resource Server
+- Spring Data JPA, PostgreSQL, Flyway, Spring Data MongoDB
+- Apache Kafka and Spring Kafka
+- Netflix Eureka and Spring Cloud Gateway/Config
+- Micrometer and Prometheus registry
+- Resilience4j 2.2.0 in the current in-progress notification-service changes
+- JUnit 5, Spring Boot Test, Spring Kafka Test, Testcontainers, and ArchUnit
+- Maven Wrapper and Google Checkstyle
 
 ## License
 
