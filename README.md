@@ -23,7 +23,7 @@ to run the full platform.
 | Eureka discovery and Git-backed Config Server | Implemented |
 | Prometheus actuator endpoints and Kafka consumer counters | Implemented |
 | Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
-| Provider circuit breakers and secondary-account failover | In progress in the current worktree; not production-ready |
+| Provider circuit breakers and secondary-account failover | Implemented, but still in progress and not production-ready |
 | RabbitMQ transport | Not implemented |
 | Docker Compose or bundled local infrastructure | Not provided |
 
