@@ -54,23 +54,68 @@ notification:
       base-url: ${SENDGRID_BASE_URL:https://api.sendgrid.com}
       api-key: ${SENDGRID_API_KEY:}
       from-address: ${SENDGRID_FROM_ADDRESS:noreply@aegisnotify.com}
+      secondary:
+        base-url: ${SENDGRID_SECONDARY_BASE_URL:https://api.sendgrid.com}
+        api-key: ${SENDGRID_SECONDARY_API_KEY:}
+        from-address: ${SENDGRID_SECONDARY_FROM_ADDRESS:noreply@aegisnotify.com}
     sms:
       base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_SMS_FROM_NUMBER:}
+      secondary:
+        base-url: ${TWILIO_SECONDARY_BASE_URL:https://api.twilio.com}
+        account-sid: ${TWILIO_SECONDARY_ACCOUNT_SID:}
+        auth-token: ${TWILIO_SECONDARY_AUTH_TOKEN:}
+        from-number: ${TWILIO_SECONDARY_SMS_FROM_NUMBER:}
     whatsapp:
       base-url: ${TWILIO_BASE_URL:https://api.twilio.com}
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_WHATSAPP_FROM_NUMBER:}
+      secondary:
+        base-url: ${TWILIO_SECONDARY_BASE_URL:https://api.twilio.com}
+        account-sid: ${TWILIO_SECONDARY_ACCOUNT_SID:}
+        auth-token: ${TWILIO_SECONDARY_AUTH_TOKEN:}
+        from-number: ${TWILIO_SECONDARY_WHATSAPP_FROM_NUMBER:}
     push:
       base-url: ${FCM_BASE_URL:https://fcm.googleapis.com}
       project-id: ${FCM_PROJECT_ID:}
       access-token: ${FCM_ACCESS_TOKEN:}
+      secondary:
+        base-url: ${FCM_SECONDARY_BASE_URL:https://fcm.googleapis.com}
+        project-id: ${FCM_SECONDARY_PROJECT_ID:}
+        access-token: ${FCM_SECONDARY_ACCESS_TOKEN:}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 40
+        slow-call-duration-threshold: 2000ms
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+    instances:
+      email-provider:
+        base-config: default
+      sms-provider:
+        base-config: default
+      whatsapp-provider:
+        base-config: default
+      push-provider:
+        base-config: default
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  health:
+    circuitbreakers:
+      enabled: true

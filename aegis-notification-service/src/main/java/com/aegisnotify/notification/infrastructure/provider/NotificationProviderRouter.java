@@ -1,23 +1,24 @@
 package com.aegisnotify.notification.infrastructure.provider;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
-import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.domain.enums.Channel;
 import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Dispatches notification delivery to the channel-specific provider adapter.
+ * Dispatches notification delivery to the channel-specific primary provider
+ * adapter.
  *
- * <p>This is the sole implementation of {@link NotificationProviderPort} —
- * the concrete channel adapters ({@code SendGridEmailProviderAdapter},
+ * <p>The concrete channel adapters ({@code SendGridEmailProviderAdapter},
  * {@code TwilioSmsProviderAdapter}, {@code TwilioWhatsAppProviderAdapter},
  * {@code FirebasePushProviderAdapter}) are plain classes injected here by
- * concrete type and indexed by {@link Channel} for dispatch, so there is no
- * ambiguity for Spring to resolve wherever {@link NotificationProviderPort}
- * itself is injected (e.g. in {@code ProcessNotificationService}).</p>
+ * concrete type and indexed by {@link Channel} for dispatch. This class is a
+ * plain dispatch collaborator, not a {@code NotificationProviderPort}
+ * implementation — {@link ResilientNotificationProviderAdapter} is the sole
+ * port implementation, wrapping this primary dispatcher with circuit
+ * breaking and secondary-provider failover.</p>
  */
-public class NotificationProviderRouter implements NotificationProviderPort {
+public class NotificationProviderRouter {
 
   private final Map<Channel, ChannelSender> adaptersByChannel;
 
@@ -33,7 +34,6 @@ public class NotificationProviderRouter implements NotificationProviderPort {
     adaptersByChannel.put(Channel.PUSH, pushAdapter::send);
   }
 
-  @Override
   public ProviderResult send(Channel channel, String recipient, String renderedContent,
       String subject) {
     ChannelSender adapter = adaptersByChannel.get(channel);
