@@ -6,6 +6,7 @@ import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
+import com.aegisnotify.notification.application.port.out.NotificationMetricsPort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.application.port.out.TemplateRepository;
@@ -28,17 +29,20 @@ public class CreateNotificationService implements CreateNotificationUseCase {
   private final OutboxEventRepository outboxEventRepository;
   private final NotificationLogRepository notificationLogRepository;
   private final AuditEventPublisherPort auditEventPublisherPort;
+  private final NotificationMetricsPort notificationMetricsPort;
 
   public CreateNotificationService(TemplateRepository templateRepository,
       NotificationRepository notificationRepository,
       OutboxEventRepository outboxEventRepository,
       NotificationLogRepository notificationLogRepository,
-      AuditEventPublisherPort auditEventPublisherPort) {
+      AuditEventPublisherPort auditEventPublisherPort,
+      NotificationMetricsPort notificationMetricsPort) {
     this.templateRepository = templateRepository;
     this.notificationRepository = notificationRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.notificationLogRepository = notificationLogRepository;
     this.auditEventPublisherPort = auditEventPublisherPort;
+    this.notificationMetricsPort = notificationMetricsPort;
   }
 
   @Override
@@ -56,6 +60,7 @@ public class CreateNotificationService implements CreateNotificationUseCase {
     );
 
     Notification saved = notificationRepository.save(notification);
+    notificationMetricsPort.recordRequest(saved.getChannel(), saved.getPriority());
 
     notificationLogRepository.save(
         NotificationLog.create(saved.getId(), LogStatus.PENDING, "Notification accepted")

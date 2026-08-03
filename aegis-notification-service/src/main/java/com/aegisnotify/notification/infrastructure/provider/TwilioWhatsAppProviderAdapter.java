@@ -2,6 +2,7 @@ package com.aegisnotify.notification.infrastructure.provider;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
@@ -25,8 +26,8 @@ public class TwilioWhatsAppProviderAdapter {
   private final String fromNumber;
 
   public TwilioWhatsAppProviderAdapter(WebClient webClient, String accountSid,
-      String fromNumber) {
-    this.client = new TwilioMessageClient(webClient, accountSid, PROVIDER_NAME);
+      String fromNumber, MeterRegistry meterRegistry) {
+    this.client = new TwilioMessageClient(webClient, accountSid, PROVIDER_NAME, meterRegistry);
     this.fromNumber = fromNumber;
   }
 

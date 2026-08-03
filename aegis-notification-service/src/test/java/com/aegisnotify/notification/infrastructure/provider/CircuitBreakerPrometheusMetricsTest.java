@@ -11,6 +11,7 @@ import com.aegisnotify.notification.domain.enums.Channel;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerAutoConfiguration;
 import io.github.resilience4j.springboot3.circuitbreaker.autoconfigure.CircuitBreakerMetricsAutoConfiguration;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -79,9 +80,11 @@ class CircuitBreakerPrometheusMetricsTest {
     ResilientNotificationProviderAdapter resilientNotificationProviderAdapter(
         NotificationProviderRouter notificationProviderRouter,
         Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
-        CircuitBreakerRegistry circuitBreakerRegistry) {
+        CircuitBreakerRegistry circuitBreakerRegistry,
+        MeterRegistry meterRegistry) {
       return new ResilientNotificationProviderAdapter(
-          notificationProviderRouter, secondaryProvidersByChannel, circuitBreakerRegistry);
+          notificationProviderRouter, secondaryProvidersByChannel, circuitBreakerRegistry,
+          meterRegistry);
     }
   }
 }
