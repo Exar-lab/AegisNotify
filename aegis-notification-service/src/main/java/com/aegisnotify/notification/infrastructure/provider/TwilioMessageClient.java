@@ -2,6 +2,8 @@ package com.aegisnotify.notification.infrastructure.provider;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.ProviderResult.Outcome;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,11 +32,14 @@ class TwilioMessageClient {
   private final WebClient webClient;
   private final String accountSid;
   private final String providerName;
+  private final ProviderMetrics metrics;
 
-  TwilioMessageClient(WebClient webClient, String accountSid, String providerName) {
+  TwilioMessageClient(WebClient webClient, String accountSid, String providerName,
+      MeterRegistry meterRegistry) {
     this.webClient = webClient;
     this.accountSid = accountSid;
     this.providerName = providerName;
+    this.metrics = new ProviderMetrics(meterRegistry);
   }
 
   ProviderResult send(String to, String from, String body) {
@@ -43,6 +48,7 @@ class TwilioMessageClient {
     form.add("From", from);
     form.add("Body", body);
 
+    Timer.Sample sample = metrics.startTimer();
     try {
       webClient.post()
           .uri("/2010-04-01/Accounts/{accountSid}/Messages.json", accountSid)
@@ -56,10 +62,14 @@ class TwilioMessageClient {
     } catch (WebClientResponseException ex) {
       log.warn("twilio_send_failed provider={} status={} body={}", providerName,
           ex.getStatusCode(), ex.getResponseBodyAsString());
+      metrics.recordError(providerName, String.valueOf(ex.getStatusCode().value()));
       return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage());
     } catch (Exception ex) {
       log.warn("twilio_send_failed provider={} error={}", providerName, ex.getMessage());
+      metrics.recordError(providerName, ex.getClass().getSimpleName());
       return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage());
+    } finally {
+      metrics.stopTimer(sample, providerName);
     }
   }
 }

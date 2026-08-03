@@ -3,6 +3,8 @@ package com.aegisnotify.notification.infrastructure.provider;
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.ProviderResult.Outcome;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,12 +33,14 @@ public class FirebasePushProviderAdapter {
   private final WebClient webClient;
   private final String projectId;
   private final String accessToken;
+  private final ProviderMetrics metrics;
 
   public FirebasePushProviderAdapter(WebClient webClient, String projectId,
-      String accessToken) {
+      String accessToken, MeterRegistry meterRegistry) {
     this.webClient = webClient;
     this.projectId = projectId;
     this.accessToken = accessToken;
+    this.metrics = new ProviderMetrics(meterRegistry);
   }
 
   public ProviderResult send(Channel channel, String recipient, String renderedContent,
@@ -44,6 +48,7 @@ public class FirebasePushProviderAdapter {
     FcmSendRequest request = new FcmSendRequest(
         new FcmMessage(recipient, new FcmNotification(subject, renderedContent)));
 
+    Timer.Sample sample = metrics.startTimer();
     try {
       webClient.post()
           .uri("/v1/projects/{projectId}/messages:send", projectId)
@@ -57,10 +62,14 @@ public class FirebasePushProviderAdapter {
     } catch (WebClientResponseException ex) {
       log.warn("fcm_send_failed status={} body={}", ex.getStatusCode(),
           ex.getResponseBodyAsString());
+      metrics.recordError(PROVIDER_NAME, String.valueOf(ex.getStatusCode().value()));
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
     } catch (Exception ex) {
       log.warn("fcm_send_failed error={}", ex.getMessage());
+      metrics.recordError(PROVIDER_NAME, ex.getClass().getSimpleName());
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
+    } finally {
+      metrics.stopTimer(sample, PROVIDER_NAME);
     }
   }
 

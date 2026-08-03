@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -19,8 +20,8 @@ class FirebasePushProviderAdapterTest {
             ClientResponse.create(HttpStatus.OK).build()))
         .build();
 
-    FirebasePushProviderAdapter adapter =
-        new FirebasePushProviderAdapter(webClient, "aegis-project", "test-access-token");
+    FirebasePushProviderAdapter adapter = new FirebasePushProviderAdapter(
+        webClient, "aegis-project", "test-access-token", new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.PUSH, "device-token-123", "Hello", "Welcome");
 
@@ -38,8 +39,8 @@ class FirebasePushProviderAdapterTest {
                 .build()))
         .build();
 
-    FirebasePushProviderAdapter adapter =
-        new FirebasePushProviderAdapter(webClient, "aegis-project", "test-access-token");
+    FirebasePushProviderAdapter adapter = new FirebasePushProviderAdapter(
+        webClient, "aegis-project", "test-access-token", new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.PUSH, "device-token-123", "Hello", "Welcome");
 

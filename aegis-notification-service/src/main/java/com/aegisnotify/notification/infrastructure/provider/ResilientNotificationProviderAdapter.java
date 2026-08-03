@@ -7,6 +7,7 @@ import com.aegisnotify.notification.domain.enums.Channel;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -42,18 +43,22 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
       Channel.WHATSAPP, "whatsapp-provider",
       Channel.PUSH, "push-provider"
   );
+  private static final String METER_FALLBACK_TRANSMISSIONS = "aegisnotify.fallback.transmissions";
 
   private final NotificationProviderRouter primaryRouter;
   private final Map<Channel, NotificationProviderPort> secondaryProvidersByChannel;
   private final CircuitBreakerRegistry circuitBreakerRegistry;
+  private final MeterRegistry meterRegistry;
 
   public ResilientNotificationProviderAdapter(
       NotificationProviderRouter primaryRouter,
       Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
-      CircuitBreakerRegistry circuitBreakerRegistry) {
+      CircuitBreakerRegistry circuitBreakerRegistry,
+      MeterRegistry meterRegistry) {
     this.primaryRouter = primaryRouter;
     this.secondaryProvidersByChannel = secondaryProvidersByChannel;
     this.circuitBreakerRegistry = circuitBreakerRegistry;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -86,6 +91,7 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
         secondary.send(channel, recipient, renderedContent, subject);
 
     if (secondaryResult.outcome() == Outcome.SENT) {
+      meterRegistry.counter(METER_FALLBACK_TRANSMISSIONS).increment();
       return new ProviderResult(Outcome.SENT_VIA_FALLBACK, secondaryResult.providerName(), null);
     }
 

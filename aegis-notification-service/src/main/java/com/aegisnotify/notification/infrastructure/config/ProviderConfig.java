@@ -10,6 +10,7 @@ import com.aegisnotify.notification.infrastructure.provider.SendGridEmailProvide
 import com.aegisnotify.notification.infrastructure.provider.TwilioSmsProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.TwilioWhatsAppProviderAdapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.EnumMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,10 +43,11 @@ public class ProviderConfig {
   public SendGridEmailProviderAdapter sendGridEmailProviderAdapter(
       @Value("${notification.providers.email.base-url}") String baseUrl,
       @Value("${notification.providers.email.api-key}") String apiKey,
-      @Value("${notification.providers.email.from-address}") String fromAddress) {
+      @Value("${notification.providers.email.from-address}") String fromAddress,
+      MeterRegistry meterRegistry) {
     requireNonBlank(apiKey, "notification.providers.email.api-key");
     return new SendGridEmailProviderAdapter(
-        WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress);
+        WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
   }
 
   @Bean
@@ -53,11 +55,13 @@ public class ProviderConfig {
       @Value("${notification.providers.sms.base-url}") String baseUrl,
       @Value("${notification.providers.sms.account-sid}") String accountSid,
       @Value("${notification.providers.sms.auth-token}") String authToken,
-      @Value("${notification.providers.sms.from-number}") String fromNumber) {
+      @Value("${notification.providers.sms.from-number}") String fromNumber,
+      MeterRegistry meterRegistry) {
     requireNonBlank(accountSid, "notification.providers.sms.account-sid");
     requireNonBlank(authToken, "notification.providers.sms.auth-token");
     return new TwilioSmsProviderAdapter(
-        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber);
+        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
+        meterRegistry);
   }
 
   @Bean
@@ -65,22 +69,25 @@ public class ProviderConfig {
       @Value("${notification.providers.whatsapp.base-url}") String baseUrl,
       @Value("${notification.providers.whatsapp.account-sid}") String accountSid,
       @Value("${notification.providers.whatsapp.auth-token}") String authToken,
-      @Value("${notification.providers.whatsapp.from-number}") String fromNumber) {
+      @Value("${notification.providers.whatsapp.from-number}") String fromNumber,
+      MeterRegistry meterRegistry) {
     requireNonBlank(accountSid, "notification.providers.whatsapp.account-sid");
     requireNonBlank(authToken, "notification.providers.whatsapp.auth-token");
     return new TwilioWhatsAppProviderAdapter(
-        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber);
+        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
+        meterRegistry);
   }
 
   @Bean
   public FirebasePushProviderAdapter firebasePushProviderAdapter(
       @Value("${notification.providers.push.base-url}") String baseUrl,
       @Value("${notification.providers.push.project-id}") String projectId,
-      @Value("${notification.providers.push.access-token}") String accessToken) {
+      @Value("${notification.providers.push.access-token}") String accessToken,
+      MeterRegistry meterRegistry) {
     requireNonBlank(projectId, "notification.providers.push.project-id");
     requireNonBlank(accessToken, "notification.providers.push.access-token");
     return new FirebasePushProviderAdapter(
-        WebClient.builder().baseUrl(baseUrl).build(), projectId, accessToken);
+        WebClient.builder().baseUrl(baseUrl).build(), projectId, accessToken, meterRegistry);
   }
 
   @Bean
@@ -109,17 +116,18 @@ public class ProviderConfig {
       @Value("${notification.providers.whatsapp.secondary.from-number}") String whatsAppFromNumber,
       @Value("${notification.providers.push.secondary.base-url}") String pushBaseUrl,
       @Value("${notification.providers.push.secondary.project-id}") String pushProjectId,
-      @Value("${notification.providers.push.secondary.access-token}") String pushAccessToken) {
+      @Value("${notification.providers.push.secondary.access-token}") String pushAccessToken,
+      MeterRegistry meterRegistry) {
     Map<Channel, NotificationProviderPort> secondary = new EnumMap<>(Channel.class);
     secondary.put(Channel.EMAIL,
-        secondaryEmail(emailBaseUrl, emailApiKey, emailFromAddress));
+        secondaryEmail(emailBaseUrl, emailApiKey, emailFromAddress, meterRegistry));
     secondary.put(Channel.SMS,
-        secondarySms(smsBaseUrl, smsAccountSid, smsAuthToken, smsFromNumber));
+        secondarySms(smsBaseUrl, smsAccountSid, smsAuthToken, smsFromNumber, meterRegistry));
     secondary.put(Channel.WHATSAPP,
         secondaryWhatsApp(whatsAppBaseUrl, whatsAppAccountSid, whatsAppAuthToken,
-            whatsAppFromNumber));
+            whatsAppFromNumber, meterRegistry));
     secondary.put(Channel.PUSH,
-        secondaryPush(pushBaseUrl, pushProjectId, pushAccessToken));
+        secondaryPush(pushBaseUrl, pushProjectId, pushAccessToken, meterRegistry));
     return Map.copyOf(secondary);
   }
 
@@ -127,49 +135,53 @@ public class ProviderConfig {
   public ResilientNotificationProviderAdapter resilientNotificationProviderAdapter(
       NotificationProviderRouter notificationProviderRouter,
       Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
-      CircuitBreakerRegistry circuitBreakerRegistry) {
+      CircuitBreakerRegistry circuitBreakerRegistry,
+      MeterRegistry meterRegistry) {
     return new ResilientNotificationProviderAdapter(
-        notificationProviderRouter, secondaryProvidersByChannel, circuitBreakerRegistry);
+        notificationProviderRouter, secondaryProvidersByChannel, circuitBreakerRegistry,
+        meterRegistry);
   }
 
   private NotificationProviderPort secondaryEmail(String baseUrl, String apiKey,
-      String fromAddress) {
+      String fromAddress, MeterRegistry meterRegistry) {
     if (apiKey == null || apiKey.isBlank()) {
       return NO_SECONDARY_PROVIDER;
     }
     SendGridEmailProviderAdapter adapter = new SendGridEmailProviderAdapter(
-        WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress);
+        WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
     return adapter::send;
   }
 
   private NotificationProviderPort secondarySms(String baseUrl, String accountSid,
-      String authToken, String fromNumber) {
+      String authToken, String fromNumber, MeterRegistry meterRegistry) {
     if (accountSid == null || accountSid.isBlank() || authToken == null || authToken.isBlank()) {
       return NO_SECONDARY_PROVIDER;
     }
     TwilioSmsProviderAdapter adapter = new TwilioSmsProviderAdapter(
-        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber);
+        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
+        meterRegistry);
     return adapter::send;
   }
 
   private NotificationProviderPort secondaryWhatsApp(String baseUrl, String accountSid,
-      String authToken, String fromNumber) {
+      String authToken, String fromNumber, MeterRegistry meterRegistry) {
     if (accountSid == null || accountSid.isBlank() || authToken == null || authToken.isBlank()) {
       return NO_SECONDARY_PROVIDER;
     }
     TwilioWhatsAppProviderAdapter adapter = new TwilioWhatsAppProviderAdapter(
-        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber);
+        buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
+        meterRegistry);
     return adapter::send;
   }
 
   private NotificationProviderPort secondaryPush(String baseUrl, String projectId,
-      String accessToken) {
+      String accessToken, MeterRegistry meterRegistry) {
     if (projectId == null || projectId.isBlank() || accessToken == null
         || accessToken.isBlank()) {
       return NO_SECONDARY_PROVIDER;
     }
     FirebasePushProviderAdapter adapter = new FirebasePushProviderAdapter(
-        WebClient.builder().baseUrl(baseUrl).build(), projectId, accessToken);
+        WebClient.builder().baseUrl(baseUrl).build(), projectId, accessToken, meterRegistry);
     return adapter::send;
   }
 

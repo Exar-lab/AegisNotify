@@ -13,6 +13,7 @@ import com.aegisnotify.notification.application.dto.CreateNotificationCommand;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
+import com.aegisnotify.notification.application.port.out.NotificationMetricsPort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.application.port.out.TemplateRepository;
@@ -56,6 +57,9 @@ class CreateNotificationServiceTest {
   @Mock
   private AuditEventPublisherPort auditEventPublisherPort;
 
+  @Mock
+  private NotificationMetricsPort notificationMetricsPort;
+
   @InjectMocks
   private CreateNotificationService service;
 
@@ -88,6 +92,7 @@ class CreateNotificationServiceTest {
     verify(notificationRepository).save(any(Notification.class));
     verify(outboxEventRepository).save(any(OutboxEvent.class));
     verify(notificationLogRepository).save(any(NotificationLog.class));
+    verify(notificationMetricsPort).recordRequest(Channel.EMAIL, Priority.HIGH);
   }
 
   @Test

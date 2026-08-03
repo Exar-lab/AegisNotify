@@ -17,6 +17,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker.State;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,7 @@ class ResilientNotificationProviderAdapterTest {
 
   private NotificationProviderRouter primaryRouter;
   private CircuitBreakerRegistry circuitBreakerRegistry;
+  private SimpleMeterRegistry meterRegistry;
   private ResilientNotificationProviderAdapter adapter;
 
   @BeforeEach
@@ -50,9 +52,11 @@ class ResilientNotificationProviderAdapterTest {
         .automaticTransitionFromOpenToHalfOpenEnabled(false)
         .build();
     circuitBreakerRegistry = CircuitBreakerRegistry.of(config);
+    meterRegistry = new SimpleMeterRegistry();
 
     adapter = new ResilientNotificationProviderAdapter(
-        primaryRouter, Map.of(Channel.EMAIL, secondaryProvider), circuitBreakerRegistry);
+        primaryRouter, Map.of(Channel.EMAIL, secondaryProvider), circuitBreakerRegistry,
+        meterRegistry);
   }
 
   @Test
@@ -77,6 +81,8 @@ class ResilientNotificationProviderAdapterTest {
 
     assertThat(result.outcome()).isEqualTo(Outcome.SENT_VIA_FALLBACK);
     assertThat(result.providerName()).isEqualTo("SendGrid-secondary");
+    assertThat(meterRegistry.counter("aegisnotify.fallback.transmissions").count())
+        .isEqualTo(1.0d);
   }
 
   @Test
