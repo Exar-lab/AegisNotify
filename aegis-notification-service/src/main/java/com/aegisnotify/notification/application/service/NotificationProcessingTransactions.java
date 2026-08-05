@@ -3,6 +3,7 @@ package com.aegisnotify.notification.application.service;
 import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -66,7 +67,10 @@ public class NotificationProcessingTransactions {
     Template template = templateRepository.findActiveByName(processing.getTemplateName())
         .orElseThrow(() -> new TemplateNotFoundException(processing.getTemplateName()));
 
-    String renderedBody = templateRenderer.render(template.getBody(), processing.getParameters());
+    TemplateRenderRequest request = new TemplateRenderRequest(
+        template.getBody(), processing.getParameters(), template.getVariables(),
+        template.getChannel());
+    String renderedBody = templateRenderer.render(request);
 
     return new PreparedNotification(processing, template.getSubject(), renderedBody);
   }

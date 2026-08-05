@@ -2,6 +2,7 @@ package com.aegisnotify.notification.application.service;
 
 import com.aegisnotify.notification.application.dto.RenderTemplateCommand;
 import com.aegisnotify.notification.application.dto.RenderedTemplateResponse;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.in.RenderTemplateUseCase;
 import com.aegisnotify.notification.application.port.out.TemplateRenderer;
 import com.aegisnotify.notification.application.port.out.TemplateRepository;
@@ -26,7 +27,9 @@ public class RenderTemplateService implements RenderTemplateUseCase {
     Template template = templateRepository.findActiveByName(command.templateName())
         .orElseThrow(() -> new TemplateNotFoundException(command.templateName()));
 
-    String renderedBody = templateRenderer.render(template.getBody(), command.parameters());
+    TemplateRenderRequest request = new TemplateRenderRequest(
+        template.getBody(), command.parameters(), template.getVariables(), template.getChannel());
+    String renderedBody = templateRenderer.render(request);
 
     return new RenderedTemplateResponse(
         template.getName(),

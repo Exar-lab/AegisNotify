@@ -3,13 +3,12 @@ package com.aegisnotify.notification.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -85,7 +84,7 @@ class NotificationProcessingTransactionsTest {
         .thenAnswer(invocation -> invocation.getArgument(0));
     when(templateRepository.findActiveByName("welcome"))
         .thenReturn(Optional.of(template));
-    when(templateRenderer.render(anyString(), anyMap()))
+    when(templateRenderer.render(any(TemplateRenderRequest.class)))
         .thenReturn("Hello John");
     when(notificationLogRepository.save(any(NotificationLog.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -99,6 +98,15 @@ class NotificationProcessingTransactionsTest {
     ArgumentCaptor<AuditEventMessage> captor = ArgumentCaptor.forClass(AuditEventMessage.class);
     Mockito.verify(auditEventPublisherPort).publish(captor.capture());
     assertEquals("PROCESSING", captor.getValue().status());
+
+    ArgumentCaptor<TemplateRenderRequest> renderCaptor =
+        ArgumentCaptor.forClass(TemplateRenderRequest.class);
+    Mockito.verify(templateRenderer).render(renderCaptor.capture());
+    TemplateRenderRequest request = renderCaptor.getValue();
+    assertEquals("Hello {{name}}", request.templateBody());
+    assertEquals(Map.of("name", "John"), request.parameters());
+    assertEquals(List.of("name"), request.requiredVariables());
+    assertEquals(Channel.EMAIL, request.channel());
   }
 
   @Test
