@@ -3,6 +3,7 @@ package com.aegisnotify.notification.infrastructure.web;
 import com.aegisnotify.notification.domain.exception.InvalidRecipientException;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
 import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
+import com.aegisnotify.notification.domain.exception.TemplateRenderingException;
 import com.aegisnotify.notification.infrastructure.web.dto.ApiErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,16 @@ public class GlobalExceptionHandler {
         .body(ApiErrorResponse.of(
             HttpStatus.NOT_FOUND.value(),
             "Not Found",
+            ex.getMessage()));
+  }
+
+  @ExceptionHandler(TemplateRenderingException.class)
+  public ResponseEntity<ApiErrorResponse> handleTemplateRendering(
+      TemplateRenderingException ex) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        .body(ApiErrorResponse.of(
+            HttpStatus.UNPROCESSABLE_ENTITY.value(),
+            "Unprocessable Entity",
             ex.getMessage()));
   }
 
