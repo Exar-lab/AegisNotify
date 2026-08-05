@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,8 @@ class TwilioWhatsAppProviderAdapterTest {
         .build();
 
     TwilioWhatsAppProviderAdapter adapter =
-        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001");
+        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001",
+            new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.WHATSAPP, "+34600000002", "Hello", "Welcome");
 
@@ -52,7 +54,8 @@ class TwilioWhatsAppProviderAdapterTest {
         .build();
 
     TwilioWhatsAppProviderAdapter adapter =
-        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001");
+        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001",
+            new SimpleMeterRegistry());
 
     adapter.send(Channel.WHATSAPP, "+34600000002", "Hello", "Welcome");
 
@@ -95,7 +98,8 @@ class TwilioWhatsAppProviderAdapterTest {
         .build();
 
     TwilioWhatsAppProviderAdapter adapter =
-        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001");
+        new TwilioWhatsAppProviderAdapter(webClient, "AC-test-sid", "+34600000001",
+            new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.WHATSAPP, "+34600000002", "Hello", "Welcome");
 

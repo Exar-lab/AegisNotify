@@ -3,6 +3,8 @@ package com.aegisnotify.notification.infrastructure.provider;
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.ProviderResult.Outcome;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.List;
 import org.slf4j.Logger;
@@ -29,11 +31,14 @@ public class SendGridEmailProviderAdapter {
   private final WebClient webClient;
   private final String apiKey;
   private final String fromAddress;
+  private final ProviderMetrics metrics;
 
-  public SendGridEmailProviderAdapter(WebClient webClient, String apiKey, String fromAddress) {
+  public SendGridEmailProviderAdapter(WebClient webClient, String apiKey, String fromAddress,
+      MeterRegistry meterRegistry) {
     this.webClient = webClient;
     this.apiKey = apiKey;
     this.fromAddress = fromAddress;
+    this.metrics = new ProviderMetrics(meterRegistry);
   }
 
   public ProviderResult send(Channel channel, String recipient, String renderedContent,
@@ -45,6 +50,7 @@ public class SendGridEmailProviderAdapter {
         List.of(new Content("text/html", renderedContent))
     );
 
+    Timer.Sample sample = metrics.startTimer();
     try {
       webClient.post()
           .uri("/v3/mail/send")
@@ -58,10 +64,14 @@ public class SendGridEmailProviderAdapter {
     } catch (WebClientResponseException ex) {
       log.warn("sendgrid_send_failed status={} body={}", ex.getStatusCode(),
           ex.getResponseBodyAsString());
+      metrics.recordError(PROVIDER_NAME, String.valueOf(ex.getStatusCode().value()));
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
     } catch (Exception ex) {
       log.warn("sendgrid_send_failed error={}", ex.getMessage());
+      metrics.recordError(PROVIDER_NAME, ex.getClass().getSimpleName());
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
+    } finally {
+      metrics.stopTimer(sample, PROVIDER_NAME);
     }
   }
 
