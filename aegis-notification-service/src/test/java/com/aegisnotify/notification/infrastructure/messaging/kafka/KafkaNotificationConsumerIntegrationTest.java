@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.aegisnotify.notification.NotificationServiceApplication;
 import com.aegisnotify.notification.application.dto.NotificationEvent;
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
@@ -135,7 +136,7 @@ class KafkaNotificationConsumerIntegrationTest {
     notificationRepository.save(notification);
 
     CountDownLatch processingObserved = new CountDownLatch(1);
-    Mockito.when(templateRenderer.render(Mockito.anyString(), Mockito.anyMap()))
+    Mockito.when(templateRenderer.render(Mockito.any(TemplateRenderRequest.class)))
         .thenReturn("rendered-body");
     Mockito.when(notificationProviderPort.send(Mockito.any(), Mockito.anyString(),
         Mockito.anyString(), Mockito.anyString())).thenAnswer(invocation -> {
