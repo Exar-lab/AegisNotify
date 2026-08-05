@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.domain.enums.Channel;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -20,7 +21,8 @@ class TwilioSmsProviderAdapterTest {
         .build();
 
     TwilioSmsProviderAdapter adapter =
-        new TwilioSmsProviderAdapter(webClient, "AC-test-sid", "+34600000001");
+        new TwilioSmsProviderAdapter(webClient, "AC-test-sid", "+34600000001",
+            new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.SMS, "+34600000002", "Hello", "Welcome");
 
@@ -39,7 +41,8 @@ class TwilioSmsProviderAdapterTest {
         .build();
 
     TwilioSmsProviderAdapter adapter =
-        new TwilioSmsProviderAdapter(webClient, "AC-test-sid", "+34600000001");
+        new TwilioSmsProviderAdapter(webClient, "AC-test-sid", "+34600000001",
+            new SimpleMeterRegistry());
 
     ProviderResult result = adapter.send(Channel.SMS, "+34600000002", "Hello", "Welcome");
 

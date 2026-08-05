@@ -32,10 +32,14 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@v1
+        # Pinned to a known-good commit instead of the floating @v1 tag.
+        # @v1 currently resolves to a regressed build that hard-fails with
+        # is_error:true on every run before any API call (see
+        # anthropics/claude-code-action#914, #965, #980, #1013). Revert to
+        # @v1 once upstream ships a fix.
+        uses: anthropics/claude-code-action@536f2c32a39763739000b0e1ac69ca2647d97ce9
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          show_full_output: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
