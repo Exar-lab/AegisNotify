@@ -2,10 +2,12 @@ package com.aegisnotify.notification.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.aegisnotify.notification.application.dto.RenderTemplateCommand;
 import com.aegisnotify.notification.application.dto.RenderedTemplateResponse;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.TemplateRenderer;
 import com.aegisnotify.notification.application.port.out.TemplateRepository;
 import com.aegisnotify.notification.application.service.RenderTemplateService;
@@ -19,8 +21,10 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +50,7 @@ class RenderTemplateServiceTest {
 
     when(templateRepository.findActiveByName("welcome"))
         .thenReturn(Optional.of(template));
-    when(templateRenderer.render("Hello {{name}}", parameters))
+    when(templateRenderer.render(any(TemplateRenderRequest.class)))
         .thenReturn("Hello John");
 
     RenderTemplateCommand command = new RenderTemplateCommand("welcome", parameters);
@@ -55,6 +59,15 @@ class RenderTemplateServiceTest {
     assertEquals("welcome", response.templateName());
     assertEquals("Welcome!", response.subject());
     assertEquals("Hello John", response.renderedBody());
+
+    ArgumentCaptor<TemplateRenderRequest> captor =
+        ArgumentCaptor.forClass(TemplateRenderRequest.class);
+    Mockito.verify(templateRenderer).render(captor.capture());
+    TemplateRenderRequest request = captor.getValue();
+    assertEquals("Hello {{name}}", request.templateBody());
+    assertEquals(parameters, request.parameters());
+    assertEquals(List.of("name"), request.requiredVariables());
+    assertEquals(Channel.EMAIL, request.channel());
   }
 
   @Test

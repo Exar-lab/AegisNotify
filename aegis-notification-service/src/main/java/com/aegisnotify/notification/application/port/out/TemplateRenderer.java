@@ -1,8 +1,8 @@
 package com.aegisnotify.notification.application.port.out;
 
-import java.util.Map;
+import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 
 public interface TemplateRenderer {
 
-  String render(String templateBody, Map<String, Object> parameters);
+  String render(TemplateRenderRequest request);
 }

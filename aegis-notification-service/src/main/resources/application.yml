@@ -35,6 +35,10 @@ audit:
   topic: notification-audit-events
 
 notification:
+  template:
+    cache:
+      maximum-size: ${NOTIFICATION_TEMPLATE_CACHE_MAX_SIZE:500}
+      expire-after-write: ${NOTIFICATION_TEMPLATE_CACHE_TTL:PT1H}
   kafka:
     relay:
       enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}
