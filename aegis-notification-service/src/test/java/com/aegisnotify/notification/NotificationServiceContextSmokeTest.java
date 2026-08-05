@@ -3,7 +3,6 @@ package com.aegisnotify.notification;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
-import com.aegisnotify.notification.application.port.out.TemplateRenderer;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
@@ -18,9 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 class NotificationServiceContextSmokeTest {
 
   // Context-only smoke test: adapter behavior is covered by dedicated tests.
-
-  @MockitoBean
-  private TemplateRenderer templateRenderer;
+  // TemplateRenderer is intentionally NOT mocked here — the real
+  // MustacheTemplateRenderer bean must boot successfully (issue #26).
 
   @MockitoBean
   private TemplateRepositoryAdapter templateRepositoryAdapter;
