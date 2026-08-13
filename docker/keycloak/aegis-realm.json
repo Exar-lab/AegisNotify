@@ -1,0 +1,90 @@
+{
+  "realm": "aegis",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clientScopes": [
+    {
+      "name": "notification:write",
+      "description": "Submit notifications for delivery (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "notification:read",
+      "description": "Read notification delivery status (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "audit:read",
+      "description": "Read the audit trail (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user:read",
+      "description": "List/query managed users (docs/security/scopes.md, forward-looking)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user:admin",
+      "description": "Create/update/disable managed users (docs/security/scopes.md, forward-looking)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "aegis-dev-cli",
+      "name": "Local dev password-grant client",
+      "description": "Used by the documented local JWT retrieval curl (README). Not for production use.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "defaultClientScopes": [
+        "notification:write",
+        "notification:read",
+        "audit:read",
+        "user:read",
+        "user:admin"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "aegis-dev",
+      "email": "aegis-dev@example.local",
+      "firstName": "Aegis",
+      "lastName": "Dev",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev123",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
