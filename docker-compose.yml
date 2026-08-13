@@ -1,0 +1,25 @@
+# Local development infrastructure for AegisNotify (issue #74 / #38).
+#
+# Scope note: this compose file is intentionally Keycloak-only for now. The
+# app services (gateway, notification, audit, eureka, config-server) keep
+# running on the host and already default their `jwk-set-uri` to
+# http://localhost:8088/realms/aegis/protocol/openid-connect/certs, so no
+# `depends_on` wiring or app-container coupling is needed here (design
+# decision A9). Postgres/MongoDB/Kafka+Zookeeper and the app containers
+# themselves are tracked separately as a future `docker-compose.full.yml`
+# (issue #38 follow-up) — out of scope for this slice.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: aegis-keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8088:8080"
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+    # No healthcheck: nothing in this compose file depends_on Keycloak (A9),
+    # and the base image ships no curl/wget to probe with.
