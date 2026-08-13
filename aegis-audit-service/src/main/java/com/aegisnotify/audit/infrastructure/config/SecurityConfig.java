@@ -1,5 +1,6 @@
 package com.aegisnotify.audit.infrastructure.config;
 
+import com.aegisnotify.audit.infrastructure.security.SecurityScopes;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -21,7 +22,8 @@ public class SecurityConfig {
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus")
             .permitAll()
-            .requestMatchers("/api/v1/audit/**").authenticated()
+            .requestMatchers("/api/v1/audit/**")
+            .hasAuthority(SecurityScopes.authority(SecurityScopes.AUDIT_READ))
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
     return http.build();
