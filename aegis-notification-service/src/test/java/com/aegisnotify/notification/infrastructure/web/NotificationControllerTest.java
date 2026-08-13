@@ -159,7 +159,7 @@ class NotificationControllerTest {
         .thenReturn(statusResponse);
 
     mockMvc.perform(get("/api/v1/notifications/{id}/status", notificationId)
-            .with(jwt()))
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(notificationId.toString()))
         .andExpect(jsonPath("$.channel").value("EMAIL"))
@@ -175,7 +175,7 @@ class NotificationControllerTest {
         .thenThrow(new NotificationNotFoundException(notificationId));
 
     mockMvc.perform(get("/api/v1/notifications/{id}/status", notificationId)
-            .with(jwt()))
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
         .andExpect(status().isNotFound());
   }
 
@@ -185,5 +185,14 @@ class NotificationControllerTest {
 
     mockMvc.perform(get("/api/v1/notifications/{id}/status", notificationId))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void getStatus_missingRequiredScope_returns403() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+
+    mockMvc.perform(get("/api/v1/notifications/{id}/status", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isForbidden());
   }
 }

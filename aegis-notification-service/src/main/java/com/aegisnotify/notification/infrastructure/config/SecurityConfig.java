@@ -1,5 +1,6 @@
 package com.aegisnotify.notification.infrastructure.config;
 
+import com.aegisnotify.notification.infrastructure.security.SecurityScopes;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,7 +24,9 @@ public class SecurityConfig {
             .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus")
             .permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/notifications")
-            .hasAuthority("SCOPE_notification:write")
+            .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_WRITE))
+            .requestMatchers(HttpMethod.GET, "/api/v1/notifications/*/status")
+            .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_READ))
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
     return http.build();

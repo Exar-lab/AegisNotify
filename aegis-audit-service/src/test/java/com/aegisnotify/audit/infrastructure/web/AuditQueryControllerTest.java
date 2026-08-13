@@ -59,7 +59,7 @@ class AuditQueryControllerTest {
 
     mockMvc.perform(
             get("/api/v1/audit/{notificationId}", notificationId)
-                .with(jwt()))
+                .with(jwt().authorities(() -> "SCOPE_audit:read")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.notificationId")
             .value(notificationId.toString()))
@@ -77,7 +77,7 @@ class AuditQueryControllerTest {
 
     mockMvc.perform(
             get("/api/v1/audit/{notificationId}", notificationId)
-                .with(jwt()))
+                .with(jwt().authorities(() -> "SCOPE_audit:read")))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").exists());
   }
@@ -89,6 +89,16 @@ class AuditQueryControllerTest {
     mockMvc.perform(
             get("/api/v1/audit/{notificationId}", notificationId))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void getByNotificationId_missingRequiredScope_returns403() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+
+    mockMvc.perform(
+            get("/api/v1/audit/{notificationId}", notificationId)
+                .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -107,7 +117,7 @@ class AuditQueryControllerTest {
         .thenReturn(pagedResponse);
 
     mockMvc.perform(get("/api/v1/audit")
-            .with(jwt())
+            .with(jwt().authorities(() -> "SCOPE_audit:read"))
             .param("channel", "EMAIL")
             .param("from", "2026-01-01T00:00:00Z"))
         .andExpect(status().isOk())
@@ -127,7 +137,8 @@ class AuditQueryControllerTest {
     when(searchAuditEventsUseCase.search(any(AuditSearchQuery.class)))
         .thenReturn(emptyResponse);
 
-    mockMvc.perform(get("/api/v1/audit").with(jwt()))
+    mockMvc.perform(get("/api/v1/audit")
+            .with(jwt().authorities(() -> "SCOPE_audit:read")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content.length()").value(0))
         .andExpect(jsonPath("$.totalElements").value(0));
