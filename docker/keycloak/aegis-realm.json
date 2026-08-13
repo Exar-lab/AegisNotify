@@ -74,6 +74,8 @@
     {
       "username": "aegis-dev",
       "email": "aegis-dev@example.local",
+      "firstName": "Aegis",
+      "lastName": "Dev",
       "enabled": true,
       "emailVerified": true,
       "credentials": [
