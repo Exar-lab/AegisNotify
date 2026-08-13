@@ -25,6 +25,7 @@ to run the full platform.
 
 - [At a glance](#at-a-glance)
 - [Quick start](#quick-start)
+- [Local authentication (Keycloak)](#local-authentication-keycloak)
 - [System topology](#system-topology)
 - [Notification processing](#notification-processing)
 - [Services and HTTP API](#services)
@@ -50,7 +51,7 @@ to run the full platform.
 | Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
 | Provider circuit breakers and secondary-account failover | Implemented and unit-tested; production and end-to-end validation remain |
 | RabbitMQ transport | Not implemented |
-| Docker Compose or bundled local infrastructure | Not provided |
+| Docker Compose or bundled local infrastructure | Keycloak only (`docker-compose.yml`); Postgres, MongoDB, Kafka, and Zookeeper are not yet included |
 
 ## Quick start
 
@@ -58,11 +59,14 @@ to run the full platform.
 
 - JDK 21
 - Docker, if running Testcontainers-based integration tests
+- `jq`, to extract the access token from the Keycloak password-grant response in the
+  [Local authentication (Keycloak)](#local-authentication-keycloak) examples
 - PostgreSQL 15 or newer for `aegis-notification-service`
 - Apache Kafka for notification processing and audit events
 - MongoDB for `aegis-audit-service`
 - An OpenID Connect provider that exposes a JWKS endpoint; the defaults expect a Keycloak realm
-  at `http://localhost:8088/realms/aegis`
+  at `http://localhost:8088/realms/aegis`. `docker-compose.yml` can start this realm locally —
+  see [Local authentication (Keycloak)](#local-authentication-keycloak) below.
 - Valid SendGrid, Twilio, and Firebase Cloud Messaging credentials to start the notification
   service in its current configuration
 
@@ -100,10 +104,94 @@ The Eureka server has no external datastore and is the simplest module to run:
 Open `http://localhost:8761` after it starts.
 
 The remaining services require the dependencies and environment variables described below.
-There is currently no Docker Compose file in the repository. In addition, the notification
-service still requires concrete implementations of `MessageBrokerPort` and
+`docker-compose.yml` in the repository root starts a local Keycloak instance with the `aegis`
+realm auto-imported (see [Local authentication (Keycloak)](#local-authentication-keycloak)
+below); it does not yet start Postgres, MongoDB, Kafka, or Zookeeper. In addition, the
+notification service still requires concrete implementations of `MessageBrokerPort` and
 `DeadLetterQueuePort`, plus a trigger for `PublishOutboxEventUseCase`, before the repository can
 execute the complete submit-to-delivery flow without test doubles.
+
+## Local authentication (Keycloak)
+
+`docker-compose.yml` starts a local Keycloak instance with the `aegis` realm auto-imported from
+[`docker/keycloak/aegis-realm.json`](docker/keycloak/aegis-realm.json). The realm ships all 5
+client scopes (`notification:write`, `notification:read`, `audit:read`, `user:read`,
+`user:admin`), a public `aegis-dev-cli` client with direct-access-grants enabled, and a test user
+(`aegis-dev` / `dev123`, local development only). This is the same Keycloak instance the
+`JWKS_URI` default above points to. See [`docs/security/scopes.md`](docs/security/scopes.md) for
+the full scope contract.
+
+Start it:
+
+```bash
+docker compose up -d keycloak
+```
+
+Once it is up, confirm the realm imported by checking the discovery endpoint:
+
+```bash
+curl -s http://localhost:8088/realms/aegis/.well-known/openid-configuration
+```
+
+Obtain a local access token with the password grant:
+
+```bash
+curl -s -X POST http://localhost:8088/realms/aegis/protocol/openid-connect/token \
+  -d "grant_type=password" \
+  -d "client_id=aegis-dev-cli" \
+  -d "username=aegis-dev" \
+  -d "password=dev123" \
+  -d "scope=notification:write notification:read audit:read user:read user:admin"
+```
+
+The response's `access_token` value is a JWT usable as `Authorization: Bearer <token>` against
+any endpoint in [HTTP API](#http-api). For example, to submit a notification:
+
+```bash
+ACCESS_TOKEN=$(curl -s -X POST http://localhost:8088/realms/aegis/protocol/openid-connect/token \
+  -d "grant_type=password" \
+  -d "client_id=aegis-dev-cli" \
+  -d "username=aegis-dev" \
+  -d "password=dev123" \
+  -d "scope=notification:write notification:read audit:read user:read user:admin" \
+  | jq -r .access_token)
+
+curl -i -X POST http://localhost:8080/api/v1/notifications \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "EMAIL",
+    "recipient": "user@example.com",
+    "templateName": "welcome-email",
+    "parameters": {
+      "name": "Ada"
+    },
+    "priority": "HIGH"
+  }'
+```
+
+`aegis-dev-cli` and `aegis-dev` exist only for local development — see
+[`docker/keycloak/aegis-realm.json`](docker/keycloak/aegis-realm.json) for the exact client and
+user definitions. If scopes drift after editing `aegis-realm.json`, re-import the realm with
+`docker compose down -v && docker compose up -d keycloak`.
+
+Reference screenshots of the Keycloak admin console (placeholders below — to be replaced with
+real captures):
+
+> 📸 Screenshot pending: Keycloak realm overview
+> (`docs/security/screenshots/TODO-realm-overview.png`)
+
+> 📸 Screenshot pending: Keycloak client scopes list
+> (`docs/security/screenshots/TODO-client-scopes.png`)
+
+> 📸 Screenshot pending: aegis-dev-cli client configuration
+> (`docs/security/screenshots/TODO-dev-cli-client.png`)
+
+> 📸 Screenshot pending: aegis-dev test user
+> (`docs/security/screenshots/TODO-dev-user.png`)
+
+> 📸 Screenshot pending: Successful token response
+> (`docs/security/screenshots/TODO-token-response.png`)
 
 ## System topology
 
@@ -433,8 +521,9 @@ Recipient values are encrypted with AES-GCM before persistence. Production start
 | Audit service | Stateless JWT resource server; audit queries require authentication |
 | Config Server | HTTP Basic authentication using environment-provided credentials |
 
-The default JWKS URI points to Keycloak, but Keycloak configuration is not included in this
-repository. Supply `JWKS_URI` to use another compatible OpenID Connect provider.
+The default JWKS URI points to a local Keycloak instance; see
+[Local authentication (Keycloak)](#local-authentication-keycloak) for how to run it. Supply
+`JWKS_URI` to use another compatible OpenID Connect provider.
 
 Actuator `health`, `info`, and `prometheus` endpoints are public in the notification and audit
 services. Review that exposure before production deployment.
