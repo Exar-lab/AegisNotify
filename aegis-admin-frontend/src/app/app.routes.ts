@@ -1,3 +1,55 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: 'dashboard',
+  },
+  {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./features/dashboard/pages/dashboard.page').then(
+        (m) => m.DashboardPage,
+      ),
+  },
+  {
+    path: 'notifications',
+    loadComponent: () =>
+      import('./features/notifications/pages/notifications.page').then(
+        (m) => m.NotificationsPage,
+      ),
+  },
+  {
+    path: 'notifications/:id',
+    loadComponent: () =>
+      import('./features/notifications/pages/notification-detail.page').then(
+        (m) => m.NotificationDetailPage,
+      ),
+  },
+  {
+    path: 'providers',
+    loadComponent: () =>
+      import('./features/providers/pages/providers.page').then(
+        (m) => m.ProvidersPage,
+      ),
+  },
+  {
+    path: 'metrics',
+    loadComponent: () =>
+      import('./features/metrics/pages/metrics.page').then(
+        (m) => m.MetricsPage,
+      ),
+  },
+  {
+    path: 'settings',
+    loadComponent: () =>
+      import('./features/settings/pages/settings.page').then(
+        (m) => m.SettingsPage,
+      ),
+  },
+  {
+    path: '**',
+    redirectTo: 'dashboard',
+  },
+];
