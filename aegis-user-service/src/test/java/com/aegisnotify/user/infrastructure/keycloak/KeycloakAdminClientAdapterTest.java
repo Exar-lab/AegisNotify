@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 
+import com.aegisnotify.user.application.dto.NewUser;
 import com.aegisnotify.user.application.dto.PagedResult;
+import com.aegisnotify.user.application.dto.UserUpdate;
+import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserDirectoryUnavailableException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
 import com.aegisnotify.user.domain.model.ManagedUser;
@@ -178,5 +181,150 @@ class KeycloakAdminClientAdapterTest {
     assertThatThrownBy(() -> shortTimeoutAdapter.findById("u-1"))
         .isInstanceOf(UserDirectoryUnavailableException.class)
         .hasCauseInstanceOf(WebClientRequestException.class);
+  }
+
+  // --- Slice 5b: mutation methods ---
+
+  @Test
+  void create_success_returnsCreatedUserWithIdParsedFromLocationHeader() {
+    server.enqueue(new MockResponse()
+        .setResponseCode(201)
+        .addHeader("Location",
+            "http://localhost:" + server.getPort() + "/admin/realms/aegis/users/u-new"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"id\":\"u-new\",\"username\":\"newuser\",\"email\":\"newuser@example.com\","
+            + "\"firstName\":\"New\",\"lastName\":\"User\",\"enabled\":true,"
+            + "\"createdTimestamp\":1700000000000}"));
+
+    ManagedUser created = adapter.create(
+        new NewUser("newuser", "newuser@example.com", "New", "User"));
+
+    assertThat(created.id()).isEqualTo("u-new");
+    assertThat(created.username()).isEqualTo("newuser");
+    assertThat(created.enabled()).isTrue();
+  }
+
+  @Test
+  void create_conflict_throwsUserAlreadyExistsException() {
+    server.enqueue(new MockResponse().setResponseCode(409));
+
+    assertThatThrownBy(
+        () -> adapter.create(new NewUser("dup", "dup@example.com", "Dup", "User")))
+        .isInstanceOf(UserAlreadyExistsException.class);
+  }
+
+  @Test
+  void create_missingLocationHeader_throwsUserDirectoryUnavailableException() {
+    server.enqueue(new MockResponse().setResponseCode(201));
+
+    assertThatThrownBy(
+        () -> adapter.create(new NewUser("newuser", "newuser@example.com", "New", "User")))
+        .isInstanceOf(UserDirectoryUnavailableException.class);
+  }
+
+  @Test
+  void create_unauthorized_throwsUserDirectoryUnavailableExceptionAndInvalidatesToken() {
+    server.enqueue(new MockResponse().setResponseCode(401));
+
+    assertThatThrownBy(
+        () -> adapter.create(new NewUser("newuser", "newuser@example.com", "New", "User")))
+        .isInstanceOf(UserDirectoryUnavailableException.class);
+
+    verify(tokenProvider).invalidate();
+  }
+
+  @Test
+  void update_success_returnsUpdatedUser() {
+    server.enqueue(new MockResponse().setResponseCode(204));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"updated@example.com\","
+            + "\"firstName\":\"Janet\",\"lastName\":\"Doe\",\"enabled\":true,"
+            + "\"createdTimestamp\":1700000000000}"));
+
+    ManagedUser updated = adapter.update(
+        "u-1", new UserUpdate("updated@example.com", "Janet", "Doe"));
+
+    assertThat(updated.email()).isEqualTo("updated@example.com");
+    assertThat(updated.firstName()).isEqualTo("Janet");
+  }
+
+  @Test
+  void update_notFound_throwsUserNotFoundException() {
+    server.enqueue(new MockResponse().setResponseCode(404));
+
+    assertThatThrownBy(
+        () -> adapter.update("missing", new UserUpdate("e@example.com", "F", "L")))
+        .isInstanceOf(UserNotFoundException.class);
+  }
+
+  @Test
+  void setEnabled_disable_returnsUserWithEnabledFalse() {
+    server.enqueue(new MockResponse().setResponseCode(204));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
+            + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":false,"
+            + "\"createdTimestamp\":1700000000000}"));
+
+    ManagedUser result = adapter.setEnabled("u-1", false);
+
+    assertThat(result.enabled()).isFalse();
+  }
+
+  @Test
+  void setEnabled_alreadyDisabled_idempotentSucceedsAgain() {
+    // Idempotent disable: Keycloak's PUT succeeds (204) even when the user
+    // is already enabled=false; no special-case handling needed here.
+    server.enqueue(new MockResponse().setResponseCode(204));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
+            + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":false,"
+            + "\"createdTimestamp\":1700000000000}"));
+
+    ManagedUser result = adapter.setEnabled("u-1", false);
+
+    assertThat(result.enabled()).isFalse();
+  }
+
+  @Test
+  void setEnabled_notFound_throwsUserNotFoundException() {
+    server.enqueue(new MockResponse().setResponseCode(404));
+
+    assertThatThrownBy(() -> adapter.setEnabled("missing", false))
+        .isInstanceOf(UserNotFoundException.class);
+  }
+
+  @Test
+  void resetPassword_success_completesWithoutError() {
+    server.enqueue(new MockResponse().setResponseCode(204));
+
+    adapter.resetPassword("u-1", "NewPassw0rd!", true);
+
+    assertThat(server.getRequestCount()).isEqualTo(1);
+  }
+
+  @Test
+  void resetPassword_notFound_throwsUserNotFoundException() {
+    server.enqueue(new MockResponse().setResponseCode(404));
+
+    assertThatThrownBy(() -> adapter.resetPassword("missing", "NewPassw0rd!", true))
+        .isInstanceOf(UserNotFoundException.class);
+  }
+
+  @Test
+  void resetPassword_forbidden_throwsUserDirectoryUnavailableExceptionAndInvalidatesToken() {
+    server.enqueue(new MockResponse().setResponseCode(403));
+
+    assertThatThrownBy(() -> adapter.resetPassword("u-1", "NewPassw0rd!", true))
+        .isInstanceOf(UserDirectoryUnavailableException.class);
+
+    verify(tokenProvider).invalidate();
   }
 }

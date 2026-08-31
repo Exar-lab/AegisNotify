@@ -1,5 +1,6 @@
 package com.aegisnotify.user.infrastructure.web;
 
+import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserDirectoryUnavailableException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
 import java.time.Instant;
@@ -23,6 +24,11 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(UserNotFoundException.class)
   public ResponseEntity<Map<String, Object>> handleNotFound(UserNotFoundException ex) {
     return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(UserAlreadyExistsException.class)
+  public ResponseEntity<Map<String, Object>> handleAlreadyExists(UserAlreadyExistsException ex) {
+    return problem(HttpStatus.CONFLICT, ex.getMessage());
   }
 
   @ExceptionHandler(UserDirectoryUnavailableException.class)

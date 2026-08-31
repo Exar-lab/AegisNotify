@@ -1,16 +1,23 @@
 package com.aegisnotify.user.infrastructure.keycloak;
 
+import com.aegisnotify.user.application.dto.NewUser;
 import com.aegisnotify.user.application.dto.PagedResult;
+import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.application.port.out.UserDirectoryPort;
+import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserDirectoryUnavailableException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
 import com.aegisnotify.user.domain.model.ManagedUser;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientRequest;
@@ -25,14 +32,14 @@ import reactor.netty.http.client.HttpClient;
  * WebClient-based {@link UserDirectoryPort} implementation calling the
  * Keycloak Admin REST API.
  *
- * <p>Read methods only in this slice (5a) — mutation methods are appended
- * to {@link UserDirectoryPort} and this adapter in Slice 5b, per the design
- * doc's "append, don't replace" note, so reverting 5b leaves this read
- * surface compiling.</p>
+ * <p>Read methods landed in Slice 5a; the mutation methods below were
+ * appended in Slice 5b per the design doc's "append, don't replace" note,
+ * so reverting 5b leaves this read surface compiling.</p>
  *
  * <p>Every request carries a fresh {@code Authorization: Bearer} header
  * from {@link KeycloakTokenProvider} via an {@link ExchangeFilterFunction}.
- * Keycloak 404 maps to {@link UserNotFoundException}; a 401/403 from
+ * Keycloak 404 maps to {@link UserNotFoundException}; a Keycloak 409 on
+ * create maps to {@link UserAlreadyExistsException}; a 401/403 from
  * Keycloak (bad service-account credentials) additionally invalidates the
  * cached token via {@link KeycloakTokenProvider#invalidate()} so the next
  * call re-authenticates. Every other {@link WebClientResponseException}
@@ -48,6 +55,8 @@ public class KeycloakAdminClientAdapter implements UserDirectoryPort {
   private static final String USERS_PATH = "/admin/realms/{realm}/users";
   private static final String USER_BY_ID_PATH = "/admin/realms/{realm}/users/{id}";
   private static final String USER_COUNT_PATH = "/admin/realms/{realm}/users/count";
+  private static final String RESET_PASSWORD_PATH =
+      "/admin/realms/{realm}/users/{id}/reset-password";
 
   private final WebClient webClient;
   private final KeycloakAdminConfig config;
@@ -122,6 +131,126 @@ public class KeycloakAdminClientAdapter implements UserDirectoryPort {
     }
   }
 
+  @Override
+  public ManagedUser create(NewUser newUser) {
+    try {
+      KeycloakUserRepresentation representation = new KeycloakUserRepresentation(
+          null, newUser.username(), newUser.email(), newUser.firstName(), newUser.lastName(),
+          true, null);
+
+      ResponseEntity<Void> response = webClient.post()
+          .uri(USERS_PATH, config.realm())
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(representation)
+          .retrieve()
+          .toBodilessEntity()
+          .block();
+
+      String id;
+      try {
+        id = extractId(response);
+      } catch (IllegalStateException ex) {
+        throw unavailable(ex);
+      }
+      return findById(id);
+    } catch (WebClientResponseException.Conflict ex) {
+      throw new UserAlreadyExistsException(newUser.username());
+    } catch (WebClientResponseException.Unauthorized | WebClientResponseException.Forbidden ex) {
+      tokenProvider.invalidate();
+      throw unavailable(ex);
+    } catch (WebClientResponseException ex) {
+      throw unavailable(ex);
+    } catch (WebClientRequestException ex) {
+      throw unavailable(ex);
+    }
+  }
+
+  @Override
+  public ManagedUser update(String id, UserUpdate update) {
+    try {
+      KeycloakUserRepresentation representation = new KeycloakUserRepresentation(
+          null, null, update.email(), update.firstName(), update.lastName(), null, null);
+
+      webClient.put()
+          .uri(USER_BY_ID_PATH, config.realm(), id)
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(representation)
+          .retrieve()
+          .toBodilessEntity()
+          .block();
+
+      return findById(id);
+    } catch (WebClientResponseException.NotFound ex) {
+      throw new UserNotFoundException(id);
+    } catch (WebClientResponseException.Unauthorized | WebClientResponseException.Forbidden ex) {
+      tokenProvider.invalidate();
+      throw unavailable(ex);
+    } catch (WebClientResponseException ex) {
+      throw unavailable(ex);
+    } catch (WebClientRequestException ex) {
+      throw unavailable(ex);
+    }
+  }
+
+  @Override
+  public ManagedUser setEnabled(String id, boolean enabled) {
+    try {
+      KeycloakUserRepresentation representation = new KeycloakUserRepresentation(
+          null, null, null, null, null, enabled, null);
+
+      webClient.put()
+          .uri(USER_BY_ID_PATH, config.realm(), id)
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(representation)
+          .retrieve()
+          .toBodilessEntity()
+          .block();
+
+      return findById(id);
+    } catch (WebClientResponseException.NotFound ex) {
+      throw new UserNotFoundException(id);
+    } catch (WebClientResponseException.Unauthorized | WebClientResponseException.Forbidden ex) {
+      tokenProvider.invalidate();
+      throw unavailable(ex);
+    } catch (WebClientResponseException ex) {
+      throw unavailable(ex);
+    } catch (WebClientRequestException ex) {
+      throw unavailable(ex);
+    }
+  }
+
+  @Override
+  public void resetPassword(String id, String newPassword, boolean temporary) {
+    try {
+      webClient.put()
+          .uri(RESET_PASSWORD_PATH, config.realm(), id)
+          .contentType(MediaType.APPLICATION_JSON)
+          .bodyValue(new KeycloakCredentialRepresentation("password", newPassword, temporary))
+          .retrieve()
+          .toBodilessEntity()
+          .block();
+    } catch (WebClientResponseException.NotFound ex) {
+      throw new UserNotFoundException(id);
+    } catch (WebClientResponseException.Unauthorized | WebClientResponseException.Forbidden ex) {
+      tokenProvider.invalidate();
+      throw unavailable(ex);
+    } catch (WebClientResponseException ex) {
+      throw unavailable(ex);
+    } catch (WebClientRequestException ex) {
+      throw unavailable(ex);
+    }
+  }
+
+  private static String extractId(ResponseEntity<Void> response) {
+    String location = response == null
+        ? null
+        : response.getHeaders().getFirst(HttpHeaders.LOCATION);
+    if (location == null) {
+      throw new IllegalStateException("Keycloak create-user response carried no Location header");
+    }
+    return location.substring(location.lastIndexOf('/') + 1);
+  }
+
   private static ExchangeFilterFunction bearerAuthFilter(KeycloakTokenProvider tokenProvider) {
     return ExchangeFilterFunction.ofRequestProcessor(request -> Mono.just(
         ClientRequest.from(request)
@@ -148,7 +277,13 @@ public class KeycloakAdminClientAdapter implements UserDirectoryPort {
         createdAt);
   }
 
+  // NON_NULL: outbound create/update/setEnabled payloads only set the
+  // fields they intend to change; Keycloak preserves any field omitted
+  // from the JSON body rather than clearing it, so nulls must never be
+  // serialized. Inbound (GET) responses always populate every field, so
+  // this has no effect on read-path deserialization.
   @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   private record KeycloakUserRepresentation(
       String id,
       String username,
@@ -157,5 +292,9 @@ public class KeycloakAdminClientAdapter implements UserDirectoryPort {
       @JsonProperty("lastName") String lastName,
       Boolean enabled,
       @JsonProperty("createdTimestamp") Long createdTimestamp) {
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private record KeycloakCredentialRepresentation(String type, String value, boolean temporary) {
   }
 }
