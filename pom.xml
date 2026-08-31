@@ -27,6 +27,7 @@
         <module>aegis-notification-service</module>
         <module>aegis-audit-service</module>
         <module>aegis-api-gateway</module>
+        <module>aegis-user-service</module>
     </modules>
 
     <build>
