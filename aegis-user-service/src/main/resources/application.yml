@@ -25,6 +25,7 @@ keycloak:
     realm: ${KEYCLOAK_REALM:aegis}
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:aegis-user-service}
     client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+    timeout: ${KEYCLOAK_ADMIN_TIMEOUT:5s}
 
 management:
   endpoints:

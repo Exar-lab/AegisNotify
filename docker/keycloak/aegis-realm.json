@@ -68,6 +68,19 @@
         "user:read",
         "user:admin"
       ]
+    },
+    {
+      "clientId": "aegis-user-service",
+      "name": "aegis-user-service Admin REST client",
+      "description": "Confidential service-account client used by aegis-user-service to call the Keycloak Admin REST API (Slice 5a, issue #74). Local dev only. Granted view-users only (read-only this slice); manage-users will be added back in Slice 5b when mutation endpoints land.",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "local-dev-only-secret",
+      "defaultClientScopes": []
     }
   ],
   "users": [
@@ -85,6 +98,14 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "service-account-aegis-user-service",
+      "enabled": true,
+      "serviceAccountClientId": "aegis-user-service",
+      "clientRoles": {
+        "realm-management": ["view-users"]
+      }
     }
   ]
 }
