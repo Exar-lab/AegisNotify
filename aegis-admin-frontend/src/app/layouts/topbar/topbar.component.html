@@ -1,0 +1,33 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="env-badge">
+      <span class="env-dot"></span>
+      <span class="env-label">{{ environmentName }}</span>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div class="service-indicators">
+      <div class="indicator-item" title="API Gateway: Connected">
+        <span class="indicator-dot online"></span>
+        <span class="indicator-text">Gateway :8080</span>
+      </div>
+      <div class="indicator-item" title="Keycloak OIDC: Connected">
+        <span class="indicator-dot online"></span>
+        <span class="indicator-text">Keycloak :8088</span>
+      </div>
+    </div>
+
+    <div class="topbar-divider"></div>
+
+    <div class="user-profile">
+      <div class="user-avatar">
+        <span>AD</span>
+      </div>
+      <div class="user-info">
+        <span class="user-name">{{ currentUser }}</span>
+        <span class="user-role">{{ userRole }}</span>
+      </div>
+    </div>
+  </div>
+</header>

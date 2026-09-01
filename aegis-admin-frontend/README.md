@@ -103,6 +103,10 @@ The project adheres to a modular, feature-first structure using Angular Standalo
 ```text
 src/
 ├── app/
+│   ├── layouts/
+│   │   ├── admin-shell/             # Main application layout wrapper
+│   │   ├── sidebar/                 # Dark navigation sidebar with active route highlighting
+│   │   └── topbar/                  # Header bar with user profile & status indicators
 │   ├── features/
 │   │   ├── dashboard/
 │   │   │   └── pages/               # Dashboard overview page
@@ -114,13 +118,15 @@ src/
 │   │   │   └── pages/               # Prometheus & delivery metrics
 │   │   └── settings/
 │   │       └── pages/               # System and UI settings
+│   ├── core/
+│   │   └── interceptors/            # Auth & HTTP interceptors
 │   ├── app.config.ts                # Application providers & global config
-│   ├── app.routes.ts                # Lazy-loaded feature routes
+│   ├── app.routes.ts                # Lazy-loaded feature routes nested under AdminShell
 │   └── app.ts                       # Root application component
 ├── environments/
 │   ├── environment.ts               # Production environment config
 │   └── environment.development.ts   # Development environment config
-└── styles.scss                      # Global styles
+└── styles.scss                      # Global styles & resets
 ```
 
 ## Architectural Decisions
@@ -129,6 +135,7 @@ src/
 2. **Lazy Loading by Feature**: Routes in `app.routes.ts` dynamically load component bundles via `loadComponent: () => import(...)` to optimize initial page load.
 3. **Hexagonal Backend Alignment**: Frontend feature modules mirror the backend domain architecture (`notifications`, `audit`, `providers`, `metrics`).
 4. **Environment Isolation**: Explicit environment configurations separate local gateway endpoints and Keycloak realm definitions from deployment artifacts.
+5. **Layout Shell Architecture**: The `AdminShellComponent` hosts the dark sidebar (`#0F172A`), topbar, and scrollable content area, utilizing Angular Router active route matching.
 
 ## Changelog
 
@@ -136,4 +143,5 @@ src/
 - Initialized base project documentation following standard structure.
 - Configured environment files (`environment.ts`, `environment.development.ts`, `.env`, `.env.development`).
 - Scaffolded initial standalone page components for `dashboard`, `notifications`, `providers`, `metrics`, and `settings` features.
-- Configured lazy-loaded routing in `app.routes.ts`.
+- Implemented visual admin layout (`AdminShellComponent`, `SidebarComponent`, `TopbarComponent`) with dark sidebar `#0F172A`, active route highlighting, and top bar status indicators.
+- Configured nested route hierarchy in `app.routes.ts` and global CSS resets in `styles.scss`.

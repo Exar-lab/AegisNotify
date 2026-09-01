@@ -1,0 +1,23 @@
+.admin-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #F8FAFC;
+
+  .main-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    overflow: hidden;
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background-color: #F8FAFC;
+    }
+  }
+}

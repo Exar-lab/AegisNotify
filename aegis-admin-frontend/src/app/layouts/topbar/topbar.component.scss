@@ -1,0 +1,119 @@
+.topbar {
+  height: 64px;
+  min-height: 64px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-sizing: border-box;
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .env-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background-color: #EFF6FF;
+      border: 1px solid #DBEAFE;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #1D4ED8;
+
+      .env-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #3B82F6;
+      }
+    }
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .service-indicators {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .indicator-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        color: #64748B;
+        padding: 4px 8px;
+        background-color: #F8FAFC;
+        border-radius: 6px;
+        border: 1px solid #F1F5F9;
+
+        .indicator-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+
+          &.online {
+            background-color: #10B981;
+          }
+
+          &.offline {
+            background-color: #EF4444;
+          }
+        }
+      }
+    }
+
+    .topbar-divider {
+      width: 1px;
+      height: 24px;
+      background-color: #E2E8F0;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+        color: #FFFFFF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+      }
+
+      .user-info {
+        display: flex;
+        flex-direction: column;
+
+        .user-name {
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: #0F172A;
+          line-height: 1.2;
+        }
+
+        .user-role {
+          font-size: 0.6875rem;
+          color: #64748B;
+          line-height: 1.2;
+        }
+      }
+    }
+  }
+}
