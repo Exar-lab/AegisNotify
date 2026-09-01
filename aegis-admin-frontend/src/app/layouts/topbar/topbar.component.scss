@@ -1,8 +1,13 @@
+@use 'sass:color';
+
+$sidebar-bg: #0F172A;
+$topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
+
 .topbar {
   height: 64px;
   min-height: 64px;
-  background-color: var(--bg-surface, #FFFFFF);
-  border-bottom: 1px solid var(--border-color, #E2E8F0);
+  background-color: $topbar-bg;
+  border-bottom: 1px solid #1E293B;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -19,18 +24,19 @@
       align-items: center;
       gap: var(--space-8, 8px);
       padding: 4px var(--space-8, 8px);
-      background-color: #EFF6FF;
-      border: 1px solid #DBEAFE;
+      background-color: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #1D4ED8;
+      color: #60A5FA;
 
       .env-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
         background-color: var(--color-accent, #3B82F6);
+        box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
       }
     }
   }
@@ -50,11 +56,11 @@
         align-items: center;
         gap: var(--space-8, 8px);
         font-size: 0.75rem;
-        color: var(--text-secondary, #64748B);
+        color: #94A3B8;
         padding: 4px var(--space-8, 8px);
-        background-color: var(--bg-main, #F8FAFC);
+        background-color: rgba(255, 255, 255, 0.04);
         border-radius: var(--space-8, 8px);
-        border: 1px solid var(--border-color, #E2E8F0);
+        border: 1px solid #1E293B;
 
         .indicator-dot {
           width: 6px;
@@ -63,10 +69,12 @@
 
           &.online {
             background-color: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
           }
 
           &.offline {
             background-color: #EF4444;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
           }
         }
       }
@@ -75,7 +83,7 @@
     .topbar-divider {
       width: 1px;
       height: var(--space-24, 24px);
-      background-color: var(--border-color, #E2E8F0);
+      background-color: #1E293B;
     }
 
     .user-profile {
@@ -87,7 +95,7 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
+        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
         color: #FFFFFF;
         display: flex;
         align-items: center;
@@ -95,6 +103,7 @@
         font-size: 0.75rem;
         font-weight: 700;
         letter-spacing: 0.05em;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
       }
 
       .user-info {
@@ -104,13 +113,13 @@
         .user-name {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: var(--text-primary, #0F172A);
+          color: #F8FAFC;
           line-height: 1.2;
         }
 
         .user-role {
           font-size: 0.6875rem;
-          color: var(--text-secondary, #64748B);
+          color: #94A3B8;
           line-height: 1.2;
         }
       }
