@@ -19,6 +19,14 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
     align-items: center;
     gap: var(--space-16, 16px);
 
+    .feature-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #F8FAFC;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
     .env-badge {
       display: inline-flex;
       align-items: center;
