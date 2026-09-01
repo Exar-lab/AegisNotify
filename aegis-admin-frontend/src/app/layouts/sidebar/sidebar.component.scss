@@ -2,19 +2,19 @@
   width: 260px;
   min-width: 260px;
   height: 100vh;
-  background-color: #0F172A;
-  color: #94A3B8;
+  background-color: var(--bg-sidebar, #0F172A);
+  color: var(--text-sidebar, #94A3B8);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1E293B;
+  border-right: 1px solid var(--border-sidebar, #1E293B);
   box-sizing: border-box;
 
   .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 24px 20px;
-    border-bottom: 1px solid #1E293B;
+    gap: var(--space-16, 16px);
+    padding: var(--space-24, 24px) var(--space-16, 16px);
+    border-bottom: 1px solid var(--border-sidebar, #1E293B);
 
     .brand-icon {
       display: flex;
@@ -22,9 +22,9 @@
       justify-content: center;
       width: 40px;
       height: 40px;
-      background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+      background: linear-gradient(135deg, var(--color-accent, #3B82F6) 0%, #1D4ED8 100%);
       color: #FFFFFF;
-      border-radius: 10px;
+      border-radius: var(--space-8, 8px);
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
@@ -52,7 +52,7 @@
 
   .sidebar-nav {
     flex: 1;
-    padding: 16px 12px;
+    padding: var(--space-16, 16px) var(--space-8, 8px);
     overflow-y: auto;
 
     .nav-list {
@@ -61,16 +61,16 @@
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: var(--space-8, 8px);
 
       .nav-item {
         .nav-link {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 10px 14px;
-          border-radius: 8px;
-          color: #94A3B8;
+          gap: var(--space-16, 16px);
+          padding: var(--space-8, 8px) var(--space-16, 16px);
+          border-radius: var(--space-8, 8px);
+          color: var(--text-sidebar, #94A3B8);
           text-decoration: none;
           font-size: 0.875rem;
           font-weight: 500;
@@ -89,30 +89,30 @@
 
           &:hover {
             color: #F8FAFC;
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: var(--bg-sidebar-hover, rgba(255, 255, 255, 0.05));
 
             .nav-icon {
-              color: #94A3B8;
+              color: var(--text-sidebar, #94A3B8);
             }
           }
 
           &.active {
-            color: #FFFFFF;
-            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--text-sidebar-active, #FFFFFF);
+            background-color: var(--bg-sidebar-active, rgba(59, 130, 246, 0.15));
             font-weight: 600;
 
             .nav-icon {
-              color: #3B82F6;
+              color: var(--color-accent, #3B82F6);
             }
 
             &::before {
               content: '';
               position: absolute;
-              left: -12px;
-              top: 6px;
-              bottom: 6px;
+              left: -8px;
+              top: 4px;
+              bottom: 4px;
               width: 4px;
-              background-color: #3B82F6;
+              background-color: var(--color-accent, #3B82F6);
               border-radius: 0 4px 4px 0;
             }
           }
@@ -122,8 +122,8 @@
   }
 
   .sidebar-footer {
-    padding: 16px 20px;
-    border-top: 1px solid #1E293B;
+    padding: var(--space-16, 16px) var(--space-24, 24px);
+    border-top: 1px solid var(--border-sidebar, #1E293B);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -132,7 +132,7 @@
     .system-status {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-8, 8px);
 
       .status-indicator {
         width: 8px;
@@ -143,7 +143,7 @@
       }
 
       .status-text {
-        color: #94A3B8;
+        color: var(--text-sidebar, #94A3B8);
         font-weight: 500;
       }
     }

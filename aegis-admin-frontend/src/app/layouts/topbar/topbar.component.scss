@@ -1,24 +1,24 @@
 .topbar {
   height: 64px;
   min-height: 64px;
-  background-color: #FFFFFF;
-  border-bottom: 1px solid #E2E8F0;
+  background-color: var(--bg-surface, #FFFFFF);
+  border-bottom: 1px solid var(--border-color, #E2E8F0);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 var(--space-24, 24px);
   box-sizing: border-box;
 
   .topbar-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-16, 16px);
 
     .env-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
+      gap: var(--space-8, 8px);
+      padding: 4px var(--space-8, 8px);
       background-color: #EFF6FF;
       border: 1px solid #DBEAFE;
       border-radius: 9999px;
@@ -30,7 +30,7 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background-color: #3B82F6;
+        background-color: var(--color-accent, #3B82F6);
       }
     }
   }
@@ -38,23 +38,23 @@
   .topbar-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-16, 16px);
 
     .service-indicators {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-16, 16px);
 
       .indicator-item {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: var(--space-8, 8px);
         font-size: 0.75rem;
-        color: #64748B;
-        padding: 4px 8px;
-        background-color: #F8FAFC;
-        border-radius: 6px;
-        border: 1px solid #F1F5F9;
+        color: var(--text-secondary, #64748B);
+        padding: 4px var(--space-8, 8px);
+        background-color: var(--bg-main, #F8FAFC);
+        border-radius: var(--space-8, 8px);
+        border: 1px solid var(--border-color, #E2E8F0);
 
         .indicator-dot {
           width: 6px;
@@ -74,14 +74,14 @@
 
     .topbar-divider {
       width: 1px;
-      height: 24px;
-      background-color: #E2E8F0;
+      height: var(--space-24, 24px);
+      background-color: var(--border-color, #E2E8F0);
     }
 
     .user-profile {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: var(--space-8, 8px);
 
       .user-avatar {
         width: 36px;
@@ -104,13 +104,13 @@
         .user-name {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: #0F172A;
+          color: var(--text-primary, #0F172A);
           line-height: 1.2;
         }
 
         .user-role {
           font-size: 0.6875rem;
-          color: #64748B;
+          color: var(--text-secondary, #64748B);
           line-height: 1.2;
         }
       }
