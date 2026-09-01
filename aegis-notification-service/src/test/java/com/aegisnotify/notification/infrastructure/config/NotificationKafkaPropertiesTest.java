@@ -26,6 +26,7 @@ class NotificationKafkaPropertiesTest {
   private static final short REPLICATION_FACTOR = 3;
   private static final int MIN_IN_SYNC_REPLICAS = 2;
   private static final String DLT_SUFFIX = "-dlt";
+  private static final java.time.Duration DEFAULT_POLL_INTERVAL = java.time.Duration.ofSeconds(5);
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withInitializer(new RemoveKafkaPropertySourcesInitializer())
       .withInitializer(new ConfigDataApplicationContextInitializer())
@@ -53,6 +54,7 @@ class NotificationKafkaPropertiesTest {
 
       assertThat(context).hasSingleBean(NotificationKafkaProperties.Registration.class);
       assertThat(properties.relay().enabled()).isFalse();
+      assertThat(properties.relay().pollInterval()).isEqualTo(DEFAULT_POLL_INTERVAL);
       assertThat(properties.consumer().enabled()).isFalse();
       assertThat(properties.consumer().groupId()).isEqualTo(GROUP_ID);
       assertThat(properties.topics().highPriority()).isEqualTo(HIGH_PRIORITY);
@@ -74,6 +76,7 @@ class NotificationKafkaPropertiesTest {
     this.placeholderContextRunner
         .withSystemProperties(
             "NOTIFICATION_KAFKA_RELAY_ENABLED=true",
+            "NOTIFICATION_KAFKA_RELAY_POLL_INTERVAL=PT15S",
             "NOTIFICATION_KAFKA_CONSUMER_ENABLED=true",
             "NOTIFICATION_KAFKA_CONSUMER_GROUP_ID=notification-contract-v3",
             "NOTIFICATION_KAFKA_HIGH_PRIORITY_TOPIC=contract.notifications.high",
@@ -88,6 +91,7 @@ class NotificationKafkaPropertiesTest {
               context.getBean(NotificationKafkaProperties.class);
 
           assertThat(properties.relay().enabled()).isTrue();
+          assertThat(properties.relay().pollInterval()).isEqualTo(java.time.Duration.ofSeconds(15));
           assertThat(properties.consumer().enabled()).isTrue();
           assertThat(properties.consumer().groupId()).isEqualTo("notification-contract-v3");
           assertThat(properties.sourceTopics()).containsExactly(
@@ -106,6 +110,7 @@ class NotificationKafkaPropertiesTest {
     this.contextRunner
         .withPropertyValues(
             "notification.kafka.relay.enabled=true",
+            "notification.kafka.relay.poll-interval=PT20S",
             "notification.kafka.consumer.enabled=true",
             "notification.kafka.consumer.group-id=notification-service-v2",
             "notification.kafka.topics.high-priority=notifications.high.v2",
@@ -120,6 +125,7 @@ class NotificationKafkaPropertiesTest {
               context.getBean(NotificationKafkaProperties.class);
 
           assertThat(properties.relay().enabled()).isTrue();
+          assertThat(properties.relay().pollInterval()).isEqualTo(java.time.Duration.ofSeconds(20));
           assertThat(properties.consumer().enabled()).isTrue();
           assertThat(properties.consumer().groupId()).isEqualTo("notification-service-v2");
           assertThat(properties.sourceTopics()).containsExactly(
@@ -140,6 +146,24 @@ class NotificationKafkaPropertiesTest {
         .run(context ->
             assertThat(context.getStartupFailure()).hasStackTraceContaining(
                 "notification.kafka.consumer.group-id must not be blank"));
+  }
+
+  @Test
+  void relayPollInterval_rejectsNonPositiveDuration() {
+    this.contextRunner
+        .withPropertyValues("notification.kafka.relay.poll-interval=PT0S")
+        .run(context ->
+            assertThat(context.getStartupFailure()).hasStackTraceContaining(
+                "notification.kafka.relay.poll-interval must be a positive duration"));
+  }
+
+  @Test
+  void relayPollInterval_rejectsNegativeDuration() {
+    this.contextRunner
+        .withPropertyValues("notification.kafka.relay.poll-interval=PT-5S")
+        .run(context ->
+            assertThat(context.getStartupFailure()).hasStackTraceContaining(
+                "notification.kafka.relay.poll-interval must be a positive duration"));
   }
 
 
