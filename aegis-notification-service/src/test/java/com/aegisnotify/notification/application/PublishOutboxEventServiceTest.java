@@ -2,37 +2,35 @@ package com.aegisnotify.notification.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.aegisnotify.notification.application.dto.AuditEventMessage;
-import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
-import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
-import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
-import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.application.service.PublishOutboxEventService;
-import com.aegisnotify.notification.domain.enums.Channel;
-import com.aegisnotify.notification.domain.enums.NotificationStatus;
-import com.aegisnotify.notification.domain.enums.Priority;
-import com.aegisnotify.notification.domain.model.Notification;
-import com.aegisnotify.notification.domain.model.NotificationLog;
+import com.aegisnotify.notification.application.service.PublishOutboxEventTransactions;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * Covers {@link PublishOutboxEventService}'s batch-loop behavior only. The
+ * per-event publish/mark-processed/audit work now lives in
+ * {@link PublishOutboxEventTransactions} (see
+ * {@code PublishOutboxEventTransactionsTest}), each call bracketed by its own
+ * transaction — these tests prove the loop itself never lets one event's
+ * failure roll back or block another (issue #27 Slice 0a fix: duplicate
+ * delivery on partial batch failure).
+ */
 @ExtendWith(MockitoExtension.class)
 class PublishOutboxEventServiceTest {
 
@@ -40,151 +38,78 @@ class PublishOutboxEventServiceTest {
   private OutboxEventRepository outboxEventRepository;
 
   @Mock
-  private MessageBrokerPort messageBrokerPort;
+  private PublishOutboxEventTransactions transactions;
 
-  @Mock
-  private NotificationLogRepository notificationLogRepository;
-
-  @Mock
-  private NotificationRepository notificationRepository;
-
-  @Mock
-  private AuditEventPublisherPort auditEventPublisherPort;
-
-  @InjectMocks
   private PublishOutboxEventService service;
 
-  @Test
-  void publishPending_withPendingEvents_publishesAndMarksProcessed() {
-    UUID notificationId = UUID.randomUUID();
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("id", notificationId.toString());
-    payload.put("priority", "HIGH");
+  private PublishOutboxEventService newService() {
+    return new PublishOutboxEventService(outboxEventRepository, transactions);
+  }
 
-    OutboxEvent event = OutboxEvent.create(notificationId, payload);
-    Notification notification = Notification.reconstitute(
-        notificationId, Channel.EMAIL, "user@example.com", "welcome",
-        Map.of(), Priority.HIGH, NotificationStatus.PENDING,
-        null, null, Instant.now(), Instant.now()
-    );
+  @Test
+  void publishPending_withPendingEvents_delegatesEachEventToItsOwnTransaction() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId,
+        Map.of("id", notificationId.toString(), "priority", "HIGH"));
 
     when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
-    when(outboxEventRepository.save(any(OutboxEvent.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationLogRepository.save(any(NotificationLog.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationRepository.findById(notificationId))
-        .thenReturn(Optional.of(notification));
-    when(notificationRepository.save(any(Notification.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
 
+    service = newService();
     int count = service.publishPending();
 
     assertEquals(1, count);
-    verify(messageBrokerPort).publish(eq("high-priority-topic"), eq(event.getPayload()));
-    verify(outboxEventRepository).save(any(OutboxEvent.class));
-    verify(notificationLogRepository).save(any(NotificationLog.class));
-    verify(notificationRepository).save(any(Notification.class));
+    verify(transactions).publishOne(event);
   }
 
   @Test
   void publishPending_noPendingEvents_returnsZero() {
     when(outboxEventRepository.findPendingEvents()).thenReturn(List.of());
 
+    service = newService();
     int count = service.publishPending();
 
     assertEquals(0, count);
-    verify(messageBrokerPort, never()).publish(any(), any());
-    verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
+    verify(transactions, never()).publishOne(any());
   }
 
   @Test
-  void publishPending_routesToCorrectTopicByPriority() {
-    UUID highId = UUID.randomUUID();
-    UUID mediumId = UUID.randomUUID();
-    UUID lowId = UUID.randomUUID();
+  void publishPending_middleEventFails_doesNotRollBackOrBlockOtherEvents() {
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+    UUID id3 = UUID.randomUUID();
 
-    OutboxEvent highEvent = OutboxEvent.create(highId,
-        Map.of("priority", "HIGH", "id", highId.toString()));
-    OutboxEvent mediumEvent = OutboxEvent.create(mediumId,
-        Map.of("priority", "MEDIUM", "id", mediumId.toString()));
-    OutboxEvent lowEvent = OutboxEvent.create(lowId,
-        Map.of("priority", "LOW", "id", lowId.toString()));
-
-    Notification highNotification = Notification.reconstitute(
-        highId, Channel.EMAIL, "a@example.com", "t",
-        Map.of(), Priority.HIGH, NotificationStatus.PENDING,
-        null, null, Instant.now(), Instant.now()
-    );
-    Notification mediumNotification = Notification.reconstitute(
-        mediumId, Channel.EMAIL, "b@example.com", "t",
-        Map.of(), Priority.MEDIUM, NotificationStatus.PENDING,
-        null, null, Instant.now(), Instant.now()
-    );
-    Notification lowNotification = Notification.reconstitute(
-        lowId, Channel.EMAIL, "c@example.com", "t",
-        Map.of(), Priority.LOW, NotificationStatus.PENDING,
-        null, null, Instant.now(), Instant.now()
-    );
+    OutboxEvent event1 = OutboxEvent.create(id1, Map.of("id", id1.toString(), "priority", "HIGH"));
+    OutboxEvent event2 =
+        OutboxEvent.create(id2, Map.of("id", id2.toString(), "priority", "MEDIUM"));
+    OutboxEvent event3 = OutboxEvent.create(id3, Map.of("id", id3.toString(), "priority", "LOW"));
 
     when(outboxEventRepository.findPendingEvents())
-        .thenReturn(List.of(highEvent, mediumEvent, lowEvent));
-    when(outboxEventRepository.save(any(OutboxEvent.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationLogRepository.save(any(NotificationLog.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationRepository.findById(highId))
-        .thenReturn(Optional.of(highNotification));
-    when(notificationRepository.findById(mediumId))
-        .thenReturn(Optional.of(mediumNotification));
-    when(notificationRepository.findById(lowId))
-        .thenReturn(Optional.of(lowNotification));
-    when(notificationRepository.save(any(Notification.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenReturn(List.of(event1, event2, event3));
 
+    // Explicit passthrough stubs for events 1 and 3: once ANY stub exists for
+    // publishOne(), Mockito's strict-stubs mode requires every invocation of that
+    // method to match a stub, so these make the "no-op success" case explicit rather
+    // than relying on default mock behavior.
+    doNothing().when(transactions).publishOne(event1);
+    doNothing().when(transactions).publishOne(event3);
+    // event 2's own transaction fails independently of events 1 and 3.
+    doThrow(new RuntimeException("broker unavailable"))
+        .when(transactions).publishOne(event2);
+
+    service = newService();
     int count = service.publishPending();
 
-    assertEquals(3, count);
-    verify(messageBrokerPort).publish(eq("high-priority-topic"), any());
-    verify(messageBrokerPort).publish(eq("medium-priority-topic"), any());
-    verify(messageBrokerPort).publish(eq("low-priority-topic"), any());
-  }
+    // Only events 1 and 3 succeed (published exactly once each); event 2 stays
+    // UNPROCESSED for retry without ever touching 1 or 3's already-committed state.
+    assertEquals(2, count);
 
-  @Test
-  void publishPending_withPendingEvents_publishesAuditEventWithQueuedStatus() {
-    UUID notificationId = UUID.randomUUID();
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("id", notificationId.toString());
-    payload.put("priority", "HIGH");
+    InOrder inOrder = Mockito.inOrder(transactions);
+    inOrder.verify(transactions).publishOne(event1);
+    inOrder.verify(transactions).publishOne(event2);
+    inOrder.verify(transactions).publishOne(event3);
 
-    OutboxEvent event = OutboxEvent.create(notificationId, payload);
-    Notification notification = Notification.reconstitute(
-        notificationId, Channel.EMAIL, "user@example.com", "welcome",
-        Map.of(), Priority.HIGH, NotificationStatus.PENDING,
-        null, null, Instant.now(), Instant.now()
-    );
-
-    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
-    when(outboxEventRepository.save(any(OutboxEvent.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationLogRepository.save(any(NotificationLog.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-    when(notificationRepository.findById(notificationId))
-        .thenReturn(Optional.of(notification));
-    when(notificationRepository.save(any(Notification.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
-
-    service.publishPending();
-
-    ArgumentCaptor<AuditEventMessage> captor =
-        ArgumentCaptor.forClass(AuditEventMessage.class);
-    verify(auditEventPublisherPort).publish(captor.capture());
-
-    AuditEventMessage captured = captor.getValue();
-    assertEquals(notificationId, captured.notificationId());
-    assertEquals("QUEUED", captured.status());
-    assertEquals("EMAIL", captured.channel());
-    assertEquals("user@example.com", captured.recipient());
-    assertEquals("HIGH", captured.priority());
+    verify(transactions).publishOne(event1);
+    verify(transactions).publishOne(event2);
+    verify(transactions).publishOne(event3);
   }
 }
