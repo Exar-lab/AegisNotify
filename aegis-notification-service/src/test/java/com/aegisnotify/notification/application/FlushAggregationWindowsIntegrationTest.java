@@ -9,6 +9,7 @@ import com.aegisnotify.notification.application.dto.SummarizedContent;
 import com.aegisnotify.notification.application.port.in.FlushAggregationWindowsUseCase;
 import com.aegisnotify.notification.application.port.out.AggregationBufferRepository;
 import com.aegisnotify.notification.application.port.out.AggregationSummarizerPort;
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.domain.enums.AggregationBufferStatus;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
@@ -105,6 +106,12 @@ class FlushAggregationWindowsIntegrationTest {
 
   @MockitoBean
   private AggregationSummarizerPort summarizerPort;
+
+  // No production DeadLetterQueuePort implementation exists yet; every
+  // context that boots the full NotificationServiceApplication must supply
+  // one to satisfy ConsumeNotificationEventService's dependencies.
+  @MockitoBean
+  private DeadLetterQueuePort deadLetterQueuePort;
 
   @Test
   void flushExpiredWindows_twoNotificationsSharingGroup_writesOneAggregateOutboxEvent() {
