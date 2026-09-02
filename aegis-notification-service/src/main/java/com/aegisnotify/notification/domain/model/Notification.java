@@ -162,6 +162,15 @@ public final class Notification {
    * Slice 1 onward since Slice 1 owns the migration). {@code aggregateBody}
    * is non-null only on the leader notification of a group (X2) — sibling
    * notifications are linked via {@code aggregationId} alone.
+   *
+   * <p>This method deliberately leaves {@code status} untouched. The leader
+   * gets its status advanced separately, the normal way, once its single
+   * outbox event is published ({@code
+   * PublishOutboxEventTransactions#publishOne}). Callers resolving a
+   * <em>sibling</em> (no outbox event of its own) must chain {@link
+   * #markQueued()} onto the result — see {@code
+   * AggregationFlushTransactions#flushAggregate} — otherwise the sibling
+   * stays {@code PENDING} forever with no path to ever leave it.</p>
    */
   public Notification markAggregated(UUID aggregationId, String aggregateBody) {
     return reconstitute(id, channel, recipient, templateName, parameters,

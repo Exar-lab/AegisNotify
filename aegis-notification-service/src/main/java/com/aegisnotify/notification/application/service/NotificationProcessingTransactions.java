@@ -67,6 +67,15 @@ public class NotificationProcessingTransactions {
     Template template = templateRepository.findActiveByName(processing.getTemplateName())
         .orElseThrow(() -> new TemplateNotFoundException(processing.getTemplateName()));
 
+    // X2 of the design: a leader notification carries a pre-summarized
+    // aggregate_body (set by the aggregation flush path, issue #86 Slice 2)
+    // and skips the renderer entirely — the template is still looked up for
+    // its subject line, since no dedicated aggregate-subject column exists.
+    if (processing.getAggregateBody() != null) {
+      return new PreparedNotification(processing, template.getSubject(),
+          processing.getAggregateBody());
+    }
+
     TemplateRenderRequest request = new TemplateRenderRequest(
         template.getBody(), processing.getParameters(), template.getVariables(),
         template.getChannel());

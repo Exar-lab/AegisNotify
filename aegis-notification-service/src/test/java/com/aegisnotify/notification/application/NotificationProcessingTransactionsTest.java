@@ -117,6 +117,76 @@ class NotificationProcessingTransactionsTest {
     assertThrows(NotificationNotFoundException.class, () -> transactions.prepare(notificationId));
   }
 
+  /**
+   * X2 of the design: a leader notification with a pre-set {@code
+   * aggregateBody} skips {@link TemplateRenderer} entirely and uses the
+   * pre-summarized body directly — the one small branch this slice adds.
+   * Subject still comes from the resolved template (see apply-progress for
+   * the documented subject-persistence gap: the schema has no dedicated
+   * aggregate-subject column).
+   */
+  @Test
+  void prepare_leaderWithAggregateBody_skipsRenderAndUsesPreSetBody() {
+    UUID notificationId = UUID.randomUUID();
+    UUID aggregationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now(), aggregationId, "Two things happened."
+    );
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello {{name}}", List.of("name"),
+        true, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("welcome"))
+        .thenReturn(Optional.of(template));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    PreparedNotification prepared = transactions.prepare(notificationId);
+
+    assertEquals("Welcome", prepared.subject());
+    assertEquals("Two things happened.", prepared.renderedBody());
+    Mockito.verifyNoInteractions(templateRenderer);
+  }
+
+  @Test
+  void prepare_normalNotificationWithoutAggregateBody_takesUnchangedRenderPath() {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now()
+    );
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello {{name}}", List.of("name"),
+        true, Instant.now(), Instant.now()
+    );
+
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("welcome"))
+        .thenReturn(Optional.of(template));
+    when(templateRenderer.render(any(TemplateRenderRequest.class)))
+        .thenReturn("Hello John");
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    PreparedNotification prepared = transactions.prepare(notificationId);
+
+    assertEquals("Hello John", prepared.renderedBody());
+    Mockito.verify(templateRenderer).render(any(TemplateRenderRequest.class));
+  }
+
   @Test
   void prepare_templateNotFound_throwsTemplateNotFoundException() {
     UUID notificationId = UUID.randomUUID();
