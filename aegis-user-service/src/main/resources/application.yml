@@ -1,0 +1,34 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: aegis-user-service
+  config:
+    import: "optional:configserver:"
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8088/realms/aegis/protocol/openid-connect/certs}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+keycloak:
+  admin:
+    base-url: ${KEYCLOAK_BASE_URL:http://localhost:8088}
+    realm: ${KEYCLOAK_REALM:aegis}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:aegis-user-service}
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+    timeout: ${KEYCLOAK_ADMIN_TIMEOUT:5s}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
