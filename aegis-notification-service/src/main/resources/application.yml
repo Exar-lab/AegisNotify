@@ -43,6 +43,14 @@ notification:
     cache:
       maximum-size: ${NOTIFICATION_TEMPLATE_CACHE_MAX_SIZE:500}
       expire-after-write: ${NOTIFICATION_TEMPLATE_CACHE_TTL:PT1H}
+  aggregation:
+    enabled: ${NOTIFICATION_AGGREGATION_ENABLED:false}
+    window: ${NOTIFICATION_AGGREGATION_WINDOW:PT5M}
+    poll-interval: ${NOTIFICATION_AGGREGATION_POLL_INTERVAL:PT10S}
+    require-same-template: ${NOTIFICATION_AGGREGATION_REQUIRE_SAME_TEMPLATE:true}
+    max-group-size: ${NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE:20}
+    claim-lease: ${NOTIFICATION_AGGREGATION_CLAIM_LEASE:PT2M}
+    max-attempts: ${NOTIFICATION_AGGREGATION_MAX_ATTEMPTS:3}
   kafka:
     relay:
       enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}

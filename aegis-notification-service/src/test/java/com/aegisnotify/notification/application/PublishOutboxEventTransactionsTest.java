@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.aegisnotify.notification.application.dto.AuditEventMessage;
+import com.aegisnotify.notification.application.port.out.AggregationBufferRepository;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
@@ -19,13 +20,19 @@ import com.aegisnotify.notification.application.service.PublishOutboxEventTransa
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
+import com.aegisnotify.notification.domain.model.AggregationSettings;
+import com.aegisnotify.notification.domain.model.BufferedNotification;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,12 +67,21 @@ class PublishOutboxEventTransactionsTest {
   @Mock
   private AuditEventPublisherPort auditEventPublisherPort;
 
+  @Mock
+  private AggregationBufferRepository aggregationBufferRepository;
+
+  private static final Instant FIXED_NOW = Instant.parse("2026-09-01T12:00:00Z");
+  private final Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
+  private final AggregationSettings aggregationSettings = new AggregationSettings(
+      true, Duration.ofMinutes(5), true, 20, Set.of(), Set.of(), Duration.ofMinutes(2), 3);
+
   private PublishOutboxEventTransactions transactions;
 
   @BeforeEach
   void setUp() {
     transactions = new PublishOutboxEventTransactions(outboxEventRepository, messageBrokerPort,
-        notificationLogRepository, notificationRepository, auditEventPublisherPort);
+        notificationLogRepository, notificationRepository, auditEventPublisherPort,
+        aggregationBufferRepository, aggregationSettings, clock);
   }
 
   @Test
@@ -199,5 +215,70 @@ class PublishOutboxEventTransactionsTest {
     verify(notificationLogRepository, never()).save(any(NotificationLog.class));
     verify(notificationRepository, never()).save(any(Notification.class));
     verify(auditEventPublisherPort, never()).publish(any());
+  }
+
+  @Test
+  void holdForAggregation_insertsBufferRowAndMarksOutboxProcessed_withoutPublishing() {
+    UUID notificationId = UUID.randomUUID();
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("id", notificationId.toString());
+    payload.put("channel", "EMAIL");
+    payload.put("recipient", "user@example.com");
+    payload.put("templateName", "welcome");
+    payload.put("priority", "MEDIUM");
+
+    when(aggregationBufferRepository.save(any(BufferedNotification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    OutboxEvent event = OutboxEvent.create(notificationId, payload);
+    transactions.holdForAggregation(event);
+
+    ArgumentCaptor<BufferedNotification> bufferedCaptor =
+        ArgumentCaptor.forClass(BufferedNotification.class);
+    verify(aggregationBufferRepository).save(bufferedCaptor.capture());
+    BufferedNotification buffered = bufferedCaptor.getValue();
+    assertEquals(notificationId, buffered.getNotificationId());
+    assertEquals(Channel.EMAIL, buffered.getChannel());
+    assertEquals("user@example.com", buffered.getRecipient());
+    assertEquals("welcome", buffered.getTemplateName());
+    assertEquals(Priority.MEDIUM, buffered.getPriority());
+    assertEquals(FIXED_NOW.plus(Duration.ofMinutes(5)), buffered.getExpiresAt());
+
+    ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+    verify(outboxEventRepository).save(outboxCaptor.capture());
+    assertEquals(com.aegisnotify.notification.domain.enums.OutboxStatus.PROCESSED,
+        outboxCaptor.getValue().getStatus());
+
+    verify(messageBrokerPort, never()).publish(any(), any());
+    verify(notificationLogRepository).save(any(NotificationLog.class));
+  }
+
+  @Test
+  void holdForAggregation_neverCallsMessageBrokerOrAuditPublisher() {
+    UUID notificationId = UUID.randomUUID();
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("id", notificationId.toString());
+    payload.put("channel", "SMS");
+    payload.put("recipient", "+34600000000");
+    payload.put("templateName", "otp");
+    payload.put("priority", "LOW");
+
+    when(aggregationBufferRepository.save(any(BufferedNotification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    OutboxEvent event = OutboxEvent.create(notificationId, payload);
+    transactions.holdForAggregation(event);
+
+    verify(messageBrokerPort, never()).publish(any(), any());
+    verify(auditEventPublisherPort, never()).publish(any());
+    verify(notificationRepository, never()).save(any());
   }
 }

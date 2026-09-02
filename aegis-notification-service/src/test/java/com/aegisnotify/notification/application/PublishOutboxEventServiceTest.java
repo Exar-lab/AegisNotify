@@ -11,9 +11,12 @@ import static org.mockito.Mockito.when;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.application.service.PublishOutboxEventService;
 import com.aegisnotify.notification.application.service.PublishOutboxEventTransactions;
+import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,8 +45,17 @@ class PublishOutboxEventServiceTest {
 
   private PublishOutboxEventService service;
 
+  private static AggregationSettings aggregationSettings(boolean enabled) {
+    return new AggregationSettings(enabled, Duration.ofMinutes(5), true, 20,
+        Set.of(), Set.of(), Duration.ofMinutes(2), 3);
+  }
+
   private PublishOutboxEventService newService() {
-    return new PublishOutboxEventService(outboxEventRepository, transactions);
+    return newService(aggregationSettings(false));
+  }
+
+  private PublishOutboxEventService newService(AggregationSettings aggregationSettings) {
+    return new PublishOutboxEventService(outboxEventRepository, transactions, aggregationSettings);
   }
 
   @Test
@@ -111,5 +123,73 @@ class PublishOutboxEventServiceTest {
     verify(transactions).publishOne(event1);
     verify(transactions).publishOne(event2);
     verify(transactions).publishOne(event3);
+  }
+
+  @Test
+  void publishPending_aggregationEnabled_highPriority_publishesImmediately_noHold() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "HIGH", "channel", "EMAIL",
+        "templateName", "welcome"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(true));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
+  }
+
+  @Test
+  void publishPending_aggregationEnabled_mediumPriority_holdsForAggregation_noPublish() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "EMAIL",
+        "templateName", "welcome"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(true));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).holdForAggregation(event);
+    verify(transactions, never()).publishOne(any());
+  }
+
+  @Test
+  void publishPending_aggregationEnabled_lowPriority_holdsForAggregation_noPublish() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "LOW", "channel", "SMS",
+        "templateName", "otp"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(true));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).holdForAggregation(event);
+    verify(transactions, never()).publishOne(any());
+  }
+
+  @Test
+  void publishPending_aggregationDisabled_mediumPriority_publishesImmediately() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "EMAIL",
+        "templateName", "welcome"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(false));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
   }
 }
