@@ -24,6 +24,7 @@ flowchart LR
     Config[Config Server] -. configuration .-> Gateway
     Config -. configuration .-> Notification
     Config -. configuration .-> Audit
+    Config -. configuration .-> User
 
     Notification -.-> Postgres[(PostgreSQL)]
     Notification -.-> Kafka[(Kafka)]
@@ -46,7 +47,7 @@ separately (see the [README](../README.md#installation)).
 
 ## Hexagonal layering
 
-The notification and audit services use Hexagonal Architecture. Dependencies point inward;
+The notification, audit, and user services use Hexagonal Architecture. Dependencies point inward;
 infrastructure implements application ports rather than leaking framework concerns into the core.
 
 ```mermaid
@@ -82,7 +83,7 @@ flowchart LR
 | `application/` | Inbound use-case ports, outbound dependency ports, DTOs, and orchestration services |
 | `infrastructure/` | HTTP and Kafka inbound adapters; JPA, MongoDB, Kafka, encryption, provider, Spring configuration, and security adapters |
 
-The domain does not import Spring or persistence frameworks. ArchUnit tests in both domain
+The domain does not import Spring or persistence frameworks. ArchUnit tests in all three domain
 services enforce these boundaries.
 
 The notification workflow uses short transactions around state changes and deliberately performs
@@ -279,12 +280,13 @@ included in the repository.
 
 ```text
 AegisNotify/
-├── aegis-api-gateway/           # Reactive routing and centralized JWT validation
+├── aegis-api-gateway/           # Reactive routing, JWT validation, and per-route scope enforcement
 ├── aegis-audit-service/         # Kafka-to-MongoDB audit trail service
 ├── aegis-config-server/         # Git-backed Spring Cloud Config server
 ├── aegis-eureka-server/         # Service registry
 ├── aegis-notification-service/  # Notification domain, API, outbox, Kafka, and providers
+├── aegis-user-service/          # User administration against the Keycloak Admin API
 ├── mvnw                          # Unix Maven wrapper
 ├── mvnw.cmd                      # Windows Maven wrapper
-└── pom.xml                       # Parent build and five-module reactor
+└── pom.xml                       # Parent build and six-module reactor
 ```

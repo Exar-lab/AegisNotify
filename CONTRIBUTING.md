@@ -27,8 +27,9 @@ the pull request checklist that CI actually enforces.
 - For a small, obvious fix (typo, dependency bump, a clearly broken test), a pull request without
   a prior issue is fine.
 - Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before touching `domain/`, `application/`,
-  or `infrastructure/` in either `aegis-notification-service` or `aegis-audit-service` — the
-  layering rules are enforced by ArchUnit and a violating PR will fail CI.
+  or `infrastructure/` in `aegis-notification-service`, `aegis-audit-service`, or
+  `aegis-user-service` — the layering rules are enforced by ArchUnit and a violating PR will fail
+  CI.
 
 ## Local environment setup
 
@@ -48,13 +49,13 @@ cd AegisNotify
 ./mvnw clean package -DskipTests
 ```
 
-See the [README](README.md#quick-start) for prerequisites needed to actually run a service
+See the [README](README.md#installation) for prerequisites needed to actually run a service
 (PostgreSQL, Kafka, MongoDB, an OIDC provider, provider API keys), and
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the services fit together.
 
 ## Project structure
 
-Five Maven modules under one reactor:
+Six Maven modules under one reactor:
 
 ```text
 AegisNotify/
@@ -63,12 +64,13 @@ AegisNotify/
 ├── aegis-config-server/
 ├── aegis-eureka-server/
 ├── aegis-notification-service/
+├── aegis-user-service/
 └── pom.xml
 ```
 
-`aegis-notification-service` and `aegis-audit-service` follow Hexagonal Architecture
-(`domain/` → `application/` → `infrastructure/`); the other three are thin Spring Cloud
-infrastructure modules.
+`aegis-notification-service`, `aegis-audit-service`, and `aegis-user-service` follow Hexagonal
+Architecture (`domain/` → `application/` → `infrastructure/`); the other three are thin Spring
+Cloud infrastructure modules.
 
 ## Branching
 

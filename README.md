@@ -257,9 +257,12 @@ In separate terminals, in this order:
   centralized configuration; it's optional for a local run using each service's own
   `application.yml`.
 - `aegis-user-service` additionally requires `KEYCLOAK_ADMIN_CLIENT_SECRET` for the confidential
-  `aegis-user-service` client that calls the Keycloak Admin API — retrieve it from the Keycloak
-  admin console (`http://localhost:8088`, `admin` / `admin` by default) under the `aegis` realm's
-  client credentials, or add it to `docker/keycloak/aegis-realm.json` and re-import the realm.
+  `aegis-user-service` client that calls the Keycloak Admin API. The imported realm already ships
+  a default local value, `local-dev-only-secret` (see `docker/keycloak/aegis-realm.json`), so
+  exporting it is enough for a local run: `export KEYCLOAK_ADMIN_CLIENT_SECRET=local-dev-only-secret`.
+  If you rotate it in the Keycloak admin console (`http://localhost:8088`, `admin` / `admin` by
+  default) under the `aegis` realm's client credentials, update the environment variable — and, for
+  the value to survive a realm re-import, `docker/keycloak/aegis-realm.json` — to match.
 - Even with every dependency above running, the complete submit-to-delivery flow (HTTP submit →
   outbox → Kafka → provider delivery) is still blocked by the missing outbox broker adapter and
   relay trigger — see [Current implementation status](#current-implementation-status).
