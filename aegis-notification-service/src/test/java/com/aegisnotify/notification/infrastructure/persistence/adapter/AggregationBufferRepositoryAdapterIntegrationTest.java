@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.NotificationServiceApplication;
 import com.aegisnotify.notification.application.port.out.AggregationBufferRepository;
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.domain.enums.AggregationBufferStatus;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.Priority;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -66,6 +68,13 @@ class AggregationBufferRepositoryAdapterIntegrationTest {
 
   @Autowired
   private AggregationBufferRepository repository;
+
+  // No production DeadLetterQueuePort implementation exists yet; every
+  // context that boots the full NotificationServiceApplication must supply
+  // one to satisfy ConsumeNotificationEventService's dependencies, even
+  // though nothing in this test exercises the Kafka consumer path.
+  @MockitoBean
+  private DeadLetterQueuePort deadLetterQueuePort;
 
   @Test
   void conditionalClaim_statusAlreadyChanged_updatesZeroRows_returnsEmpty() {
