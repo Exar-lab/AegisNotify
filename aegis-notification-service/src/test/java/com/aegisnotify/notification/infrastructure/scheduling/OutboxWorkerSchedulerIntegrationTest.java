@@ -3,6 +3,7 @@ package com.aegisnotify.notification.infrastructure.scheduling;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.NotificationServiceApplication;
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.OutboxStatus;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -82,6 +84,15 @@ class OutboxWorkerSchedulerIntegrationTest {
 
   @Autowired
   private SpringDataOutboxEventRepository outboxEventRepository;
+
+  // No production DeadLetterQueuePort implementation exists yet; every
+  // context that boots the full NotificationServiceApplication (this one
+  // included, since ConsumeNotificationEventService is an unconditional
+  // @Service regardless of notification.kafka.consumer.enabled) must supply
+  // one. Never invoked here — notification.kafka.consumer.enabled=false
+  // keeps the actual Kafka consumer listener off, this only satisfies DI.
+  @MockitoBean
+  private DeadLetterQueuePort deadLetterQueuePort;
 
   @Test
   void relayTicks_publishesPendingOutboxEventAndMarksProcessed() throws InterruptedException {
