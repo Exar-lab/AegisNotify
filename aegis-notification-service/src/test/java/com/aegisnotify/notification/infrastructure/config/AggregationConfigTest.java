@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.aegisnotify.notification.application.port.out.AggregationSummarizerPort;
+import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.infrastructure.summarizer.AnthropicMessagesSummarizerAdapter;
 import com.aegisnotify.notification.infrastructure.summarizer.SummarizerProperties;
@@ -14,6 +15,7 @@ import com.aegisnotify.notification.infrastructure.summarizer.UnavailableSummari
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,6 +41,26 @@ class AggregationConfigTest {
     assertEquals(5, settings.maxAttempts());
     assertTrue(settings.excludedTemplates().isEmpty());
     assertTrue(settings.excludedChannels().isEmpty());
+  }
+
+  /**
+   * Task 3.8 (D13/X1 completion): {@code excluded-templates}/{@code
+   * excluded-channels} must flow, unmodified, from the Spring-bound
+   * properties record straight into the domain {@link AggregationSettings}
+   * value object that {@link com.aegisnotify.notification.domain.model
+   * .AggregationPolicy#isAggregatable} reads.
+   */
+  @Test
+  void aggregationSettings_mapsExcludedTemplatesAndChannelsOntoDomainValueObject() {
+    NotificationAggregationProperties properties = new NotificationAggregationProperties(
+        true, Duration.ofMinutes(7), Duration.ofSeconds(15), false, 42,
+        Duration.ofMinutes(3), 5, Set.of("regulated-notice", "billing-statement"),
+        Set.of(Channel.SMS, Channel.PUSH));
+
+    AggregationSettings settings = new AggregationConfig().aggregationSettings(properties);
+
+    assertEquals(Set.of("regulated-notice", "billing-statement"), settings.excludedTemplates());
+    assertEquals(Set.of(Channel.SMS, Channel.PUSH), settings.excludedChannels());
   }
 
   @Test

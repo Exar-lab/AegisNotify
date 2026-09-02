@@ -1,7 +1,9 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.SummarizedContent;
 import com.aegisnotify.notification.application.port.out.AggregationBufferRepository;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
@@ -16,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,19 +36,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AggregationFlushTransactions {
 
+  private static final Logger log = LoggerFactory.getLogger(AggregationFlushTransactions.class);
+
   private final AggregationBufferRepository aggregationBufferRepository;
   private final NotificationRepository notificationRepository;
   private final OutboxEventRepository outboxEventRepository;
   private final NotificationLogRepository notificationLogRepository;
+  private final AuditEventPublisherPort auditEventPublisherPort;
 
   public AggregationFlushTransactions(AggregationBufferRepository aggregationBufferRepository,
       NotificationRepository notificationRepository,
       OutboxEventRepository outboxEventRepository,
-      NotificationLogRepository notificationLogRepository) {
+      NotificationLogRepository notificationLogRepository,
+      AuditEventPublisherPort auditEventPublisherPort) {
     this.aggregationBufferRepository = aggregationBufferRepository;
     this.notificationRepository = notificationRepository;
     this.outboxEventRepository = outboxEventRepository;
     this.notificationLogRepository = notificationLogRepository;
+    this.auditEventPublisherPort = auditEventPublisherPort;
   }
 
   /**
@@ -105,6 +114,47 @@ public class AggregationFlushTransactions {
         LogStatus.PENDING, "Released from aggregation buffer for individual delivery"));
   }
 
+  /**
+   * D5 audit fan-out helper: publishes one {@link AuditEventMessage} for a
+   * single original notification folded into an aggregate, keyed by its own
+   * {@code notificationId}. {@code details} is expected to already carry the
+   * shared aggregation id (built by the caller) so a grepped/searched audit
+   * log line correlates back to the aggregate send without any {@code
+   * aegis-audit-service} schema change (X2/D5) — the message shape is
+   * identical to every other {@link AuditEventMessage} published in this
+   * service.
+   */
+  private void publishAggregationAuditEvent(Notification notification, String details) {
+    auditEventPublisherPort.publish(new AuditEventMessage(
+        notification.getId(),
+        AuditStatusMapper.toAuditStatus(notification.getStatus()),
+        details,
+        notification.getChannel().name(),
+        notification.getRecipient(),
+        notification.getPriority().name(),
+        Instant.now()
+    ));
+  }
+
+  /**
+   * Same publish as {@link #publishAggregationAuditEvent} but never lets a
+   * publish failure escape (review-reliability WARNING fix) — used in the
+   * member fan-out loop of {@link #flushAggregate} so one bad audit publish
+   * can never abort resolving the remaining group members. {@link
+   * AuditEventPublisherPort} is fire-and-forget by contract, but nothing
+   * about the interface itself enforces that at compile time, so this is
+   * defense-in-depth rather than reliance on a single concrete adapter's
+   * behavior.
+   */
+  private void publishAggregationAuditEventSafely(Notification notification, String details) {
+    try {
+      publishAggregationAuditEvent(notification, details);
+    } catch (Exception ex) {
+      log.warn("Failed to publish aggregation audit event for notification {}: {}",
+          notification.getId(), ex.getMessage(), ex);
+    }
+  }
+
   private OutboxEvent buildOutboxEvent(Notification notification) {
     Map<String, Object> payload = new HashMap<>();
     payload.put("id", notification.getId().toString());
@@ -117,14 +167,29 @@ public class AggregationFlushTransactions {
   }
 
   /**
-   * Aggregate-success half of the flush phase (B3, Slice 2): links every
+   * Aggregate-success half of the flush phase (B3, Slice 2/3): links every
    * group member to a new aggregation id and persists the summarized body on
    * the leader only (X2), writes exactly ONE outbox event carrying the
    * leader's own unchanged payload shape, and resolves every member's
-   * buffer row to {@code DONE}. No audit fan-out here — the leader's outbox
-   * event still triggers exactly one audit event through the existing relay
-   * publish path, same as any other outbox write; per-sibling audit
-   * correlation is explicitly Slice 3 scope.
+   * buffer row to {@code DONE}.
+   *
+   * <p>D5 audit fan-out (Slice 3): every original notification folded into
+   * this aggregate — leader included — gets its OWN {@link AuditEventMessage}
+   * publish here, all sharing this call's {@code aggregationId} in the
+   * free-text {@code details} field so the audit trail stays individually
+   * traceable per notification even though only one outbox event (and,
+   * later, one provider call) actually happens. This is IN ADDITION to,
+   * not instead of, the leader's own existing audit event from the relay
+   * publish path once its single outbox event is picked up — the same
+   * multi-event-per-lifecycle pattern every other notification already has
+   * (queued, processing, terminal outcome all publish separately).
+   * {@link AuditEventPublisherPort} is fire-and-forget by contract (failures
+   * are logged and swallowed by the adapter, never propagated here) — this
+   * fan-out is called the same direct, uncaught way every other audit
+   * publish call site in this codebase already is; a partial audit-publish
+   * failure never rolls back or duplicates the actual notification delivery,
+   * which is already durably owned by the outbox event written in this same
+   * transaction.</p>
    *
    * <p>Throws (uncaught, rolling back this transaction) if the leader
    * notification cannot be found — the caller ({@code
@@ -153,10 +218,13 @@ public class AggregationFlushTransactions {
         leaderNotification.markAggregated(aggregationId, summary.body());
     notificationRepository.save(aggregatedLeader);
     outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
-    notificationLogRepository.save(NotificationLog.create(leaderRow.getNotificationId(),
-        LogStatus.PENDING,
-        "Aggregated as leader of a " + members.size() + "-notification group"));
+    String leaderDetail =
+        "Aggregated as leader of a " + members.size() + "-notification group (aggregation "
+            + aggregationId + ")";
+    notificationLogRepository.save(
+        NotificationLog.create(leaderRow.getNotificationId(), LogStatus.PENDING, leaderDetail));
     aggregationBufferRepository.resolve(leaderRow.getId());
+    publishAggregationAuditEvent(aggregatedLeader, leaderDetail);
 
     for (BufferedNotification member : members) {
       if (member.getId().equals(leaderRow.getId())) {
@@ -183,11 +251,17 @@ public class AggregationFlushTransactions {
       // it removes the "stuck PENDING forever" bug and bounds the
       // cancelable window to the same in-flight window the leader itself
       // has between its own outbox write and eventual delivery outcome.
+      String siblingDetail = "Folded into aggregate led by " + leaderRow.getNotificationId()
+          + " (aggregation " + aggregationId + ")";
       notificationRepository.findById(member.getNotificationId())
-          .ifPresent(sibling -> notificationRepository.save(
-              sibling.markAggregated(aggregationId, null).markQueued()));
+          .ifPresent(sibling -> {
+            Notification updatedSibling =
+                notificationRepository.save(sibling.markAggregated(aggregationId, null)
+                    .markQueued());
+            publishAggregationAuditEventSafely(updatedSibling, siblingDetail);
+          });
       notificationLogRepository.save(NotificationLog.create(member.getNotificationId(),
-          LogStatus.QUEUED, "Folded into aggregate led by " + leaderRow.getNotificationId()));
+          LogStatus.QUEUED, siblingDetail));
       aggregationBufferRepository.resolve(member.getId());
     }
   }

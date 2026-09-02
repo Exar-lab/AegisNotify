@@ -50,4 +50,11 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         .map(mapper::toDomain)
         .toList();
   }
+
+  @Override
+  public List<Notification> findByAggregationId(UUID aggregationId) {
+    return springDataRepository.findByAggregationId(aggregationId).stream()
+        .map(mapper::toDomain)
+        .toList();
+  }
 }

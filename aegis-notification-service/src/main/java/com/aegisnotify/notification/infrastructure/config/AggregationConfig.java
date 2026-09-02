@@ -8,7 +8,6 @@ import com.aegisnotify.notification.infrastructure.summarizer.UnavailableSummari
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -21,11 +20,12 @@ import org.springframework.web.reactive.function.client.WebClient;
  * live in infrastructure — application services depend on the domain object,
  * never on the Spring-bound properties record directly.
  *
- * <p>Slice 1 does not yet bind {@code excluded-templates}/{@code
- * excluded-channels} (D13 config wiring is Slice 3 scope) — both default to
- * empty sets here, meaning {@link com.aegisnotify.notification.domain.model
- * .AggregationPolicy}'s exclusion check is exercised and correct today, just
- * with nothing yet configured to exclude.</p>
+ * <p>{@code excluded-templates}/{@code excluded-channels} (D13, Slice 3)
+ * bind straight from {@link NotificationAggregationProperties} into {@link
+ * AggregationSettings}, completing X1: {@link com.aegisnotify.notification
+ * .domain.model.AggregationPolicy}'s exclusion check has accepted these
+ * fields since Slice 1, but nothing was configured to exclude until this
+ * mapping existed.</p>
  *
  * <p><strong>No {@code @EnableScheduling} here</strong> (K7, revised in
  * rev 2 of the design): the single unconditional scheduling bootstrap lives
@@ -42,8 +42,8 @@ public class AggregationConfig {
         properties.window(),
         properties.requireSameTemplate(),
         properties.maxGroupSize(),
-        Set.of(),
-        Set.of(),
+        properties.excludedTemplates(),
+        properties.excludedChannels(),
         properties.claimLease(),
         properties.maxAttempts()
     );

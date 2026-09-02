@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.application.service.PublishOutboxEventService;
 import com.aegisnotify.notification.application.service.PublishOutboxEventTransactions;
+import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
 import java.time.Duration;
@@ -186,6 +187,73 @@ class PublishOutboxEventServiceTest {
     when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
 
     service = newService(aggregationSettings(false));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
+  }
+
+  /**
+   * Task 3.9 (D13 end-to-end fail-safe): a config-excluded template must
+   * publish immediately and never reach the aggregation buffer — and, by
+   * construction (never held, never rendered/grouped), never appears in a
+   * summarizer request either.
+   */
+  @Test
+  void publishPending_aggregationEnabled_excludedTemplate_publishesImmediately_neverHeld() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "EMAIL",
+        "templateName", "regulated-notice"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    AggregationSettings settings = new AggregationSettings(true, Duration.ofMinutes(5), true, 20,
+        Set.of("Regulated-Notice"), Set.of(), Duration.ofMinutes(2), 3);
+    service = newService(settings);
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
+  }
+
+  /** Task 3.9 (D13 end-to-end fail-safe): a config-excluded channel bypasses aggregation. */
+  @Test
+  void publishPending_aggregationEnabled_excludedChannel_publishesImmediately_neverHeld() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "SMS",
+        "templateName", "otp"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    AggregationSettings settings = new AggregationSettings(true, Duration.ofMinutes(5), true, 20,
+        Set.of(), Set.of(Channel.SMS), Duration.ofMinutes(2), 3);
+    service = newService(settings);
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
+  }
+
+  /**
+   * Task 3.9 (D13 end-to-end fail-safe): a missing/unresolvable {@code
+   * templateName} in the outbox payload must be treated as excluded
+   * (fail-safe) and publish immediately, even with aggregation enabled and
+   * nothing explicitly configured as excluded.
+   */
+  @Test
+  void publishPending_aggregationEnabled_missingTemplateName_publishesImmediately_failSafe() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "EMAIL"));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(true));
     int count = service.publishPending();
 
     assertEquals(1, count);

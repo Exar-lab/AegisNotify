@@ -51,6 +51,8 @@ notification:
     max-group-size: ${NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE:20}
     claim-lease: ${NOTIFICATION_AGGREGATION_CLAIM_LEASE:PT2M}
     max-attempts: ${NOTIFICATION_AGGREGATION_MAX_ATTEMPTS:3}
+    excluded-templates: ${NOTIFICATION_AGGREGATION_EXCLUDED_TEMPLATES:}
+    excluded-channels: ${NOTIFICATION_AGGREGATION_EXCLUDED_CHANNELS:}
     summarizer:
       base-url: ${AGGREGATION_LLM_BASE_URL:https://api.anthropic.com}
       api-key: ${AGGREGATION_LLM_API_KEY:}

@@ -8,10 +8,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.dto.SummarizedContent;
 import com.aegisnotify.notification.application.port.out.AggregationBufferRepository;
+import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
@@ -57,12 +60,16 @@ class AggregationFlushTransactionsTest {
   @Mock
   private NotificationLogRepository notificationLogRepository;
 
+  @Mock
+  private AuditEventPublisherPort auditEventPublisherPort;
+
   private AggregationFlushTransactions transactions;
 
   @BeforeEach
   void setUp() {
     transactions = new AggregationFlushTransactions(aggregationBufferRepository,
-        notificationRepository, outboxEventRepository, notificationLogRepository);
+        notificationRepository, outboxEventRepository, notificationLogRepository,
+        auditEventPublisherPort);
   }
 
   @Test
@@ -147,6 +154,40 @@ class AggregationFlushTransactionsTest {
     verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
     verify(aggregationBufferRepository).resolve(claimed.getId());
     verify(notificationLogRepository).save(any(NotificationLog.class));
+  }
+
+  /**
+   * Task 3.3/3.4 (D5 fallback-path scenario): a group that falls back to
+   * individual delivery (Slice 1's unchanged path) must keep its existing
+   * single-notification audit event, unaffected by the D5 fan-out added to
+   * {@link AggregationFlushTransactions#flushAggregate}. {@link
+   * AggregationFlushTransactions#flushIndividually} itself publishes NO
+   * audit event at all — the individual notification's own audit event
+   * still comes later, unchanged, via {@code
+   * PublishOutboxEventTransactions#publishOne} once its freshly-written
+   * outbox event is picked up by the relay, exactly as it always has.
+   */
+  @Test
+  void flushIndividually_neverPublishesAuditEvent_fallbackPathUnaffectedByD5FanOut() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, now, now);
+    final BufferedNotification claimed = BufferedNotification.create(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Priority.MEDIUM, now.plusSeconds(300), now).claim(now);
+
+    when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    transactions.flushIndividually(claimed);
+
+    verifyNoInteractions(auditEventPublisherPort);
   }
 
   private BufferedNotification bufferedRow(UUID notificationId, Instant now,
@@ -277,6 +318,150 @@ class AggregationFlushTransactionsTest {
         .filter(n -> n.getId().equals(siblingId)).findFirst().orElseThrow();
 
     assertEquals(NotificationStatus.QUEUED, savedSibling.getStatus());
+  }
+
+  /**
+   * Task 3.1 (D5): an aggregate of 5 originals must produce exactly 5 {@link
+   * AuditEventMessage} publishes — one per original notification ID, leader
+   * included — each carrying the SAME {@code aggregationId} somewhere in its
+   * free-text {@code details} field so an operator grepping the audit log
+   * can correlate all 5 back to one aggregate send.
+   *
+   * <p>Fix 5 (review-reliability WARNING): each fabricated member has a
+   * DISTINCT recipient/channel so a bug that swapped/reused the wrong
+   * notification's recipient or channel per member would be caught, not
+   * just a distinct-ID count — every published event's recipient/channel is
+   * asserted against THAT SPECIFIC member's own notification data.</p>
+   */
+  @Test
+  void flushAggregate_success_publishesOneAuditEventPerMember_allSharingAggregationId() {
+    Instant now = Instant.now();
+    List<UUID> notificationIds = List.of(UUID.randomUUID(), UUID.randomUUID(),
+        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    List<Channel> channels =
+        List.of(Channel.EMAIL, Channel.SMS, Channel.EMAIL, Channel.WHATSAPP, Channel.PUSH);
+    List<String> recipients = List.of("member0@example.com", "+34600000001",
+        "member2@example.com", "+34600000003", "device-token-4");
+
+    List<Notification> notifications = new java.util.ArrayList<>();
+    for (int i = 0; i < notificationIds.size(); i++) {
+      notifications.add(Notification.reconstitute(
+          notificationIds.get(i), channels.get(i), recipients.get(i), "welcome",
+          Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+          null, null, now.minusSeconds(10), now));
+    }
+    for (int i = 0; i < notificationIds.size(); i++) {
+      when(notificationRepository.findById(notificationIds.get(i)))
+          .thenReturn(Optional.of(notifications.get(i)));
+    }
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    SummarizedContent summary = new SummarizedContent("Update", "Five things happened.");
+    List<BufferedNotification> rows = notificationIds.stream()
+        .map(id -> bufferedRow(id, now, now.minusSeconds(10)))
+        .toList();
+    BufferedNotification leaderRow = rows.get(0);
+
+    transactions.flushAggregate(rows, leaderRow, summary);
+
+    ArgumentCaptor<AuditEventMessage> auditCaptor =
+        ArgumentCaptor.forClass(AuditEventMessage.class);
+    verify(auditEventPublisherPort, times(5)).publish(auditCaptor.capture());
+    List<AuditEventMessage> published = auditCaptor.getAllValues();
+
+    assertEquals(notificationIds.size(),
+        published.stream().map(AuditEventMessage::notificationId).distinct().count());
+    assertTrue(notificationIds.containsAll(
+        published.stream().map(AuditEventMessage::notificationId).toList()));
+
+    // Every published event's details must reference the SAME aggregation
+    // id — extract it from the leader's own detail string and assert every
+    // other event's details contains it too.
+    String leaderDetails = published.stream()
+        .filter(e -> e.notificationId().equals(leaderRow.getNotificationId()))
+        .findFirst().orElseThrow().details();
+    String aggregationIdFragment = leaderDetails.substring(leaderDetails.indexOf("aggregation "));
+    assertTrue(published.stream().allMatch(e -> e.details().contains(aggregationIdFragment)));
+
+    // Fix 5: each published event's recipient/channel must match THAT
+    // SPECIFIC member's own notification data, never another member's.
+    for (int i = 0; i < notificationIds.size(); i++) {
+      UUID memberId = notificationIds.get(i);
+      AuditEventMessage event = published.stream()
+          .filter(e -> e.notificationId().equals(memberId))
+          .findFirst().orElseThrow();
+      assertEquals(recipients.get(i), event.recipient());
+      assertEquals(channels.get(i).name(), event.channel());
+    }
+  }
+
+  /**
+   * Fix 6 (review-reliability WARNING): a synchronously-throwing {@link
+   * AuditEventPublisherPort} implementation (a hypothetical one that
+   * violates the port's fire-and-forget javadoc contract) must not abort
+   * the member fan-out loop, and must not affect the throwing member's own
+   * already-completed save/log or the leader's own delivery-critical outbox
+   * event either.
+   */
+  @Test
+  void flushAggregate_onePublishThrows_othersStillProcessed() {
+    Instant now = Instant.now();
+    UUID leaderNotificationId = UUID.randomUUID();
+    UUID sibling1Id = UUID.randomUUID();
+    UUID sibling2Id = UUID.randomUUID();
+
+    Notification leaderNotification = Notification.reconstitute(
+        leaderNotificationId, Channel.EMAIL, "leader@example.com", "welcome",
+        Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, now.minusSeconds(10), now);
+    Notification sibling1 = Notification.reconstitute(
+        sibling1Id, Channel.EMAIL, "sibling1@example.com", "welcome",
+        Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, now.minusSeconds(5), now);
+    Notification sibling2 = Notification.reconstitute(
+        sibling2Id, Channel.SMS, "+34600000002", "welcome",
+        Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, now.minusSeconds(3), now);
+
+    when(notificationRepository.findById(leaderNotificationId))
+        .thenReturn(Optional.of(leaderNotification));
+    when(notificationRepository.findById(sibling1Id)).thenReturn(Optional.of(sibling1));
+    when(notificationRepository.findById(sibling2Id)).thenReturn(Optional.of(sibling2));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    org.mockito.Mockito.doAnswer(invocation -> {
+      AuditEventMessage event = invocation.getArgument(0);
+      if (event.notificationId().equals(sibling1Id)) {
+        throw new RuntimeException("boom - simulated synchronous publish failure");
+      }
+      return null;
+    }).when(auditEventPublisherPort).publish(any(AuditEventMessage.class));
+
+    SummarizedContent summary = new SummarizedContent("Update", "Two things happened.");
+    BufferedNotification leaderRow = bufferedRow(leaderNotificationId, now, now.minusSeconds(10));
+    BufferedNotification sibling1Row = bufferedRow(sibling1Id, now, now.minusSeconds(5));
+    BufferedNotification sibling2Row = bufferedRow(sibling2Id, now, now.minusSeconds(3));
+
+    org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> transactions.flushAggregate(
+        List.of(leaderRow, sibling1Row, sibling2Row), leaderRow, summary));
+
+    // The leader's delivery-critical outbox event is written regardless.
+    verify(outboxEventRepository, times(1)).save(any(OutboxEvent.class));
+    // All 3 members (leader + 2 siblings) still get saved/logged/resolved
+    // even though sibling1's audit publish threw.
+    verify(notificationRepository, times(3)).save(any(Notification.class));
+    verify(aggregationBufferRepository).resolve(leaderRow.getId());
+    verify(aggregationBufferRepository).resolve(sibling1Row.getId());
+    verify(aggregationBufferRepository).resolve(sibling2Row.getId());
   }
 
   @Test
