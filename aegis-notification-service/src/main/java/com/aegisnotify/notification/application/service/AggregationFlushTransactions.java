@@ -222,6 +222,12 @@ public class AggregationFlushTransactions {
     OutboxEvent savedOutbox = outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
     log.info("DIAGNOSTIC flushAggregate saved outbox id={} notificationId={} status={}",
         savedOutbox.getId(), savedOutbox.getNotificationId(), savedOutbox.getStatus());
+    // TEMP: same-transaction readback to check whether the writes above are
+    // even visible to a fresh query within THIS transaction.
+    notificationRepository.findById(leaderRow.getNotificationId()).ifPresentOrElse(
+        n -> log.info("DIAGNOSTIC same-tx readback notification aggregationId={} status={}",
+            n.getAggregationId(), n.getStatus()),
+        () -> log.info("DIAGNOSTIC same-tx readback notification NOT FOUND"));
     String leaderDetail =
         "Aggregated as leader of a " + members.size() + "-notification group (aggregation "
             + aggregationId + ")";
