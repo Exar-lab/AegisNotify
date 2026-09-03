@@ -216,8 +216,12 @@ public class AggregationFlushTransactions {
 
     Notification aggregatedLeader =
         leaderNotification.markAggregated(aggregationId, summary.body());
-    notificationRepository.save(aggregatedLeader);
-    outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
+    Notification savedLeader = notificationRepository.save(aggregatedLeader);
+    log.info("DIAGNOSTIC flushAggregate saved leader id={} aggregationId={} status={}",
+        savedLeader.getId(), savedLeader.getAggregationId(), savedLeader.getStatus());
+    OutboxEvent savedOutbox = outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
+    log.info("DIAGNOSTIC flushAggregate saved outbox id={} notificationId={} status={}",
+        savedOutbox.getId(), savedOutbox.getNotificationId(), savedOutbox.getStatus());
     String leaderDetail =
         "Aggregated as leader of a " + members.size() + "-notification group (aggregation "
             + aggregationId + ")";
