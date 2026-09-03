@@ -69,4 +69,39 @@ class ProcessNotificationServiceTest {
         .send(Channel.EMAIL, "user@example.com", "Hello John", "Welcome");
     verify(transactions).applyResult(processing, providerResult);
   }
+
+  /**
+   * Fix 4 (review-resilience WARNING): sibling propagation must run in its
+   * OWN, separate transaction, invoked AFTER {@code applyResult} has already
+   * committed the leader's own outcome — never merged back into the same
+   * call/transaction as the leader's update.
+   */
+  @Test
+  void process_propagatesToSiblings_afterApplyResultAlreadyCompleted() {
+    service = new ProcessNotificationService(notificationProviderPort, transactions);
+
+    UUID notificationId = UUID.randomUUID();
+    Notification processing = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.HIGH, NotificationStatus.PROCESSING,
+        null, null, Instant.now(), Instant.now()
+    );
+    PreparedNotification prepared =
+        new PreparedNotification(processing, "Welcome", "Hello John");
+    ProviderResult providerResult =
+        new ProviderResult(ProviderResult.Outcome.SENT, "SendGrid", null);
+    NotificationResponse expectedResponse =
+        new NotificationResponse(notificationId, NotificationStatus.SENT);
+
+    when(transactions.prepare(notificationId)).thenReturn(prepared);
+    when(notificationProviderPort.send(Channel.EMAIL, "user@example.com", "Hello John", "Welcome"))
+        .thenReturn(providerResult);
+    when(transactions.applyResult(processing, providerResult)).thenReturn(expectedResponse);
+
+    service.process(notificationId);
+
+    org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(transactions);
+    inOrder.verify(transactions).applyResult(processing, providerResult);
+    inOrder.verify(transactions).propagateOutcomeToAggregationSiblings(processing, providerResult);
+  }
 }

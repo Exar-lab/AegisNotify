@@ -3,6 +3,7 @@ package com.aegisnotify.notification;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.AggregationBufferRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
@@ -31,6 +32,9 @@ class NotificationServiceContextSmokeTest {
 
   @MockitoBean
   private OutboxEventRepositoryAdapter outboxEventRepositoryAdapter;
+
+  @MockitoBean
+  private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;

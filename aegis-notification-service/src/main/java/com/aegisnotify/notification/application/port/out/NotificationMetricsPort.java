@@ -17,4 +17,19 @@ public interface NotificationMetricsPort {
    * @param priority the notification priority
    */
   void recordRequest(Channel channel, Priority priority);
+
+  /**
+   * Records one aggregation buffer group successfully resolved by a flush
+   * poll (issue #86, Slice 1).
+   */
+  void recordAggregationFlushSuccess();
+
+  /**
+   * Records one aggregation buffer row whose claim or flush attempt failed
+   * during a flush poll (issue #86, Slice 1).
+   *
+   * @param reason short, low-cardinality failure classification (e.g.
+   *               {@code "claim_failed"}, {@code "flush_failed"})
+   */
+  void recordAggregationFlushError(String reason);
 }

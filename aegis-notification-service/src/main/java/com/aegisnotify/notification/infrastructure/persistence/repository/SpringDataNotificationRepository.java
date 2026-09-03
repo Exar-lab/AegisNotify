@@ -13,4 +13,6 @@ public interface SpringDataNotificationRepository
   List<NotificationJpaEntity> findByStatus(NotificationStatus status);
 
   List<NotificationJpaEntity> findByChannel(Channel channel);
+
+  List<NotificationJpaEntity> findByAggregationId(UUID aggregationId);
 }

@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 public class MicrometerNotificationMetricsAdapter implements NotificationMetricsPort {
 
   private static final String METER_REQUESTS_TOTAL = "aegisnotify.requests.total";
+  private static final String METER_AGGREGATION_FLUSH_SUCCESS =
+      "aegisnotify.aggregation.flush.success.count";
+  private static final String METER_AGGREGATION_FLUSH_ERROR =
+      "aegisnotify.aggregation.flush.error.count";
 
   private final MeterRegistry meterRegistry;
 
@@ -24,5 +28,15 @@ public class MicrometerNotificationMetricsAdapter implements NotificationMetrics
         "channel", channel.name(),
         "priority", priority.name()
     ).increment();
+  }
+
+  @Override
+  public void recordAggregationFlushSuccess() {
+    meterRegistry.counter(METER_AGGREGATION_FLUSH_SUCCESS).increment();
+  }
+
+  @Override
+  public void recordAggregationFlushError(String reason) {
+    meterRegistry.counter(METER_AGGREGATION_FLUSH_ERROR, "reason", reason).increment();
   }
 }

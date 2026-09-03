@@ -20,7 +20,9 @@ public class NotificationPersistenceMapper {
         entity.getProviderUsed(),
         entity.getErrorDetail(),
         entity.getCreatedAt(),
-        entity.getUpdatedAt()
+        entity.getUpdatedAt(),
+        entity.getAggregationId(),
+        entity.getAggregateBody()
     );
   }
 
@@ -36,7 +38,9 @@ public class NotificationPersistenceMapper {
         domain.getProviderUsed(),
         domain.getErrorDetail(),
         domain.getCreatedAt(),
-        domain.getUpdatedAt()
+        domain.getUpdatedAt(),
+        domain.getAggregationId(),
+        domain.getAggregateBody()
     );
   }
 }
