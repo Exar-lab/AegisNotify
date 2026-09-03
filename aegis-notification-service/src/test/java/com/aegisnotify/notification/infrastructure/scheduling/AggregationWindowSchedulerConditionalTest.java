@@ -7,6 +7,7 @@ import com.aegisnotify.notification.infrastructure.config.SchedulingConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.scheduling.TaskScheduler;
 
 /**
  * Regression coverage for tasks 1.26/1.27: with {@code
@@ -17,22 +18,24 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
  * (verified together with {@code SchedulingConfigTest}'s K7 proof that the
  * relay's own scheduling infrastructure never depends on this flag).
  *
- * <p>Deliberately does NOT register {@code TaskSchedulingAutoConfiguration}
- * or invoke the scheduler's method here: proving delegation and the per-tick
- * exception guard is {@link AggregationWindowSchedulerTest}'s job (plain
- * Mockito, no Spring context, fully deterministic). Mixing a live {@code
- * @Scheduled} tick into this class's context previously raced a manual
- * invocation of the same method, forcing the assertion down to {@code
- * atLeastOnce()} to tolerate it — this class now only proves bean wiring
- * (conditional presence/absence + the bean resolves the correct use-case
- * dependency), which needs no real ticking scheduler at all.</p>
+ * <p>A mocked {@link TaskScheduler} bean is registered so {@code
+ * @EnableScheduling}'s {@code ScheduledAnnotationBeanPostProcessor} uses it
+ * instead of creating its own live local scheduler — without this, {@code
+ * @Scheduled(fixedDelayString=...)} fires its first tick immediately on
+ * context startup regardless of the configured interval (not just after it
+ * elapses), which previously raced this test's own manual invocation of the
+ * same method under real CI/Docker timing and forced the assertion down to
+ * {@code atLeastOnce()} to tolerate it. Substituting the scheduler
+ * eliminates the race outright — the manual call is now the ONLY
+ * invocation, an assertion no faster/slower CI can ever flake.</p>
  */
 class AggregationWindowSchedulerConditionalTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withUserConfiguration(SchedulingConfig.class, AggregationWindowScheduler.class)
       .withBean(FlushAggregationWindowsUseCase.class,
-          () -> Mockito.mock(FlushAggregationWindowsUseCase.class));
+          () -> Mockito.mock(FlushAggregationWindowsUseCase.class))
+      .withBean(TaskScheduler.class, () -> Mockito.mock(TaskScheduler.class));
 
   @Test
   void aggregationDisabled_schedulerBeanIsAbsent() {

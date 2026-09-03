@@ -7,10 +7,14 @@ import com.aegisnotify.notification.application.port.out.AggregationBufferReposi
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.domain.enums.AggregationBufferStatus;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.model.BufferedNotification;
+import com.aegisnotify.notification.infrastructure.persistence.entity.NotificationJpaEntity;
+import com.aegisnotify.notification.infrastructure.persistence.repository.SpringDataNotificationRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -69,6 +73,9 @@ class AggregationBufferRepositoryAdapterIntegrationTest {
   @Autowired
   private AggregationBufferRepository repository;
 
+  @Autowired
+  private SpringDataNotificationRepository notificationRepository;
+
   // No production DeadLetterQueuePort implementation exists yet; every
   // context that boots the full NotificationServiceApplication must supply
   // one to satisfy ConsumeNotificationEventService's dependencies, even
@@ -76,11 +83,27 @@ class AggregationBufferRepositoryAdapterIntegrationTest {
   @MockitoBean
   private DeadLetterQueuePort deadLetterQueuePort;
 
+  /**
+   * {@code aggregation_buffer.notification_id} carries a foreign key to
+   * {@code notifications} (V3 migration) — every buffered row in this test
+   * needs a real backing notification row first, or Postgres rejects the
+   * insert. Never caught locally since Docker was unavailable in the dev
+   * sandbox; surfaced by CI, which does have Docker.
+   */
+  private UUID seedNotification(String recipient, Channel channel) {
+    UUID notificationId = UUID.randomUUID();
+    notificationRepository.save(new NotificationJpaEntity(
+        notificationId, channel, recipient, "welcome", Map.of("name", "Jane"),
+        Priority.MEDIUM, NotificationStatus.PENDING, null, null, Instant.now(), Instant.now()));
+    return notificationId;
+  }
+
   @Test
   void conditionalClaim_statusAlreadyChanged_updatesZeroRows_returnsEmpty() {
     Instant now = Instant.now();
+    UUID notificationId = seedNotification("user@example.com", Channel.EMAIL);
     BufferedNotification buffered = repository.save(BufferedNotification.create(
-        UUID.randomUUID(), Channel.EMAIL, "user@example.com", "welcome",
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
         Priority.MEDIUM, now.minusSeconds(1), now.minusSeconds(300)));
 
     // A concurrent claimer wins first: the row's real DB status is now
@@ -100,11 +123,13 @@ class AggregationBufferRepositoryAdapterIntegrationTest {
   void findClaimable_includesExpiredBufferedRow_excludesNotYetExpiredRow() {
     Instant now = Instant.now();
     BufferedNotification expired = repository.save(BufferedNotification.create(
-        UUID.randomUUID(), Channel.EMAIL, "expired@example.com", "welcome",
-        Priority.MEDIUM, now.minusSeconds(1), now.minusSeconds(300)));
+        seedNotification("expired@example.com", Channel.EMAIL), Channel.EMAIL,
+        "expired@example.com", "welcome", Priority.MEDIUM,
+        now.minusSeconds(1), now.minusSeconds(300)));
     BufferedNotification notYetExpired = repository.save(BufferedNotification.create(
-        UUID.randomUUID(), Channel.EMAIL, "future@example.com", "welcome",
-        Priority.MEDIUM, now.plusSeconds(300), now.minusSeconds(1)));
+        seedNotification("future@example.com", Channel.EMAIL), Channel.EMAIL,
+        "future@example.com", "welcome", Priority.MEDIUM,
+        now.plusSeconds(300), now.minusSeconds(1)));
 
     List<BufferedNotification> claimable =
         repository.findClaimable(now, now.minus(java.time.Duration.ofMinutes(2)));
@@ -118,8 +143,9 @@ class AggregationBufferRepositoryAdapterIntegrationTest {
   void findClaimable_includesStaleClaimedRow_pastLeaseCutoff() {
     Instant now = Instant.now();
     BufferedNotification buffered = repository.save(BufferedNotification.create(
-        UUID.randomUUID(), Channel.EMAIL, "stale@example.com", "welcome",
-        Priority.MEDIUM, now.plusSeconds(300), now.minusSeconds(600)));
+        seedNotification("stale@example.com", Channel.EMAIL), Channel.EMAIL,
+        "stale@example.com", "welcome", Priority.MEDIUM,
+        now.plusSeconds(300), now.minusSeconds(600)));
     Instant staleClaimTime = now.minus(java.time.Duration.ofMinutes(5));
     Optional<BufferedNotification> claimed = repository.claim(buffered, staleClaimTime);
     assertThat(claimed).isPresent();
