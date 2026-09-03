@@ -31,6 +31,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -112,6 +113,18 @@ class FlushAggregationWindowsIntegrationTest {
   // one to satisfy ConsumeNotificationEventService's dependencies.
   @MockitoBean
   private DeadLetterQueuePort deadLetterQueuePort;
+
+  // notification.aggregation.enabled=true also activates the REAL
+  // AggregationWindowScheduler, whose first @Scheduled tick fires
+  // immediately on context startup regardless of poll-interval — racing
+  // this test's own manual flushExpiredWindows() call on the exact same
+  // buffered rows under real CI/Docker timing (a background tick can claim
+  // and resolve a row before or during the test's own call, leaving the
+  // manually-invoked call's view of "what got flushed" inconsistent with
+  // what's actually in the database by assertion time). Mocking the
+  // scheduler infrastructure eliminates the race outright.
+  @MockitoBean
+  private TaskScheduler taskScheduler;
 
   @Test
   void flushExpiredWindows_twoNotificationsSharingGroup_writesOneAggregateOutboxEvent() {
