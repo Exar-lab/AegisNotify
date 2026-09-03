@@ -30,8 +30,16 @@ public interface SpringDataAggregationBufferRepository
    * matches {@code expectedStatus} at the moment of the update — the
    * single-claimant guard against a concurrent claimer racing on the same
    * group (B3).
+   *
+   * <p>{@code clearAutomatically = true}: a bulk {@code @Modifying} update
+   * bypasses the persistence context, so without this, a subsequent read
+   * within the SAME transaction (e.g. {@link #findClaimable}) can return a
+   * stale, pre-update cached entity instead of the row this query just
+   * wrote. Production code never notices — each of these calls already runs
+   * in its own transaction (B3) — but this is the correct, defensive
+   * default for any bulk update that might be read again same-transaction.
    */
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query("UPDATE AggregationBufferJpaEntity e SET e.status = :newStatus, "
       + "e.claimedAt = :claimedAt, e.attempts = :attempts "
       + "WHERE e.id = :id AND e.status = :expectedStatus")
@@ -41,7 +49,7 @@ public interface SpringDataAggregationBufferRepository
       @Param("claimedAt") Instant claimedAt,
       @Param("attempts") int attempts);
 
-  @Modifying
+  @Modifying(clearAutomatically = true)
   @Query("UPDATE AggregationBufferJpaEntity e SET e.status = "
       + "com.aegisnotify.notification.domain.enums.AggregationBufferStatus.DONE WHERE e.id = :id")
   void markDone(@Param("id") UUID id);
