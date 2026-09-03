@@ -183,13 +183,12 @@ public class AggregationFlushTransactions {
    * publish path once its single outbox event is picked up — the same
    * multi-event-per-lifecycle pattern every other notification already has
    * (queued, processing, terminal outcome all publish separately).
-   * {@link AuditEventPublisherPort} is fire-and-forget by contract (failures
-   * are logged and swallowed by the adapter, never propagated here) — this
-   * fan-out is called the same direct, uncaught way every other audit
-   * publish call site in this codebase already is; a partial audit-publish
-   * failure never rolls back or duplicates the actual notification delivery,
-   * which is already durably owned by the outbox event written in this same
-   * transaction.</p>
+   * {@link AuditEventPublisherPort} is fire-and-forget by contract, but
+   * nothing about the interface enforces that at compile time, so every
+   * publish here — leader included — goes through {@link
+   * #publishAggregationAuditEventSafely}: an audit-publish failure must never
+   * roll back this transaction and lose the outbox write (or the sibling
+   * fan-out) that already durably owns the actual notification delivery.</p>
    *
    * <p>Throws (uncaught, rolling back this transaction) if the leader
    * notification cannot be found — the caller ({@code
@@ -224,7 +223,7 @@ public class AggregationFlushTransactions {
     notificationLogRepository.save(
         NotificationLog.create(leaderRow.getNotificationId(), LogStatus.PENDING, leaderDetail));
     aggregationBufferRepository.resolve(leaderRow.getId());
-    publishAggregationAuditEvent(aggregatedLeader, leaderDetail);
+    publishAggregationAuditEventSafely(aggregatedLeader, leaderDetail);
 
     for (BufferedNotification member : members) {
       if (member.getId().equals(leaderRow.getId())) {

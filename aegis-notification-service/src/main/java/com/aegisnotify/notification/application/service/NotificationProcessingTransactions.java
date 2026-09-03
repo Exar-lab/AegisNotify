@@ -21,6 +21,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -110,9 +111,10 @@ public class NotificationProcessingTransactions {
    * individually traceable per original notification through to the FINAL
    * outcome, not just at flush time.</p>
    *
-   * <p>Runs in its OWN transaction, separate from and invoked AFTER {@link
-   * #applyResult} has already committed the leader's own delivery-critical
-   * status update (review-resilience WARNING): the sibling group can grow up
+   * <p>Runs in its OWN transaction ({@code REQUIRES_NEW}, not the default
+   * {@code REQUIRED}), separate from and invoked AFTER {@link #applyResult}
+   * has already committed the leader's own delivery-critical status update
+   * (review-resilience WARNING): the sibling group can grow up
    * to {@code max-group-size} (default 20), and a slow/failing sibling save
    * must never roll back — or hold the connection behind — the leader's
    * already-correct, already-committed outcome. A retried delivery
@@ -138,7 +140,7 @@ public class NotificationProcessingTransactions {
    * overwhelmingly common case — a notification that was never aggregated
    * at all).</p>
    */
-  @Transactional
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void propagateOutcomeToAggregationSiblings(Notification leader, ProviderResult result) {
     UUID aggregationId = leader.getAggregationId();
     if (aggregationId == null) {
@@ -151,7 +153,11 @@ public class NotificationProcessingTransactions {
       }
 
       if (sibling.getStatus() != NotificationStatus.QUEUED) {
-        log.warn("Skipping aggregation outcome propagation for notification {} in aggregation "
+        // Expected, not a failure: a cancelled sibling or one already
+        // finalized by an earlier propagation (see the guard's own javadoc
+        // above) — DEBUG, not WARN, so normal cancellations/retries don't
+        // page anyone.
+        log.debug("Skipping aggregation outcome propagation for notification {} in aggregation "
                 + "{}: current status {} is not QUEUED (already cancelled or already finalized "
                 + "by an earlier propagation)",
             sibling.getId(), aggregationId, sibling.getStatus());
