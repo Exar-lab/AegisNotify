@@ -7,6 +7,7 @@ import com.aegisnotify.notification.application.dto.NotificationEvent;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.AggregationBufferRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
@@ -78,6 +79,15 @@ class KafkaMessageBrokerAdapterIntegrationTest {
 
   @MockitoBean
   private OutboxEventRepositoryAdapter outboxEventRepositoryAdapter;
+
+  // @ActiveProfiles("test") excludes JPA repository auto-configuration
+  // entirely (application-test.yml), so every JPA-backed adapter bean must
+  // be explicitly mocked here — same reason as the other 4 adapters above.
+  // Added when issue #86 introduced this adapter after this test was
+  // originally written for issue #27, alongside NotificationServiceContext
+  // SmokeTest's identical fix.
+  @MockitoBean
+  private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;

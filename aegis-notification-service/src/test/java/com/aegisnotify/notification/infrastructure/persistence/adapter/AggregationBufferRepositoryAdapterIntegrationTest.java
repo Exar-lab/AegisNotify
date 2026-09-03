@@ -23,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -41,9 +42,18 @@ import org.testcontainers.utility.DockerImageName;
  * OutboxWorkerSchedulerIntegrationTest} — this follows the identical
  * Testcontainers-Postgres pattern and is expected to pass wherever a real
  * Docker daemon is available.</p>
+ *
+ * <p>{@code @Transactional}: the adapter's {@code conditionalClaim}/{@code
+ * markDone} queries are {@code @Modifying}, which JPA refuses to execute
+ * outside an active transaction — production code always has one (owned by
+ * {@code AggregationFlushTransactions}), but a test calling the adapter
+ * directly needs its own. Spring's test-managed transaction also rolls back
+ * after each method, so the three tests don't need to worry about sharing
+ * state.</p>
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
+@Transactional
 class AggregationBufferRepositoryAdapterIntegrationTest {
 
   @Container
