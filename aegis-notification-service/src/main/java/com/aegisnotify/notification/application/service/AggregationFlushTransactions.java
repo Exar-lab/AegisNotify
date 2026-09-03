@@ -45,6 +45,12 @@ public class AggregationFlushTransactions {
   private final NotificationLogRepository notificationLogRepository;
   private final AuditEventPublisherPort auditEventPublisherPort;
 
+  // TEMP DIAGNOSTIC: forces an immediate flush right after the leader save so
+  // any real JDBC/Hibernate error surfaces synchronously instead of being
+  // deferred (and possibly swallowed) until commit time.
+  @jakarta.persistence.PersistenceContext
+  private jakarta.persistence.EntityManager entityManager;
+
   public AggregationFlushTransactions(AggregationBufferRepository aggregationBufferRepository,
       NotificationRepository notificationRepository,
       OutboxEventRepository outboxEventRepository,
@@ -224,6 +230,13 @@ public class AggregationFlushTransactions {
     Notification savedLeader = notificationRepository.save(aggregatedLeader);
     log.info("DIAGNOSTIC flushAggregate saved leader id={} aggregationId={} status={}",
         savedLeader.getId(), savedLeader.getAggregationId(), savedLeader.getStatus());
+    try {
+      entityManager.flush();
+      log.info("DIAGNOSTIC flushAggregate explicit entityManager.flush() succeeded");
+    } catch (RuntimeException flushEx) {
+      log.warn("DIAGNOSTIC flushAggregate explicit flush THREW: {}", flushEx.toString(), flushEx);
+      throw flushEx;
+    }
     OutboxEvent savedOutbox = outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
     log.info("DIAGNOSTIC flushAggregate saved outbox id={} notificationId={} status={}",
         savedOutbox.getId(), savedOutbox.getNotificationId(), savedOutbox.getStatus());
