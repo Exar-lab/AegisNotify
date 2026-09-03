@@ -240,6 +240,11 @@ public class AggregationFlushTransactions {
         NotificationLog.create(leaderRow.getNotificationId(), LogStatus.PENDING, leaderDetail));
     aggregationBufferRepository.resolve(leaderRow.getId());
     publishAggregationAuditEvent(aggregatedLeader, leaderDetail);
+    log.info("DIAGNOSTIC flushAggregate end-of-method rollbackOnly={}",
+        TransactionSynchronizationManager.isActualTransactionActive()
+            ? org.springframework.transaction.interceptor.TransactionAspectSupport
+                .currentTransactionStatus().isRollbackOnly()
+            : "N/A");
 
     for (BufferedNotification member : members) {
       if (member.getId().equals(leaderRow.getId())) {
