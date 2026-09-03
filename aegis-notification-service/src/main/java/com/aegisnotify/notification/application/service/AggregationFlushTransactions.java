@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Owns the two short-lived transactions that bracket an aggregation flush
@@ -209,6 +210,10 @@ public class AggregationFlushTransactions {
   @Transactional
   public void flushAggregate(List<BufferedNotification> members, BufferedNotification leaderRow,
       SummarizedContent summary) {
+    log.info("DIAGNOSTIC flushAggregate tx active={} readOnly={} name={}",
+        TransactionSynchronizationManager.isActualTransactionActive(),
+        TransactionSynchronizationManager.isCurrentTransactionReadOnly(),
+        TransactionSynchronizationManager.getCurrentTransactionName());
     UUID aggregationId = UUID.randomUUID();
     Notification leaderNotification = notificationRepository.findById(leaderRow.getNotificationId())
         .orElseThrow(() -> new IllegalStateException(
