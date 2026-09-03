@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.scheduling.TaskScheduler;
@@ -61,6 +63,9 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
 class FlushAggregationWindowsIntegrationTest {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(FlushAggregationWindowsIntegrationTest.class);
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
@@ -144,9 +149,13 @@ class FlushAggregationWindowsIntegrationTest {
         Priority.MEDIUM, NotificationStatus.PENDING, null, null,
         now.minusSeconds(10), now.minusSeconds(10)));
 
+    // TEMP: only used at the end; the new diagnostic dump call below widens
+    // the distance beyond the default limit.
+    // CHECKSTYLE.SUPPRESS: VariableDeclarationUsageDistance
     BufferedNotification leaderBufferRow = aggregationBufferRepository.save(
         BufferedNotification.create(leaderId, Channel.EMAIL, "user@example.com", "welcome",
             Priority.MEDIUM, now.minusSeconds(1), now.minusSeconds(20)));
+    // CHECKSTYLE.SUPPRESS: VariableDeclarationUsageDistance
     BufferedNotification siblingBufferRow = aggregationBufferRepository.save(
         BufferedNotification.create(siblingId, Channel.EMAIL, "user@example.com", "welcome",
             Priority.MEDIUM, now.minusSeconds(1), now.minusSeconds(10)));
@@ -158,22 +167,8 @@ class FlushAggregationWindowsIntegrationTest {
 
     assertThat(resolved).isEqualTo(2);
 
-    // TEMP DIAGNOSTIC (issue #86 flake investigation) - dump full state
-    // regardless of status before asserting, so a failure tells us WHAT
-    // happened instead of just that something did not match.
-    System.out.println("=== DIAGNOSTIC: all outbox_events rows ===");
-    outboxEventJpaRepository.findAll().forEach(e -> System.out.println(
-        "outboxEvent id=" + e.getId() + " notificationId=" + e.getNotificationId()
-            + " status=" + e.getStatus() + " createdAt=" + e.getCreatedAt()
-            + " processedAt=" + e.getProcessedAt()));
-    System.out.println("=== DIAGNOSTIC: all aggregation_buffer rows ===");
-    aggregationBufferJpaRepository.findAll().forEach(e -> System.out.println(
-        "bufferRow id=" + e.getId() + " notificationId=" + e.getNotificationId()
-            + " status=" + e.getStatus() + " attempts=" + e.getAttempts()));
-    System.out.println("=== DIAGNOSTIC: all notifications rows ===");
-    notificationJpaRepository.findAll().forEach(e -> System.out.println(
-        "notification id=" + e.getId() + " status=" + e.getStatus()
-            + " aggregationId=" + e.getAggregationId()));
+    // TEMP DIAGNOSTIC (issue #86 flake investigation) - see dumpDiagnosticState().
+    dumpDiagnosticState();
 
     List<OutboxEventJpaEntity> outboxRows = outboxEventJpaRepository.findByStatus(
         OutboxStatus.UNPROCESSED);
@@ -193,5 +188,27 @@ class FlushAggregationWindowsIntegrationTest {
         aggregationBufferJpaRepository.findById(siblingBufferRow.getId()).orElseThrow();
     assertThat(leaderBufferAfter.getStatus()).isEqualTo(AggregationBufferStatus.DONE);
     assertThat(siblingBufferAfter.getStatus()).isEqualTo(AggregationBufferStatus.DONE);
+  }
+
+  /**
+   * TEMP DIAGNOSTIC (issue #86 flake investigation) - dumps full state
+   * regardless of status, so a failing assertion tells us WHAT happened
+   * (aggregate write never committed vs. committed-then-changed vs. something
+   * else) instead of just that a count did not match. To be reverted once the
+   * root cause is confirmed.
+   */
+  private void dumpDiagnosticState() {
+    log.info("=== DIAGNOSTIC: all outbox_events rows ===");
+    outboxEventJpaRepository.findAll().forEach(e -> log.info(
+        "outboxEvent id={} notificationId={} status={} createdAt={} processedAt={}",
+        e.getId(), e.getNotificationId(), e.getStatus(), e.getCreatedAt(), e.getProcessedAt()));
+    log.info("=== DIAGNOSTIC: all aggregation_buffer rows ===");
+    aggregationBufferJpaRepository.findAll().forEach(e -> log.info(
+        "bufferRow id={} notificationId={} status={} attempts={}",
+        e.getId(), e.getNotificationId(), e.getStatus(), e.getAttempts()));
+    log.info("=== DIAGNOSTIC: all notifications rows ===");
+    notificationJpaRepository.findAll().forEach(e -> log.info(
+        "notification id={} status={} aggregationId={}",
+        e.getId(), e.getStatus(), e.getAggregationId()));
   }
 }
