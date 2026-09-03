@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Owns the two short-lived transactions that bracket an aggregation flush
@@ -44,12 +43,6 @@ public class AggregationFlushTransactions {
   private final OutboxEventRepository outboxEventRepository;
   private final NotificationLogRepository notificationLogRepository;
   private final AuditEventPublisherPort auditEventPublisherPort;
-
-  // TEMP DIAGNOSTIC: forces an immediate flush right after the leader save so
-  // any real JDBC/Hibernate error surfaces synchronously instead of being
-  // deferred (and possibly swallowed) until commit time.
-  @jakarta.persistence.PersistenceContext
-  private jakarta.persistence.EntityManager entityManager;
 
   public AggregationFlushTransactions(AggregationBufferRepository aggregationBufferRepository,
       NotificationRepository notificationRepository,
@@ -216,10 +209,6 @@ public class AggregationFlushTransactions {
   @Transactional
   public void flushAggregate(List<BufferedNotification> members, BufferedNotification leaderRow,
       SummarizedContent summary) {
-    log.info("DIAGNOSTIC flushAggregate tx active={} readOnly={} name={}",
-        TransactionSynchronizationManager.isActualTransactionActive(),
-        TransactionSynchronizationManager.isCurrentTransactionReadOnly(),
-        TransactionSynchronizationManager.getCurrentTransactionName());
     UUID aggregationId = UUID.randomUUID();
     Notification leaderNotification = notificationRepository.findById(leaderRow.getNotificationId())
         .orElseThrow(() -> new IllegalStateException(
@@ -227,25 +216,8 @@ public class AggregationFlushTransactions {
 
     Notification aggregatedLeader =
         leaderNotification.markAggregated(aggregationId, summary.body());
-    Notification savedLeader = notificationRepository.save(aggregatedLeader);
-    log.info("DIAGNOSTIC flushAggregate saved leader id={} aggregationId={} status={}",
-        savedLeader.getId(), savedLeader.getAggregationId(), savedLeader.getStatus());
-    try {
-      entityManager.flush();
-      log.info("DIAGNOSTIC flushAggregate explicit entityManager.flush() succeeded");
-    } catch (RuntimeException flushEx) {
-      log.warn("DIAGNOSTIC flushAggregate explicit flush THREW: {}", flushEx.toString(), flushEx);
-      throw flushEx;
-    }
-    OutboxEvent savedOutbox = outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
-    log.info("DIAGNOSTIC flushAggregate saved outbox id={} notificationId={} status={}",
-        savedOutbox.getId(), savedOutbox.getNotificationId(), savedOutbox.getStatus());
-    // TEMP: same-transaction readback to check whether the writes above are
-    // even visible to a fresh query within THIS transaction.
-    notificationRepository.findById(leaderRow.getNotificationId()).ifPresentOrElse(
-        n -> log.info("DIAGNOSTIC same-tx readback notification aggregationId={} status={}",
-            n.getAggregationId(), n.getStatus()),
-        () -> log.info("DIAGNOSTIC same-tx readback notification NOT FOUND"));
+    notificationRepository.save(aggregatedLeader);
+    outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
     String leaderDetail =
         "Aggregated as leader of a " + members.size() + "-notification group (aggregation "
             + aggregationId + ")";
@@ -253,11 +225,6 @@ public class AggregationFlushTransactions {
         NotificationLog.create(leaderRow.getNotificationId(), LogStatus.PENDING, leaderDetail));
     aggregationBufferRepository.resolve(leaderRow.getId());
     publishAggregationAuditEvent(aggregatedLeader, leaderDetail);
-    log.info("DIAGNOSTIC flushAggregate end-of-method rollbackOnly={}",
-        TransactionSynchronizationManager.isActualTransactionActive()
-            ? org.springframework.transaction.interceptor.TransactionAspectSupport
-                .currentTransactionStatus().isRollbackOnly()
-            : "N/A");
 
     for (BufferedNotification member : members) {
       if (member.getId().equals(leaderRow.getId())) {

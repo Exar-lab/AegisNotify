@@ -26,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,14 +102,11 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
 
     List<BufferedNotification> claimable =
         aggregationBufferRepository.findClaimable(now, leaseCutoff);
-    log.info("DIAGNOSTIC claimable.size={}", claimable.size());
 
     Map<AggregationGroupKey, List<BufferedNotification>> groups = claimable.stream()
         .collect(Collectors.groupingBy(
             row -> row.groupKey(settings.requireSameTemplate()),
             LinkedHashMap::new, Collectors.toList()));
-    log.info("DIAGNOSTIC groups.size={} groupSizes={}", groups.size(),
-        groups.values().stream().map(List::size).toList());
 
     int resolvedCount = 0;
     for (List<BufferedNotification> groupRows : groups.values()) {
@@ -153,15 +149,12 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
       }
     }
 
-    log.info("DIAGNOSTIC flushGroup claimed.size={}", claimed.size());
-
     if (claimed.isEmpty()) {
       return 0;
     }
     if (claimed.size() == 1) {
       // Every other member lost the claim race (or failed to claim) —
       // nothing left to aggregate with, fall back to the single-row path.
-      log.info("DIAGNOSTIC flushGroup taking claimed.size==1 branch");
       return resolveClaimedRow(claimed.get(0)) ? 1 : 0;
     }
 
@@ -179,7 +172,6 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
         }
       }
     }
-    log.info("DIAGNOSTIC flushGroup rendered.size={}", rendered.size());
 
     if (rendered.size() < 2) {
       // Fewer than two renderable members remain: nothing left worth
@@ -218,13 +210,8 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
         .map(RenderedMember::row)
         .orElseThrow();
 
-    List<UUID> memberIds =
-        memberRows.stream().map(BufferedNotification::getNotificationId).toList();
-    log.info("DIAGNOSTIC flushGroup about to call flushAggregate leaderRow={} memberRows={}",
-        leaderRow.getNotificationId(), memberIds);
     try {
       transactions.flushAggregate(memberRows, leaderRow, summary);
-      log.info("DIAGNOSTIC flushGroup flushAggregate returned normally");
       metrics.recordAggregationFlushSuccess();
       resolvedCount += memberRows.size();
     } catch (RuntimeException ex) {

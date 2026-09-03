@@ -27,7 +27,16 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
   @Override
   public Notification save(Notification notification) {
     var entity = mapper.toJpa(notification);
-    var saved = springDataRepository.save(entity);
+    // saveAndFlush, not save: this entity carries a jsonb-typed column
+    // (parameters). Writes to jsonb-typed entities issued back-to-back with
+    // writes to other entity types in the same transaction (e.g. the
+    // outbox event write that immediately follows a notification update in
+    // AggregationFlushTransactions.flushAggregate) were silently lost —
+    // never reaching the database — under Hibernate's deferred, batched
+    // auto-flush-at-commit, while an eagerly flushed write in the same
+    // transaction persisted correctly. Forcing an immediate flush per save
+    // sidesteps that batching hazard.
+    var saved = springDataRepository.saveAndFlush(entity);
     return mapper.toDomain(saved);
   }
 

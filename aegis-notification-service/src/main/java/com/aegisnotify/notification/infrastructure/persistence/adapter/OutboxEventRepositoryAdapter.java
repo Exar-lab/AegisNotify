@@ -24,7 +24,12 @@ public class OutboxEventRepositoryAdapter implements OutboxEventRepository {
   @Override
   public OutboxEvent save(OutboxEvent event) {
     var entity = mapper.toJpa(event);
-    var saved = springDataRepository.save(entity);
+    // saveAndFlush, not save: see NotificationRepositoryAdapter.save for why
+    // — this entity also carries a jsonb-typed column (payload), and is
+    // exactly the write that was observed lost when issued right after a
+    // notification update in the same transaction without an intervening
+    // flush.
+    var saved = springDataRepository.saveAndFlush(entity);
     return mapper.toDomain(saved);
   }
 
