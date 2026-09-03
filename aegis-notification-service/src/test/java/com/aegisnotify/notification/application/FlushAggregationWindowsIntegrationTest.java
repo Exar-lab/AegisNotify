@@ -158,6 +158,23 @@ class FlushAggregationWindowsIntegrationTest {
 
     assertThat(resolved).isEqualTo(2);
 
+    // TEMP DIAGNOSTIC (issue #86 flake investigation) - dump full state
+    // regardless of status before asserting, so a failure tells us WHAT
+    // happened instead of just that something did not match.
+    System.out.println("=== DIAGNOSTIC: all outbox_events rows ===");
+    outboxEventJpaRepository.findAll().forEach(e -> System.out.println(
+        "outboxEvent id=" + e.getId() + " notificationId=" + e.getNotificationId()
+            + " status=" + e.getStatus() + " createdAt=" + e.getCreatedAt()
+            + " processedAt=" + e.getProcessedAt()));
+    System.out.println("=== DIAGNOSTIC: all aggregation_buffer rows ===");
+    aggregationBufferJpaRepository.findAll().forEach(e -> System.out.println(
+        "bufferRow id=" + e.getId() + " notificationId=" + e.getNotificationId()
+            + " status=" + e.getStatus() + " attempts=" + e.getAttempts()));
+    System.out.println("=== DIAGNOSTIC: all notifications rows ===");
+    notificationJpaRepository.findAll().forEach(e -> System.out.println(
+        "notification id=" + e.getId() + " status=" + e.getStatus()
+            + " aggregationId=" + e.getAggregationId()));
+
     List<OutboxEventJpaEntity> outboxRows = outboxEventJpaRepository.findByStatus(
         OutboxStatus.UNPROCESSED);
     assertThat(outboxRows).hasSize(1);
