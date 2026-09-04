@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router';
 import { AdminShellComponent } from './layouts/admin-shell/admin-shell.component';
+import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
     component: AdminShellComponent,
+    canActivate: [authGuard],
     children: [
       {
         path: '',
