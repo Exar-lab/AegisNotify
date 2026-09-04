@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-topbar',
@@ -12,10 +13,14 @@ import { filter, map, startWith } from 'rxjs';
 })
 export class TopbarComponent {
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
 
-  readonly currentUser = 'aegis-dev';
   readonly userRole = 'Administrator';
   readonly environmentName = 'Local Development';
+
+  get currentUser(): string {
+    return this.authService.getDisplayName() || this.authService.getUsername() || 'aegis-dev';
+  }
 
   readonly currentFeature = toSignal(
     this.router.events.pipe(
