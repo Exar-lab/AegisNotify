@@ -83,21 +83,30 @@
       "defaultClientScopes": []
     },
     {
-    "clientId": "aegis-admin-frontend",
-    "name": "Aegis Admin Frontend",
-    "description": "Public OpenID Connect client used by the Angular admin frontend for user authentication. Uses Authorization Code Flow with PKCE. Local development only.",
-    "enabled": true,
-    "publicClient": true,
-    "standardFlowEnabled": true,
-    "implicitFlowEnabled": false,
-    "directAccessGrantsEnabled": false,
-    "serviceAccountsEnabled": false,
-    "defaultClientScopes": [
-      "notification:read",
-      "notification:write",
-      "audit:read"
-    ]
-  }
+      "clientId": "aegis-admin-frontend",
+      "name": "Aegis Admin Frontend",
+      "description": "Public OpenID Connect client used by the Angular admin frontend for user authentication. Uses Authorization Code Flow with PKCE. Local development only.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4200/silent-check-sso.html",
+        "http://localhost:4200"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "+"
+      ],
+      "defaultClientScopes": [
+        "notification:read",
+        "notification:write",
+        "audit:read"
+      ]
+    }
   ],
   "users": [
     {

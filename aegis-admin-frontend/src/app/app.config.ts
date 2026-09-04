@@ -26,7 +26,8 @@ export const appConfig: ApplicationConfig = {
       },
       initOptions: {
         onLoad: 'check-sso',
-        checkLoginIframe: false,
+        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+        flow: 'standard',
       },
       features: [
         withAutoRefreshToken({
