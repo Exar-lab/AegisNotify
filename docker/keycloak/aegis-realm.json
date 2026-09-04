@@ -81,7 +81,23 @@
       "serviceAccountsEnabled": true,
       "secret": "local-dev-only-secret",
       "defaultClientScopes": []
-    }
+    },
+    {
+    "clientId": "aegis-admin-frontend",
+    "name": "Aegis Admin Frontend",
+    "description": "Public OpenID Connect client used by the Angular admin frontend for user authentication. Uses Authorization Code Flow with PKCE. Local development only.",
+    "enabled": true,
+    "publicClient": true,
+    "standardFlowEnabled": true,
+    "implicitFlowEnabled": false,
+    "directAccessGrantsEnabled": false,
+    "serviceAccountsEnabled": false,
+    "defaultClientScopes": [
+      "notification:read",
+      "notification:write",
+      "audit:read"
+    ]
+  }
   ],
   "users": [
     {
