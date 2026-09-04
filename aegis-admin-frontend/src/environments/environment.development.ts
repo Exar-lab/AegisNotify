@@ -1,8 +1,8 @@
 export const environment = {
   production: false,
   apiBaseUrl: 'http://localhost:8080',
-  keycloakUrl: 'http://localhost:8081',
+  keycloakUrl: 'http://localhost:8088',
   keycloakRealm: 'aegis',
-  keycloakClientId: 'aegis-dev-cli'
+  keycloakClientId: 'aegis-admin-frontend'
 };
 
