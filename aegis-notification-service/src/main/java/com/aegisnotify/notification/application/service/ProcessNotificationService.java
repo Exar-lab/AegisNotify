@@ -36,6 +36,13 @@ public class ProcessNotificationService implements ProcessNotificationUseCase {
         prepared.renderedBody(), prepared.subject()
     );
 
-    return transactions.applyResult(prepared.notification(), result);
+    // The leader's own outcome commits in its own short transaction first;
+    // sibling propagation (issue #86, review-resilience) runs in its OWN,
+    // separate transaction afterward, so a slow/failing sibling can never
+    // roll back the leader's already-correct, already-committed outcome.
+    NotificationResponse response = transactions.applyResult(prepared.notification(), result);
+    transactions.propagateOutcomeToAggregationSiblings(prepared.notification(), result);
+
+    return response;
   }
 }

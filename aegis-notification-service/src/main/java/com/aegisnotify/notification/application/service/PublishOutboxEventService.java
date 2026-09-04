@@ -1,86 +1,90 @@
 package com.aegisnotify.notification.application.service;
 
-import com.aegisnotify.notification.application.dto.AuditEventMessage;
 import com.aegisnotify.notification.application.port.in.PublishOutboxEventUseCase;
-import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
-import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
-import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
-import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
-import com.aegisnotify.notification.domain.enums.LogStatus;
+import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.Priority;
-import com.aegisnotify.notification.domain.model.Notification;
-import com.aegisnotify.notification.domain.model.NotificationLog;
+import com.aegisnotify.notification.domain.model.AggregationPolicy;
+import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.domain.model.OutboxEvent;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Orchestrates a single outbox relay poll without holding one database
+ * transaction open across the whole batch. Each event's publish-or-hold work
+ * runs in its own transaction, owned by {@link PublishOutboxEventTransactions}:
+ * a failure on event N rolls back only event N (leaving it {@code
+ * UNPROCESSED} for retry) and never touches events already committed earlier
+ * in the batch, nor blocks evaluation of events later in the batch.
+ *
+ * <p>This class owns the single aggregation hold guard (B2 of the design,
+ * issue #86): before delegating an event, it asks {@link AggregationPolicy}
+ * whether the event is aggregatable. HIGH-priority and D13-excluded events
+ * always take the unchanged immediate-publish path; everything else that
+ * qualifies is instead handed to {@link
+ * PublishOutboxEventTransactions#holdForAggregation}, which inserts a
+ * buffer row and marks the outbox row {@code PROCESSED} in the same
+ * transaction — never publishing to the broker.</p>
+ */
 @Service
 public class PublishOutboxEventService implements PublishOutboxEventUseCase {
 
-  private static final Map<Priority, String> TOPIC_MAP = Map.of(
-      Priority.HIGH, "high-priority-topic",
-      Priority.MEDIUM, "medium-priority-topic",
-      Priority.LOW, "low-priority-topic"
-  );
+  private static final Logger log = LoggerFactory.getLogger(PublishOutboxEventService.class);
 
   private final OutboxEventRepository outboxEventRepository;
-  private final MessageBrokerPort messageBrokerPort;
-  private final NotificationLogRepository notificationLogRepository;
-  private final NotificationRepository notificationRepository;
-  private final AuditEventPublisherPort auditEventPublisherPort;
+  private final PublishOutboxEventTransactions transactions;
+  private final AggregationSettings aggregationSettings;
 
   public PublishOutboxEventService(OutboxEventRepository outboxEventRepository,
-      MessageBrokerPort messageBrokerPort,
-      NotificationLogRepository notificationLogRepository,
-      NotificationRepository notificationRepository,
-      AuditEventPublisherPort auditEventPublisherPort) {
+      PublishOutboxEventTransactions transactions, AggregationSettings aggregationSettings) {
     this.outboxEventRepository = outboxEventRepository;
-    this.messageBrokerPort = messageBrokerPort;
-    this.notificationLogRepository = notificationLogRepository;
-    this.notificationRepository = notificationRepository;
-    this.auditEventPublisherPort = auditEventPublisherPort;
+    this.transactions = transactions;
+    this.aggregationSettings = aggregationSettings;
   }
 
   @Override
-  @Transactional
   public int publishPending() {
     List<OutboxEvent> pendingEvents = outboxEventRepository.findPendingEvents();
+    int processedCount = 0;
 
     for (OutboxEvent event : pendingEvents) {
-      String priority = (String) event.getPayload().get("priority");
-      String topic = TOPIC_MAP.get(Priority.valueOf(priority));
-
-      messageBrokerPort.publish(topic, event.getPayload());
-
-      OutboxEvent processed = event.markProcessed();
-      outboxEventRepository.save(processed);
-
-      notificationLogRepository.save(
-          NotificationLog.create(event.getNotificationId(), LogStatus.QUEUED,
-              "Published to " + topic)
-      );
-
-      notificationRepository.findById(event.getNotificationId())
-          .ifPresent(notification -> {
-            Notification queued = notification.markQueued();
-            notificationRepository.save(queued);
-
-            auditEventPublisherPort.publish(new AuditEventMessage(
-                queued.getId(),
-                AuditStatusMapper.toAuditStatus(queued.getStatus()),
-                "Published to " + topic,
-                queued.getChannel().name(),
-                queued.getRecipient(),
-                queued.getPriority().name(),
-                Instant.now()
-            ));
-          });
+      try {
+        if (isAggregatable(event)) {
+          transactions.holdForAggregation(event);
+        } else {
+          transactions.publishOne(event);
+        }
+        processedCount++;
+      } catch (RuntimeException ex) {
+        log.warn("outbox_event_publish_failed outboxEventId={} notificationId={} reason={}",
+            event.getId(), event.getNotificationId(), ex.getMessage());
+      }
     }
 
-    return pendingEvents.size();
+    return processedCount;
+  }
+
+  private boolean isAggregatable(OutboxEvent event) {
+    // Cheap short-circuit before touching the payload at all: avoids any
+    // parsing cost — and any assumption about payload shape — on the
+    // overwhelmingly common case where aggregation is off.
+    if (!aggregationSettings.enabled()) {
+      return false;
+    }
+
+    Map<String, Object> payload = event.getPayload();
+    String channelValue = (String) payload.get("channel");
+    if (channelValue == null) {
+      return false;
+    }
+
+    Priority priority = Priority.valueOf((String) payload.get("priority"));
+    Channel channel = Channel.valueOf(channelValue);
+    String templateName = (String) payload.get("templateName");
+    return AggregationPolicy.isAggregatable(priority, channel, templateName, aggregationSettings);
   }
 }

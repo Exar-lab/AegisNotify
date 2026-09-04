@@ -16,6 +16,10 @@ spring:
     enabled: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  task:
+    scheduling:
+      pool:
+        size: 2
   security:
     oauth2:
       resourceserver:
@@ -39,9 +43,28 @@ notification:
     cache:
       maximum-size: ${NOTIFICATION_TEMPLATE_CACHE_MAX_SIZE:500}
       expire-after-write: ${NOTIFICATION_TEMPLATE_CACHE_TTL:PT1H}
+  aggregation:
+    enabled: ${NOTIFICATION_AGGREGATION_ENABLED:false}
+    window: ${NOTIFICATION_AGGREGATION_WINDOW:PT5M}
+    poll-interval: ${NOTIFICATION_AGGREGATION_POLL_INTERVAL:PT10S}
+    require-same-template: ${NOTIFICATION_AGGREGATION_REQUIRE_SAME_TEMPLATE:true}
+    max-group-size: ${NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE:20}
+    claim-lease: ${NOTIFICATION_AGGREGATION_CLAIM_LEASE:PT2M}
+    max-attempts: ${NOTIFICATION_AGGREGATION_MAX_ATTEMPTS:3}
+    excluded-templates: ${NOTIFICATION_AGGREGATION_EXCLUDED_TEMPLATES:}
+    excluded-channels: ${NOTIFICATION_AGGREGATION_EXCLUDED_CHANNELS:}
+    summarizer:
+      base-url: ${AGGREGATION_LLM_BASE_URL:https://api.anthropic.com}
+      api-key: ${AGGREGATION_LLM_API_KEY:}
+      model: ${AGGREGATION_LLM_MODEL:claude-sonnet-4-5}
+      anthropic-version: ${AGGREGATION_LLM_API_VERSION:2023-06-01}
+      max-tokens: ${AGGREGATION_LLM_MAX_TOKENS:512}
+      timeout: ${AGGREGATION_LLM_TIMEOUT:PT10S}
+      max-output-chars: ${AGGREGATION_LLM_MAX_OUTPUT_CHARS:2000}
   kafka:
     relay:
       enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}
+      poll-interval: ${NOTIFICATION_KAFKA_RELAY_POLL_INTERVAL:PT5S}
     consumer:
       enabled: ${NOTIFICATION_KAFKA_CONSUMER_ENABLED:false}
       group-id: ${NOTIFICATION_KAFKA_CONSUMER_GROUP_ID:notification-service}
@@ -114,6 +137,17 @@ resilience4j:
         base-config: default
       push-provider:
         base-config: default
+      aggregation-agent:
+        base-config: default
+        # Fix (review-resilience, WARNING): the shared `default` config's
+        # 2000ms slow-call threshold was tuned for the fast SendGrid/Twilio/
+        # FCM provider calls. SummarizerProperties' own default response
+        # timeout is 10s (PT10S) — 5x longer — so reusing 2000ms would
+        # routinely classify normal, healthy LLM latency as a "slow call",
+        # risking the breaker tripping open under normal conditions.
+        # 6000ms stays meaningfully below the 10s hard timeout while well
+        # above typical healthy LLM response times.
+        slow-call-duration-threshold: 6000ms
 
 management:
   endpoints:

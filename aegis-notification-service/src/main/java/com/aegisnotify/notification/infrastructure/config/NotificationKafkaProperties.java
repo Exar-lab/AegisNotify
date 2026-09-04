@@ -1,5 +1,6 @@
 package com.aegisnotify.notification.infrastructure.config;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import org.apache.kafka.common.errors.InvalidTopicException;
@@ -84,6 +85,13 @@ public record NotificationKafkaProperties(
     }
   }
 
+  private static Duration requirePositiveDuration(Duration value, String propertyName) {
+    if (value.isZero() || value.isNegative()) {
+      throw new IllegalStateException(propertyName + " must be a positive duration");
+    }
+    return value;
+  }
+
   private static String validateTopicName(String topicName, String propertyName) {
     try {
       Topic.validate(topicName);
@@ -137,15 +145,25 @@ public record NotificationKafkaProperties(
    * Controls relay activation independently from consumer activation.
    *
    * @param enabled whether outbox relay processing is enabled
+   * @param pollInterval how often {@link com.aegisnotify.notification.infrastructure.scheduling
+   *     .OutboxWorkerScheduler} polls the outbox for pending events (ISO-8601 duration)
    */
-  public record Relay(boolean enabled) {
+  public record Relay(boolean enabled, Duration pollInterval) {
+
+    private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(5);
 
     @ConstructorBinding
     public Relay {
+      pollInterval = pollInterval == null ? DEFAULT_POLL_INTERVAL : pollInterval;
+      requirePositiveDuration(pollInterval, "notification.kafka.relay.poll-interval");
+    }
+
+    public Relay(boolean enabled) {
+      this(enabled, DEFAULT_POLL_INTERVAL);
     }
 
     public Relay() {
-      this(false);
+      this(false, DEFAULT_POLL_INTERVAL);
     }
   }
 
