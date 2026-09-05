@@ -3,21 +3,18 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background-color: var(--bg-main, #F8FAFC);
 
   .main-wrapper {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-width: 0;
-    height: 100vh;
     overflow: hidden;
 
     .content-area {
       flex: 1;
       overflow-y: auto;
-      padding: var(--space-24, 24px);
-      background-color: var(--bg-main, #F8FAFC);
+      padding: var(--space-24);
     }
   }
 }

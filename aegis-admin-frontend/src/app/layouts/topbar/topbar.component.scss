@@ -1,49 +1,42 @@
-@use 'sass:color';
-
-$sidebar-bg: #0F172A;
-$topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
-
 .topbar {
   height: 64px;
   min-height: 64px;
-  background-color: $topbar-bg;
-  border-bottom: 1px solid #1E293B;
+  background-color: var(--bg-topbar);
+  border-bottom: 1px solid var(--border-sidebar);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-24, 24px);
-  box-sizing: border-box;
+  padding: 0 var(--space-24);
 
   .topbar-left {
     display: flex;
     align-items: center;
-    gap: var(--space-16, 16px);
+    gap: var(--space-16);
 
     .feature-title {
       font-size: 1.125rem;
       font-weight: 700;
       color: #F8FAFC;
       letter-spacing: -0.02em;
-      margin: 0;
     }
 
     .env-badge {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-8, 8px);
-      padding: 4px var(--space-8, 8px);
-      background-color: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      gap: var(--space-8);
+      padding: 4px var(--space-8);
+      background-color: rgba(0, 238, 255, 0.15);
+      border: 1px solid rgba(0, 238, 255, 0.3);
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #60A5FA;
+      color: var(--color-accent);
 
       .env-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background-color: var(--color-accent, #3B82F6);
+        background-color: var(--color-accent);
         box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
       }
     }
@@ -52,23 +45,23 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
   .topbar-right {
     display: flex;
     align-items: center;
-    gap: var(--space-16, 16px);
+    gap: var(--space-16);
 
     .service-indicators {
       display: flex;
       align-items: center;
-      gap: var(--space-16, 16px);
+      gap: var(--space-16);
 
       .indicator-item {
         display: flex;
         align-items: center;
-        gap: var(--space-8, 8px);
+        gap: var(--space-8);
         font-size: 0.75rem;
-        color: #94A3B8;
-        padding: 4px var(--space-8, 8px);
+        color: var(--text-sidebar);
+        padding: 4px var(--space-8);
         background-color: rgba(255, 255, 255, 0.04);
-        border-radius: var(--space-8, 8px);
-        border: 1px solid #1E293B;
+        border-radius: var(--space-8);
+        border: 1px solid var(--border-sidebar);
 
         .indicator-dot {
           width: 6px;
@@ -76,12 +69,12 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
           border-radius: 50%;
 
           &.online {
-            background-color: #10B981;
+            background-color: var(--status-online);
             box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
           }
 
           &.offline {
-            background-color: #EF4444;
+            background-color: var(--status-offline);
             box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
           }
         }
@@ -90,20 +83,20 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
 
     .topbar-divider {
       width: 1px;
-      height: var(--space-24, 24px);
-      background-color: #1E293B;
+      height: var(--space-24);
+      background-color: var(--border-sidebar);
     }
 
     .user-profile {
       display: flex;
       align-items: center;
-      gap: var(--space-8, 8px);
+      gap: var(--space-8);
 
       .user-avatar {
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+        background: linear-gradient(135deg, var(--color-accent) 0%, #1cd2c6 100%);
         color: #FFFFFF;
         display: flex;
         align-items: center;
@@ -117,18 +110,17 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
       .user-info {
         display: flex;
         flex-direction: column;
+        line-height: 1.2;
 
         .user-name {
           font-size: 0.8125rem;
           font-weight: 600;
           color: #F8FAFC;
-          line-height: 1.2;
         }
 
         .user-role {
           font-size: 0.6875rem;
-          color: #94A3B8;
-          line-height: 1.2;
+          color: var(--text-sidebar);
         }
       }
     }
