@@ -149,6 +149,25 @@ resilience4j:
         # above typical healthy LLM response times.
         slow-call-duration-threshold: 6000ms
 
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - com.aegisnotify.notification.infrastructure.provider.TransientProviderDeliveryException
+    instances:
+      email-provider:
+        base-config: default
+      sms-provider:
+        base-config: default
+      whatsapp-provider:
+        base-config: default
+      push-provider:
+        base-config: default
+
 management:
   endpoints:
     web:
