@@ -9,11 +9,18 @@ Administrative web dashboard for the AegisNotify notification orchestration plat
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [Available Scripts](#available-scripts)
   - [Development Server](#development-server)
   - [Build](#build)
   - [Testing](#testing)
+- [Keycloak & Security Configuration](#keycloak--security-configuration)
+  - [Client Setup](#client-setup)
+  - [Required Scopes](#required-scopes)
+  - [Default Test Credentials](#default-test-credentials)
 - [Environment Configuration](#environment-configuration)
-- [Authentication Flow](#authentication-flow)
+- [Authentication & Routing Flow](#authentication--routing-flow)
+- [Application Features & Routes](#application-features--routes)
+- [Theme System](#theme-system)
 - [Project Structure](#project-structure)
 - [Architectural Decisions](#architectural-decisions)
 - [Changelog](#changelog)
@@ -23,36 +30,55 @@ Administrative web dashboard for the AegisNotify notification orchestration plat
 ## Purpose
 
 `aegis-admin-frontend` serves as the centralized management and monitoring interface for AegisNotify. It enables operators to:
-- Monitor notification dispatch lifecycles and real-time statuses.
-- Inspect notification details and audit trails.
-- Track delivery provider health, secondary failover, and circuit breaker states.
-- Review delivery performance metrics and failure analytics.
-- Manage system settings and operational configurations.
+- Monitor notification dispatch lifecycles, statuses, and delivery attempts in real time.
+- Inspect notification details, message payloads, and audit traces.
+- Track provider health, primary/secondary failover conditions, and circuit breaker states.
+- Review delivery performance metrics, throughput, latency, and failure analytics.
+- Manage system operational settings and theme preferences.
 
 ## Tech Stack
 
-- **Framework**: Angular 22 (Standalone Components, Signals)
-- **Styling**: SCSS
-- **Package Manager**: pnpm
-- **Authentication**: Keycloak / OIDC (Authorization Code Flow + PKCE via `keycloak-angular`, Bearer JWT Authentication)
-- **Testing**: Vitest
+- **Framework**: Angular 22 (Standalone Components, Signals, Control Flow syntax `@if`/`@for`)
+- **Styling**: SCSS (CSS Custom Properties Design Tokens, Light/Dark theme support, 8px grid spacing)
+- **Package Manager**: pnpm (`pnpm@11.22.0`)
+- **Authentication**: Keycloak / OIDC (`keycloak-angular` 22 & `keycloak-js` 26) with Authorization Code Flow + PKCE
+- **HTTP & Interceptors**: Angular HttpClient with `includeBearerTokenInterceptor` for Bearer JWT injection
+- **Testing**: Vitest & JSDOM (`@angular/build`, `vitest`)
+- **Tooling**: TypeScript 6, Angular CLI 22, Prettier
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v20+ recommended)
-- pnpm (`npm install -g pnpm`)
+Ensure the following tools and backend dependencies are installed and running:
+- **Node.js**: `v20+` (LTS recommended)
+- **pnpm**: `pnpm@11.x` (`npm install -g pnpm`)
+- **Keycloak Identity Provider**: Running locally on `http://localhost:8088` (realm `aegis`)
+- **Aegis API Gateway**: Running on `http://localhost:8080`
 
 ### Installation
+
+Install project dependencies using pnpm:
 
 ```bash
 pnpm install
 ```
 
+### Available Scripts
+
+The following scripts are defined in `package.json`:
+
+| Command | Script | Description |
+| --- | --- | --- |
+| `pnpm start` | `ng serve` | Runs the development server on `http://localhost:4200/` |
+| `pnpm build` | `ng build` | Compiles the production bundle into `dist/aegis-admin-frontend` |
+| `pnpm watch` | `ng build --watch --configuration development` | Builds and watches for file changes |
+| `pnpm test` | `ng test` | Executes unit tests using Vitest |
+| `pnpm ng` | `ng` | Invokes the Angular CLI |
+
 ### Development Server
 
-Start the local development server on `http://localhost:4200/`:
+Start the local development server:
 
 ```bash
 pnpm start
@@ -60,9 +86,11 @@ pnpm start
 ng serve
 ```
 
+Navigate to `http://localhost:4200/`. The application will automatically reload if you change any source files.
+
 ### Build
 
-Compile the application with production optimizations into `dist/`:
+Compile the application for production:
 
 ```bash
 pnpm build
@@ -70,9 +98,11 @@ pnpm build
 ng build
 ```
 
+The build artifacts will be stored in the `dist/aegis-admin-frontend` directory.
+
 ### Testing
 
-Run unit test suites with Vitest:
+Run unit tests via Vitest:
 
 ```bash
 pnpm test
@@ -80,79 +110,177 @@ pnpm test
 ng test
 ```
 
+## Keycloak & Security Configuration
+
+The frontend authenticates users via OpenID Connect against a Keycloak instance.
+
+### Client Setup
+
+Configure the public client in Keycloak:
+
+- **Realm**: `aegis`
+- **Client ID**: `aegis-admin-frontend`
+- **Client Type**: `OpenID Connect`
+- **Client Authentication**: `Off` (Public client)
+- **Authentication Flow**: Standard Flow (Authorization Code Flow) with PKCE (`S256`)
+- **Valid Redirect URIs**: `http://localhost:4200/*`
+- **Valid Post Logout Redirect URIs**: `http://localhost:4200/*`
+- **Web Origins**: `http://localhost:4200`
+
+### Required Scopes
+
+The client utilizes the following default realm client scopes:
+- `notification:read`: Consult notifications, dispatch status, and logs.
+- `notification:write`: Send and re-dispatch notifications.
+- `audit:read`: Consult audit trails and lifecycle events.
+
+> **Note**: These scopes are assigned as default client scopes in Keycloak. Requesting custom scopes explicitly in the `provideKeycloak` init options is omitted to prevent silent SSO loop mismatches.
+
+### Default Test Credentials
+
+For local development with the default imported realm (`docker/keycloak/aegis-realm.json`):
+- **Username**: `aegis-dev`
+- **Password**: `dev123`
+
 ## Environment Configuration
 
 Configuration files are located in `src/environments/` and the project root:
 
 | File | Environment | Description |
 | --- | --- | --- |
-| `src/environments/environment.ts` | Production / Default | Base API and Keycloak connection settings |
-| `src/environments/environment.development.ts` | Development | Development overrides and local endpoint mappings |
-| `.env` / `.env.development` | Local Tooling | Environment variable declarations for CLI / CI |
+| `src/environments/environment.ts` | Production / Default | Base API Gateway and Keycloak endpoint configuration |
+| `src/environments/environment.development.ts` | Development | Development overrides and local mappings |
+| `.env` / `.env.development` | Local Tooling | Environment variable declarations for CLI / Docker |
 
-### Default Configuration Parameters
+### Configuration Parameters
 
-- **`apiBaseUrl`**: `http://localhost:8080` (Aegis API Gateway)
-- **`keycloakUrl`**: `http://localhost:8088` (Keycloak Identity Provider)
-- **`keycloakRealm`**: `aegis`
-- **`keycloakClientId`**: `aegis-admin-frontend`
+| Parameter | Environment Variable | Default Value | Description |
+| --- | --- | --- | --- |
+| `apiBaseUrl` | `API_BASE_URL` | `http://localhost:8080` | Aegis API Gateway base URL |
+| `keycloakUrl` | `KEYCLOAK_URL` | `http://localhost:8088` | Keycloak Identity Provider URL |
+| `keycloakRealm` | `KEYCLOAK_REALM` | `aegis` | Keycloak Realm name |
+| `keycloakClientId` | `KEYCLOAK_CLIENT_ID` | `aegis-admin-frontend` | OIDC Public Client ID |
 
-## Authentication Flow
+## Authentication & Routing Flow
 
-The frontend implements a secure OpenID Connect (OIDC) authentication flow leveraging `keycloak-angular` and `keycloak-js`:
+The frontend implements an OpenID Connect (OIDC) flow managed by `keycloak-angular` and Angular Router:
 
-1. **Initialization (`check-sso`)**: On startup, `provideKeycloak` initializes with `onLoad: 'check-sso'` and uses `/silent-check-sso.html` for non-intrusive session checks.
-2. **Route Protection (`authGuard`)**: The root layout (`AdminShellComponent`) and its child feature routes are protected by a functional `authGuard` (`createAuthGuard`).
-3. **Authorization Code + PKCE**: Unauthenticated access attempts redirect users to the Keycloak login page at `http://localhost:8088` using the Authorization Code Flow with Proof Key for Code Exchange (PKCE) under client `aegis-admin-frontend`.
-4. **Token Refresh**: Token lifecycles and background refreshes are maintained automatically via `withAutoRefreshToken`.
-5. **Gateway Authorization (Bearer Token)**: The `includeBearerTokenInterceptor` intercepts outgoing HTTP requests targeting `http://localhost:8080/api/...` and attaches the `Authorization: Bearer <access_token>` header, forwarding the Bearer JWT to the API Gateway while leaving Keycloak calls intact.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser as Angular App (:4200)
+    participant Guard as Auth Guard
+    participant Keycloak as Keycloak (:8088)
+    participant Gateway as API Gateway (:8080)
+
+    User->>Browser: Access http://localhost:4200/
+    Browser->>Browser: provideKeycloak(onLoad: 'check-sso')
+    Browser->>Keycloak: Silent check SSO iframe (silent-check-sso.html)
+    alt Session Not Authenticated
+        Browser->>Guard: Navigate to protected route (/dashboard)
+        Guard->>Keycloak: Redirect to Login (Auth Code + PKCE)
+        User->>Keycloak: Submit credentials (aegis-dev / dev123)
+        Keycloak->>Browser: Redirect callback with auth code
+        Browser->>Keycloak: Exchange code for JWT tokens
+    else Session Active
+        Keycloak->>Browser: Session valid, token restored
+    end
+    Browser->>Browser: AutoRefreshTokenService active in background
+    Browser->>Gateway: HTTP GET /api/v1/... (Authorization: Bearer JWT)
+    Gateway-->>Browser: HTTP 200 OK Response
+```
+
+1. **Bootstrap (`provideKeycloak`)**: Initialized in `app.config.ts` with `onLoad: 'check-sso'`, `flow: 'standard'`, and `silentCheckSsoRedirectUri` pointing to `public/silent-check-sso.html`.
+2. **Route Protection (`authGuard`)**: The root layout `AdminShellComponent` route enforces authentication via the functional `authGuard` (`createAuthGuard`), redirecting unauthenticated requests to Keycloak.
+3. **Session Management (`AuthService`)**: Wraps user identity resolution (`getUsername()`, `getDisplayName()`), login, and logout routines.
+4. **Token Refresh (`withAutoRefreshToken`)**: Automatically maintains active token validity via `AutoRefreshTokenService` and `UserActivityService`.
+5. **Gateway Authorization (`includeBearerTokenInterceptor`)**: Intercepts requests matching `http://localhost:8080/api/**` and automatically attaches the `Authorization: Bearer <access_token>` header.
+
+## Application Features & Routes
+
+The routing structure defined in `app.routes.ts` is organized hierarchically under `AdminShellComponent`:
+
+| Route | Component | Description |
+| --- | --- | --- |
+| `/` | Redirect | Automatically redirects to `/dashboard` |
+| `/dashboard` | `DashboardPage` | Overview of system metrics, dispatch statistics, and system health |
+| `/notifications` | `NotificationsPage` | Notification management, filtering, status tracking, and dispatch actions |
+| `/notifications/:id` | `NotificationDetailPage` | Detailed inspection of single notification payloads, logs, and provider statuses |
+| `/providers` | `ProvidersPage` | Provider health tracking, primary/secondary statuses, and circuit breakers |
+| `/metrics` | `MetricsPage` | Performance dashboards, latency trends, and throughput statistics |
+| `/settings` | `SettingsPage` | Administrative preferences, environment information, and system parameters |
+| `**` | Redirect | Wildcard fallback redirecting unknown routes to `/dashboard` |
+
+## Theme System
+
+The application features a built-in Light and Dark theme system:
+
+- **Default Theme**: Light Theme.
+- **Theme Switcher**: Located in the topbar directly to the right of the user profile.
+- **State Management**: Managed by `ThemeService` using Angular Signals (`isDarkTheme`).
+- **Persistence**: User theme choice is persisted in `localStorage` under `aegis-theme`.
+- **SCSS Architecture**: Variables defined on `:root` represent the default light palette, while `[data-theme="dark"]` provides the dark mode overrides.
 
 ## Project Structure
 
-The project adheres to a modular, feature-first structure using Angular Standalone Components:
-
 ```text
-src/
-├── app/
-│   ├── layouts/
-│   │   ├── admin-shell/             # Main application layout wrapper
-│   │   ├── sidebar/                 # Dark navigation sidebar with active route highlighting
-│   │   └── topbar/                  # Header bar with user profile & status indicators
-│   ├── features/
-│   │   ├── dashboard/
-│   │   │   └── pages/               # Dashboard overview page
-│   │   ├── notifications/
-│   │   │   └── pages/               # Notification list & detail pages
-│   │   ├── providers/
-│   │   │   └── pages/               # Provider status & circuit breakers
-│   │   ├── metrics/
-│   │   │   └── pages/               # Prometheus & delivery metrics
-│   │   └── settings/
-│   │       └── pages/               # System and UI settings
-│   ├── core/
-│   │   └── interceptors/            # Auth & HTTP interceptors
-│   ├── app.config.ts                # Application providers & global config
-│   ├── app.routes.ts                # Lazy-loaded feature routes nested under AdminShell
-│   └── app.ts                       # Root application component
-├── environments/
-│   ├── environment.ts               # Production environment config
-│   └── environment.development.ts   # Development environment config
-└── styles.scss                      # Global styles & resets
+aegis-admin-frontend/
+├── public/
+│   ├── favicon.ico
+│   └── silent-check-sso.html        # Keycloak silent SSO check callback
+├── src/
+│   ├── app/
+│   │   ├── core/
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.guard.ts     # Functional OIDC route guard
+│   │   │   │   └── auth.service.ts   # User profile & auth helper service
+│   │   │   └── theme/
+│   │   │       └── theme.service.ts  # Signal-based Light/Dark theme service
+│   │   ├── features/
+│   │   │   ├── dashboard/pages/      # Dashboard page component
+│   │   │   ├── metrics/pages/        # Delivery & Prometheus metrics page
+│   │   │   ├── notifications/pages/  # Notification list & detail pages
+│   │   │   ├── providers/pages/      # Provider status & circuit breakers page
+│   │   │   └── settings/pages/       # System configuration page
+│   │   ├── layouts/
+│   │   │   ├── admin-shell/          # Main application shell with router-outlet
+│   │   │   ├── sidebar/              # Navigation sidebar with active link indicator
+│   │   │   └── topbar/               # Header with title, env badge, services, user & theme toggle
+│   │   ├── app.config.ts             # Application providers (Keycloak, HttpClient, Router)
+│   │   ├── app.routes.ts             # Feature routes with lazy loading and auth guard
+│   │   ├── app.html                  # Root template (<router-outlet />)
+│   │   ├── app.scss                  # Root component styles
+│   │   └── app.ts                    # Root component definition
+│   ├── environments/
+│   │   ├── environment.ts            # Base / Production environment config
+│   │   └── environment.development.ts# Development environment config
+│   ├── index.html                    # Single Page Application HTML entrypoint
+│   ├── main.ts                       # Application bootstrap
+│   └── styles.scss                   # Global design tokens, resets, and theme definitions
+├── .env                              # Environment variables for tooling
+├── .env.development                  # Dev environment variables
+├── angular.json                      # Angular CLI configuration
+├── package.json                      # Project dependencies and scripts
+├── pnpm-lock.yaml                    # Deterministic lockfile
+└── tsconfig.json                     # TypeScript compiler configuration
 ```
 
 ## Architectural Decisions
 
-1. **Standalone Components**: All components are standalone (`standalone: true` or default in modern Angular), eliminating the overhead of NgModules.
-2. **Lazy Loading by Feature**: Routes in `app.routes.ts` dynamically load component bundles via `loadComponent: () => import(...)` to optimize initial page load.
-3. **Hexagonal Backend Alignment**: Frontend feature modules mirror the backend domain architecture (`notifications`, `audit`, `providers`, `metrics`).
-4. **Environment Isolation**: Explicit environment configurations separate local gateway endpoints and Keycloak realm definitions from deployment artifacts.
-5. **Layout Shell Architecture**: The `AdminShellComponent` hosts the dark sidebar (`#0F172A`), topbar, and scrollable content area, utilizing Angular Router active route matching.
+1. **Standalone Components**: All components utilize Angular standalone architecture, simplifying dependency graphs and module boundaries.
+2. **Lazy Loading by Feature**: Feature pages are lazily loaded using dynamic imports (`loadComponent: () => import(...)`) to minimize initial bundle size.
+3. **Hexagonal Backend Alignment**: Frontend features align directly with backend domain services (`notifications`, `providers`, `metrics`, `audit`).
+4. **Clean SCSS Design Tokens**: Consistent 8px spacing scale, semantic color variables, and zero duplicated styles across components.
+5. **Standardized OIDC & PKCE**: Industry-standard PKCE authentication without client secrets in the browser, verified with Bearer token injection on the gateway proxy.
 
 ## Changelog
 
 ### [Unreleased]
-- Initialized base project documentation following standard structure.
-- Configured environment files (`environment.ts`, `environment.development.ts`, `.env`, `.env.development`).
-- Scaffolded initial standalone page components for `dashboard`, `notifications`, `providers`, `metrics`, and `settings` features.
-- Implemented visual admin layout (`AdminShellComponent`, `SidebarComponent`, `TopbarComponent`) with dark sidebar `#0F172A`, active route highlighting, and top bar status indicators.
-- Configured nested route hierarchy in `app.routes.ts` and global CSS resets in `styles.scss`.
+- Added complete project documentation with architecture, OIDC authentication flow, and feature details.
+- Implemented `ThemeService` supporting Light (default) and Dark themes with topbar toggle and localStorage persistence.
+- Implemented `AuthService` and functional `authGuard` protecting all administrative routes under `AdminShellComponent`.
+- Configured `keycloak-angular` with `onLoad: 'check-sso'`, `withAutoRefreshToken`, and `includeBearerTokenInterceptor` for `http://localhost:8080/api/*`.
+- Consolidated and cleaned up SCSS styles, removing redundant rules and unifying CSS custom properties across components.
+- Scaffolded lazy-loaded feature pages for `dashboard`, `notifications`, `notification-detail`, `providers`, `metrics`, and `settings`.
+- Added `public/silent-check-sso.html` for seamless background session verification.
