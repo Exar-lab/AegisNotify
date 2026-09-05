@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 
+/**
+ * Page component representing the Settings view.
+ */
 @Component({
   selector: 'app-settings-page',
   standalone: true,

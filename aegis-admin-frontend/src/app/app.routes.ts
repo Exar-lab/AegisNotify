@@ -2,6 +2,10 @@ import { Routes } from '@angular/router';
 import { AdminShellComponent } from './layouts/admin-shell/admin-shell.component';
 import { authGuard } from './core/auth/auth.guard';
 
+/**
+ * Global application route definitions.
+ * Configures the main shell, applies the authentication guard, and lazy loads feature pages.
+ */
 export const routes: Routes = [
   {
     path: '',

@@ -1,5 +1,8 @@
+<!-- Main top navigation bar -->
 <header class="topbar">
+  <!-- Left section containing title and environment badge -->
   <div class="topbar-left">
+    <!-- Hamburger menu toggle for mobile view -->
     <button
       type="button"
       class="menu-toggle"
@@ -13,13 +16,16 @@
       </svg>
     </button>
     <h1 class="feature-title">{{ currentFeature() }}</h1>
+    <!-- Badge indicating the current environment (e.g., Local Development) -->
     <div class="env-badge">
       <span class="env-dot"></span>
       <span class="env-label">{{ environmentName }}</span>
     </div>
   </div>
 
+  <!-- Right section containing search, notifications, profile, and theme toggle -->
   <div class="topbar-right">
+    <!-- Search input box -->
     <div class="search-box">
       <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"></circle>
@@ -28,6 +34,7 @@
       <input type="text" class="search-input" placeholder="Search notifications, providers..." />
     </div>
 
+    <!-- Notifications area with bell icon and dropdown panel -->
     <div class="notifications-wrapper">
       <button
         type="button"
@@ -43,12 +50,14 @@
         </svg>
       </button>
 
+      <!-- Dropdown panel shown when notifications are open -->
       @if (notificationsOpen()) {
         <div class="notifications-panel">
           <div class="notifications-header">
             <span class="panel-title">Notifications</span>
             <span class="panel-badge">0</span>
           </div>
+          <!-- Empty state when there are no new notifications -->
           <div class="notifications-empty">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-bell">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -63,6 +72,7 @@
 
     <div class="topbar-divider"></div>
 
+    <!-- User profile section showing avatar and name -->
     <div class="user-profile">
       <div class="user-avatar">
         <span>AD</span>
@@ -75,6 +85,7 @@
 
     <div class="topbar-divider"></div>
     
+    <!-- Button to toggle between light and dark themes -->
     <button class="theme-toggle" (click)="themeService.toggleTheme()" [title]="themeService.isDarkTheme() ? 'Switch to light theme' : 'Switch to dark theme'" aria-label="Toggle theme">
       @if (themeService.isDarkTheme()) {
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

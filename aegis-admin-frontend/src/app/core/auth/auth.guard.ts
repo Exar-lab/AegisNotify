@@ -1,6 +1,10 @@
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { createAuthGuard, AuthGuardData } from 'keycloak-angular';
 
+/**
+ * Checks if the user is authenticated before allowing access to a route.
+ * Redirects to Keycloak login if the user is not authenticated.
+ */
 const isAccessAllowed = async (
   route: ActivatedRouteSnapshot,
   state: RouterStateSnapshot,
@@ -18,4 +22,8 @@ const isAccessAllowed = async (
   return true;
 };
 
+/**
+ * Auth guard instance to be used in Angular route definitions.
+ */
 export const authGuard = createAuthGuard(isAccessAllowed);
+

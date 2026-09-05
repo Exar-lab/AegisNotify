@@ -1,4 +1,6 @@
+<!-- Main sidebar container -->
 <aside class="sidebar">
+  <!-- Brand logo and title section -->
   <div class="sidebar-brand">
     <div class="brand-icon">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -13,8 +15,10 @@
     </div>
   </div>
 
+  <!-- Main navigation links area -->
   <nav class="sidebar-nav">
     <ul class="nav-list">
+      <!-- Iterate over defined navItems to generate links dynamically -->
       @for (item of navItems; track item.route) {
         <li class="nav-item">
           <a
@@ -23,6 +27,7 @@
             [routerLinkActiveOptions]="item.route === '/dashboard' ? { exact: true } : { exact: false }"
             class="nav-link"
           >
+            <!-- Render the appropriate icon based on the item.icon identifier -->
             @switch (item.icon) {
               @case ('dashboard') {
                 <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -67,6 +72,7 @@
     </ul>
   </nav>
 
+  <!-- Sidebar footer showing system status and version -->
   <div class="sidebar-footer">
     <div class="system-status">
       <span class="status-indicator"></span>

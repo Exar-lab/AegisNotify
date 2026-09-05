@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 
+/**
+ * Page component representing the Providers view.
+ */
 @Component({
   selector: 'app-providers-page',
   standalone: true,

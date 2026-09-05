@@ -13,6 +13,10 @@ import {
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
+/**
+ * Main application configuration block for Angular.
+ * Sets up routing, HTTP interceptors, and Keycloak integration for authentication.
+ */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),

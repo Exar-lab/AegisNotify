@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 
+/**
+ * Page component representing the NotificationDetail view.
+ */
 @Component({
   selector: 'app-notification-detail-page',
   standalone: true,
