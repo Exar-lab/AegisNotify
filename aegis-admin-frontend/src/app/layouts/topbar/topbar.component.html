@@ -8,15 +8,45 @@
   </div>
 
   <div class="topbar-right">
-    <div class="service-indicators">
-      <div class="indicator-item" title="API Gateway: Connected">
-        <span class="indicator-dot online"></span>
-        <span class="indicator-text">Gateway :8080</span>
-      </div>
-      <div class="indicator-item" title="Keycloak OIDC: Connected">
-        <span class="indicator-dot online"></span>
-        <span class="indicator-text">Keycloak :8088</span>
-      </div>
+    <div class="search-box">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" class="search-input" placeholder="Search notifications, providers..." />
+    </div>
+
+    <div class="notifications-wrapper">
+      <button
+        type="button"
+        class="bell-btn"
+        (click)="toggleNotifications($event)"
+        [class.active]="notificationsOpen()"
+        title="Notifications"
+        aria-label="Notifications"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </button>
+
+      @if (notificationsOpen()) {
+        <div class="notifications-panel">
+          <div class="notifications-header">
+            <span class="panel-title">Notifications</span>
+            <span class="panel-badge">0</span>
+          </div>
+          <div class="notifications-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-bell">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <p class="empty-title">No new notifications</p>
+            <p class="empty-subtitle">You're all caught up</p>
+          </div>
+        </div>
+      }
     </div>
 
     <div class="topbar-divider"></div>
@@ -30,6 +60,8 @@
         <span class="user-role">{{ userRole }}</span>
       </div>
     </div>
+
+    <div class="topbar-divider"></div>
     
     <button class="theme-toggle" (click)="themeService.toggleTheme()" [title]="themeService.isDarkTheme() ? 'Switch to light theme' : 'Switch to dark theme'" aria-label="Toggle theme">
       @if (themeService.isDarkTheme()) {

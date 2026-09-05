@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
@@ -16,6 +16,21 @@ export class TopbarComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   readonly themeService = inject(ThemeService);
+
+  readonly notificationsOpen = signal(false);
+
+  toggleNotifications(event?: Event): void {
+    event?.stopPropagation();
+    this.notificationsOpen.update((open) => !open);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.notifications-wrapper')) {
+      this.notificationsOpen.set(false);
+    }
+  }
 
   readonly userRole = 'Administrator';
   readonly environmentName = 'Local Development';
