@@ -6,8 +6,13 @@ package com.aegisnotify.notification.infrastructure.provider;
  * circuit breaker (which only reacts to exceptions) can count it as a failure.
  * Adapters themselves never throw this — it exists purely at the
  * {@link ResilientNotificationProviderAdapter} boundary.
+ *
+ * <p>Sealed to exactly two subtypes so the Retry decorator can use a strict,
+ * type-based allow-list predicate: only {@link TransientProviderDeliveryException}
+ * is eligible for retry, {@link PermanentProviderDeliveryException} never is.</p>
  */
-class ProviderDeliveryException extends RuntimeException {
+public sealed class ProviderDeliveryException extends RuntimeException
+    permits TransientProviderDeliveryException, PermanentProviderDeliveryException {
 
   ProviderDeliveryException(String message) {
     super(message);
