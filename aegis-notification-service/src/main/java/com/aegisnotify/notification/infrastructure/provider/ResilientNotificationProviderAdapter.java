@@ -7,6 +7,8 @@ import com.aegisnotify.notification.domain.enums.Channel;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -37,7 +39,7 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
   private static final Logger log =
       LoggerFactory.getLogger(ResilientNotificationProviderAdapter.class);
 
-  private static final Map<Channel, String> CIRCUIT_BREAKER_NAMES = Map.of(
+  private static final Map<Channel, String> RESILIENCE_INSTANCE_NAMES = Map.of(
       Channel.EMAIL, "email-provider",
       Channel.SMS, "sms-provider",
       Channel.WHATSAPP, "whatsapp-provider",
@@ -48,35 +50,41 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
   private final NotificationProviderRouter primaryRouter;
   private final Map<Channel, NotificationProviderPort> secondaryProvidersByChannel;
   private final CircuitBreakerRegistry circuitBreakerRegistry;
+  private final RetryRegistry retryRegistry;
   private final MeterRegistry meterRegistry;
 
   public ResilientNotificationProviderAdapter(
       NotificationProviderRouter primaryRouter,
       Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
       CircuitBreakerRegistry circuitBreakerRegistry,
+      RetryRegistry retryRegistry,
       MeterRegistry meterRegistry) {
     this.primaryRouter = primaryRouter;
     this.secondaryProvidersByChannel = secondaryProvidersByChannel;
     this.circuitBreakerRegistry = circuitBreakerRegistry;
+    this.retryRegistry = retryRegistry;
     this.meterRegistry = meterRegistry;
   }
 
   @Override
   public ProviderResult send(Channel channel, String recipient, String renderedContent,
       String subject) {
-    CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(
-        CIRCUIT_BREAKER_NAMES.get(channel));
+    String instanceName = RESILIENCE_INSTANCE_NAMES.get(channel);
+    CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceName);
+    Retry retry = retryRegistry.retry(instanceName);
 
     Supplier<ProviderResult> primaryCall = () -> {
       ProviderResult result = primaryRouter.send(channel, recipient, renderedContent, subject);
       if (result.outcome() == Outcome.FAILED) {
-        throw new ProviderDeliveryException(result.errorDetail());
+        throw result.retryable()
+            ? new TransientProviderDeliveryException(result.errorDetail())
+            : new PermanentProviderDeliveryException(result.errorDetail());
       }
       return result;
     };
 
     try {
-      return circuitBreaker.decorateSupplier(primaryCall).get();
+      return Retry.decorateSupplier(retry, circuitBreaker.decorateSupplier(primaryCall)).get();
     } catch (CallNotPermittedException | ProviderDeliveryException primaryFailure) {
       log.warn("primary_provider_unavailable channel={} reason={}", channel,
           primaryFailure.getMessage());

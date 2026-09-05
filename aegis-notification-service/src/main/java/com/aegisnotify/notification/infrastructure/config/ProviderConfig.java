@@ -10,6 +10,7 @@ import com.aegisnotify.notification.infrastructure.provider.SendGridEmailProvide
 import com.aegisnotify.notification.infrastructure.provider.TwilioSmsProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.TwilioWhatsAppProviderAdapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.RetryRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.EnumMap;
 import java.util.Map;
@@ -136,10 +137,11 @@ public class ProviderConfig {
       NotificationProviderRouter notificationProviderRouter,
       Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
       CircuitBreakerRegistry circuitBreakerRegistry,
+      RetryRegistry retryRegistry,
       MeterRegistry meterRegistry) {
     return new ResilientNotificationProviderAdapter(
         notificationProviderRouter, secondaryProvidersByChannel, circuitBreakerRegistry,
-        meterRegistry);
+        retryRegistry, meterRegistry);
   }
 
   private NotificationProviderPort secondaryEmail(String baseUrl, String apiKey,
