@@ -65,11 +65,13 @@ public class SendGridEmailProviderAdapter {
       log.warn("sendgrid_send_failed status={} body={}", ex.getStatusCode(),
           ex.getResponseBodyAsString());
       metrics.recordError(PROVIDER_NAME, String.valueOf(ex.getStatusCode().value()));
-      return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
+      return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage(),
+          RetryClassification.isRetryable(ex.getStatusCode()));
     } catch (Exception ex) {
       log.warn("sendgrid_send_failed error={}", ex.getMessage());
       metrics.recordError(PROVIDER_NAME, ex.getClass().getSimpleName());
-      return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage());
+      return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage(),
+          RetryClassification.isRetryable(ex));
     } finally {
       metrics.stopTimer(sample, PROVIDER_NAME);
     }

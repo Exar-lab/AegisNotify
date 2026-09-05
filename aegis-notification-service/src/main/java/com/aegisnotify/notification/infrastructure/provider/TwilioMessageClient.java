@@ -63,11 +63,13 @@ class TwilioMessageClient {
       log.warn("twilio_send_failed provider={} status={} body={}", providerName,
           ex.getStatusCode(), ex.getResponseBodyAsString());
       metrics.recordError(providerName, String.valueOf(ex.getStatusCode().value()));
-      return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage());
+      return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage(),
+          RetryClassification.isRetryable(ex.getStatusCode()));
     } catch (Exception ex) {
       log.warn("twilio_send_failed provider={} error={}", providerName, ex.getMessage());
       metrics.recordError(providerName, ex.getClass().getSimpleName());
-      return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage());
+      return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage(),
+          RetryClassification.isRetryable(ex));
     } finally {
       metrics.stopTimer(sample, providerName);
     }
