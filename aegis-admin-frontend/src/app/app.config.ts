@@ -29,9 +29,7 @@ export const appConfig: ApplicationConfig = {
       initOptions: {
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        flow: 'standard',
-        scope: 'openid profile email notification:read notification:write audit:read',
-        checkLoginIframe: false,
+        flow: 'standard'
       },
       features: [
         withAutoRefreshToken({
