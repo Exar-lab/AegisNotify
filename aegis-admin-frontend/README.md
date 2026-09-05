@@ -166,36 +166,30 @@ Configuration files are located in `src/environments/` and the project root:
 The frontend implements an OpenID Connect (OIDC) flow managed by `keycloak-angular` and Angular Router:
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant Browser as Angular App (:4200)
-    participant Guard as Auth Guard
-    participant Keycloak as Keycloak (:8088)
-    participant Gateway as API Gateway (:8080)
+flowchart TD
+    Start(["User accesses http://localhost:4200"]) --> Init["1. Keycloak Init (check-sso)"]
+    Init --> SilentSSO["Silent SSO verification<br/>(/silent-check-sso.html)"]
+    SilentSSO --> Guard{"2. authGuard check"}
 
-    User->>Browser: Access http://localhost:4200/
-    Browser->>Browser: provideKeycloak(onLoad: 'check-sso')
-    Browser->>Keycloak: Silent check SSO iframe (silent-check-sso.html)
-    alt Session Not Authenticated
-        Browser->>Guard: Navigate to protected route (/dashboard)
-        Guard->>Keycloak: Redirect to Login (Auth Code + PKCE)
-        User->>Keycloak: Submit credentials (aegis-dev / dev123)
-        Keycloak->>Browser: Redirect callback with auth code
-        Browser->>Keycloak: Exchange code for JWT tokens
-    else Session Active
-        Keycloak->>Browser: Session valid, token restored
-    end
-    Browser->>Browser: AutoRefreshTokenService active in background
-    Browser->>Gateway: HTTP GET /api/v1/... (Authorization: Bearer JWT)
-    Gateway-->>Browser: HTTP 200 OK Response
+    Guard -- "Unauthenticated" --> KCLogin["3. Redirect to Keycloak (:8088)<br/>Authorization Code + PKCE"]
+    KCLogin --> UserAuth["User enters credentials<br/>(aegis-dev / dev123)"]
+    UserAuth --> Callback["Keycloak Callback<br/>Exchange Code for JWT"]
+    Callback --> Shell
+
+    Guard -- "Authenticated" --> Shell["4. Render AdminShellComponent<br/>(/dashboard, /notifications, etc.)"]
+
+    Shell --> APIReq["5. HTTP API Request"]
+    APIReq --> Interceptor["includeBearerTokenInterceptor<br/>Attaches Authorization: Bearer JWT"]
+    Interceptor --> Gateway[("6. API Gateway (:8080)<br/>Validates JWT via JWKS")]
 ```
 
-1. **Bootstrap (`provideKeycloak`)**: Initialized in `app.config.ts` with `onLoad: 'check-sso'`, `flow: 'standard'`, and `silentCheckSsoRedirectUri` pointing to `public/silent-check-sso.html`.
-2. **Route Protection (`authGuard`)**: The root layout `AdminShellComponent` route enforces authentication via the functional `authGuard` (`createAuthGuard`), redirecting unauthenticated requests to Keycloak.
-3. **Session Management (`AuthService`)**: Wraps user identity resolution (`getUsername()`, `getDisplayName()`), login, and logout routines.
-4. **Token Refresh (`withAutoRefreshToken`)**: Automatically maintains active token validity via `AutoRefreshTokenService` and `UserActivityService`.
-5. **Gateway Authorization (`includeBearerTokenInterceptor`)**: Intercepts requests matching `http://localhost:8080/api/**` and automatically attaches the `Authorization: Bearer <access_token>` header.
+1. **Keycloak Initialization (`provideKeycloak`)**: On application startup, Keycloak initializes with `onLoad: 'check-sso'`, performing a silent session check via `/silent-check-sso.html`.
+2. **Route Protection (`authGuard`)**: The functional `authGuard` verifies whether an active session exists before activating `AdminShellComponent` and its child routes.
+3. **Login Redirect & PKCE**: If unauthenticated, the user is redirected to the Keycloak login page (`http://localhost:8088`) using the Authorization Code Flow with PKCE (`S256`).
+4. **Callback & Token Exchange**: Upon successful login, Keycloak redirects back to the application where the authorization code is exchanged for JWT access and refresh tokens.
+5. **AdminShell Rendering**: The authenticated user accesses `AdminShellComponent` and protected feature routes (`/dashboard`, `/notifications`, `/providers`, etc.).
+6. **Bearer Token Interception**: All outgoing HTTP requests matching `http://localhost:8080/api/**` automatically receive the `Authorization: Bearer <access_token>` header via `includeBearerTokenInterceptor`.
+7. **Token Lifecycle & Refresh**: `withAutoRefreshToken` seamlessly refreshes expiring tokens in the background through `AutoRefreshTokenService`.
 
 ## Application Features & Routes
 
