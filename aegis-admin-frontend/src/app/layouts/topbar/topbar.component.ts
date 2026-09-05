@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { ThemeService } from '../../core/theme/theme.service';
+import { SidebarService } from '../../core/layout/sidebar.service';
 
 @Component({
   selector: 'app-topbar',
@@ -16,6 +17,7 @@ export class TopbarComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   readonly themeService = inject(ThemeService);
+  readonly sidebarService = inject(SidebarService);
 
   readonly notificationsOpen = signal(false);
 

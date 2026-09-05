@@ -1,4 +1,7 @@
-<div class="admin-layout">
+<div class="admin-layout" [class.sidebar-open]="sidebarService.isOpen()">
+  @if (sidebarService.isOpen()) {
+    <div class="sidebar-overlay" (click)="sidebarService.close()"></div>
+  }
   <app-sidebar />
   <div class="main-wrapper">
     <app-topbar />
