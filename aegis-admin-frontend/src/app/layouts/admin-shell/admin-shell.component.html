@@ -1,0 +1,22 @@
+<!-- Main layout container that wraps the entire admin dashboard -->
+<div class="admin-layout" [class.sidebar-open]="sidebarService.isOpen()">
+  
+  <!-- Semi-transparent overlay shown on mobile when the sidebar is open -->
+  @if (sidebarService.isOpen()) {
+    <div class="sidebar-overlay" (click)="sidebarService.close()"></div>
+  }
+  
+  <!-- Sidebar navigation component -->
+  <app-sidebar />
+  
+  <!-- Wrapper for the topbar and main content area -->
+  <div class="main-wrapper">
+    <!-- Top navigation bar component -->
+    <app-topbar />
+    
+    <!-- Main content area where feature routes are rendered -->
+    <main class="content-area">
+      <router-outlet />
+    </main>
+  </div>
+</div>
