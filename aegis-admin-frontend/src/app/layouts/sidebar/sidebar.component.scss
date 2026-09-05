@@ -22,7 +22,7 @@
       width: 40px;
       height: 40px;
       background: linear-gradient(135deg, var(--color-accent) 0%, #12b48b 100%);
-      color: #FFFFFF;
+      color: var(--text-inverted);
       border-radius: var(--space-8);
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
@@ -33,7 +33,7 @@
       gap: 2px;
 
       .brand-title {
-        color: #F8FAFC;
+        color: var(--text-primary);
         font-size: 1.125rem;
         font-weight: 700;
         letter-spacing: -0.02em;
@@ -84,7 +84,7 @@
         }
 
         &:hover {
-          color: #F8FAFC;
+          color: var(--text-primary);
           background-color: var(--bg-sidebar-hover);
 
           .nav-icon {

@@ -1,20 +1,25 @@
 /* Design Tokens & CSS Variables */
 :root {
-  --bg-sidebar: #11151f;
-  --bg-topbar: #181e2b;
-  --bg-sidebar-active: rgba(59, 246, 221, 0.15);
-  --bg-sidebar-hover: rgba(100, 255, 255, 0.05);
+  /* Light Theme (Default) */
+  --bg-sidebar: #f8fafc;
+  --bg-topbar: #ffffff;
+  --bg-sidebar-active: rgba(28, 210, 165, 0.15);
+  --bg-sidebar-hover: rgba(28, 210, 165, 0.05);
   --color-accent: #1cd2a5;
-  --bg-main: #0b0d14;
-  --bg-surface: #FFFFFF;
-  --border-color: #E2E8F0;
-  --border-sidebar: #1f2330;
-  --text-primary: #F8FAFC;
-  --text-secondary: #64748B;
-  --text-sidebar: #94A3B8;
-  --text-sidebar-active: #FFFFFF;
+  --bg-main: #f1f5f9;
+  --bg-surface: #ffffff;
+  --border-color: #e2e8f0;
+  --border-sidebar: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-sidebar: #475569;
+  --text-sidebar-active: #0f172a;
   --status-online: #10B981;
   --status-offline: #EF4444;
+  --text-inverted: #ffffff;
+  --env-badge-bg: rgba(28, 210, 165, 0.15);
+  --env-badge-border: rgba(28, 210, 165, 0.3);
+  --indicator-bg: rgba(0, 0, 0, 0.04);
 
   /* 8px Grid Spacing Scale */
   --space-8: 8px;
@@ -23,6 +28,27 @@
 
   /* Typography */
   --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --bg-sidebar: #11151f;
+  --bg-topbar: #181e2b;
+  --bg-sidebar-active: rgba(59, 246, 221, 0.15);
+  --bg-sidebar-hover: rgba(100, 255, 255, 0.05);
+  --color-accent: #1cd2a5;
+  --bg-main: #0b0d14;
+  --bg-surface: #1f2937;
+  --border-color: #374151;
+  --border-sidebar: #1f2330;
+  --text-primary: #F8FAFC;
+  --text-secondary: #9ca3af;
+  --text-sidebar: #94A3B8;
+  --text-sidebar-active: #FFFFFF;
+  --text-inverted: #ffffff;
+  --env-badge-bg: rgba(0, 238, 255, 0.15);
+  --env-badge-border: rgba(0, 238, 255, 0.3);
+  --indicator-bg: rgba(255, 255, 255, 0.04);
 }
 
 *,

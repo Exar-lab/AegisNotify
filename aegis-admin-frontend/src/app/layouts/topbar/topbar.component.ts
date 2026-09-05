@@ -3,6 +3,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { ThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'app-topbar',
@@ -14,6 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 export class TopbarComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   readonly userRole = 'Administrator';
   readonly environmentName = 'Local Development';
