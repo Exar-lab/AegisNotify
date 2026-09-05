@@ -13,6 +13,7 @@ Administrative web dashboard for the AegisNotify notification orchestration plat
   - [Build](#build)
   - [Testing](#testing)
 - [Environment Configuration](#environment-configuration)
+- [Authentication Flow](#authentication-flow)
 - [Project Structure](#project-structure)
 - [Architectural Decisions](#architectural-decisions)
 - [Changelog](#changelog)
@@ -30,10 +31,10 @@ Administrative web dashboard for the AegisNotify notification orchestration plat
 
 ## Tech Stack
 
-- **Framework**: Angular 19+ (Standalone Components, Signals)
+- **Framework**: Angular 22 (Standalone Components, Signals)
 - **Styling**: SCSS
 - **Package Manager**: pnpm
-- **Authentication**: Keycloak / OIDC (Bearer Token)
+- **Authentication**: Keycloak / OIDC (Authorization Code Flow + PKCE via `keycloak-angular`, Bearer JWT Authentication)
 - **Testing**: Vitest
 
 ## Getting Started
@@ -92,9 +93,19 @@ Configuration files are located in `src/environments/` and the project root:
 ### Default Configuration Parameters
 
 - **`apiBaseUrl`**: `http://localhost:8080` (Aegis API Gateway)
-- **`keycloakUrl`**: `http://localhost:8081` / `http://localhost:8088` (Identity Provider)
+- **`keycloakUrl`**: `http://localhost:8088` (Keycloak Identity Provider)
 - **`keycloakRealm`**: `aegis`
-- **`keycloakClientId`**: `aegis-dev-cli`
+- **`keycloakClientId`**: `aegis-admin-frontend`
+
+## Authentication Flow
+
+The frontend implements a secure OpenID Connect (OIDC) authentication flow leveraging `keycloak-angular` and `keycloak-js`:
+
+1. **Initialization (`check-sso`)**: On startup, `provideKeycloak` initializes with `onLoad: 'check-sso'` and uses `/silent-check-sso.html` for non-intrusive session checks.
+2. **Route Protection (`authGuard`)**: The root layout (`AdminShellComponent`) and its child feature routes are protected by a functional `authGuard` (`createAuthGuard`).
+3. **Authorization Code + PKCE**: Unauthenticated access attempts redirect users to the Keycloak login page at `http://localhost:8088` using the Authorization Code Flow with Proof Key for Code Exchange (PKCE) under client `aegis-admin-frontend`.
+4. **Token Refresh**: Token lifecycles and background refreshes are maintained automatically via `withAutoRefreshToken`.
+5. **Gateway Authorization (Bearer Token)**: The `includeBearerTokenInterceptor` intercepts outgoing HTTP requests targeting `http://localhost:8080/api/...` and attaches the `Authorization: Bearer <access_token>` header, forwarding the Bearer JWT to the API Gateway while leaving Keycloak calls intact.
 
 ## Project Structure
 
