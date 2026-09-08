@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,13 +14,17 @@ import com.aegisnotify.notification.application.dto.CreateNotificationCommand;
 import com.aegisnotify.notification.application.dto.NotificationLogEntry;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
+import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
+import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
+import com.aegisnotify.notification.domain.exception.NotificationNotCancellableException;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
+import com.aegisnotify.notification.domain.exception.NotificationNotRetryableException;
 import com.aegisnotify.notification.infrastructure.config.SecurityConfig;
 import com.aegisnotify.notification.infrastructure.web.mapper.NotificationWebMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +55,12 @@ class NotificationControllerTest {
 
   @MockitoBean
   private GetNotificationStatusUseCase getNotificationStatusUseCase;
+
+  @MockitoBean
+  private CancelNotificationUseCase cancelNotificationUseCase;
+
+  @MockitoBean
+  private RetryFailedNotificationUseCase retryFailedNotificationUseCase;
 
   @MockitoBean
   private NotificationWebMapper mapper;
@@ -193,6 +204,103 @@ class NotificationControllerTest {
 
     mockMvc.perform(get("/api/v1/notifications/{id}/status", notificationId)
             .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void cancel_pending_returns200() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(cancelNotificationUseCase.cancel(notificationId))
+        .thenReturn(new NotificationResponse(notificationId, NotificationStatus.CANCELLED));
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(notificationId.toString()))
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
+  }
+
+  @Test
+  void cancel_notCancellable_returns409() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(cancelNotificationUseCase.cancel(notificationId))
+        .thenThrow(new NotificationNotCancellableException(
+            notificationId, NotificationStatus.SENT));
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void cancel_notFound_returns404() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(cancelNotificationUseCase.cancel(notificationId))
+        .thenThrow(new NotificationNotFoundException(notificationId));
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void cancel_noToken_returns401() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", notificationId))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void cancel_missingRequiredScope_returns403() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void retry_failed_returns200() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(retryFailedNotificationUseCase.retry(notificationId))
+        .thenReturn(new NotificationResponse(notificationId, NotificationStatus.PENDING));
+
+    mockMvc.perform(post("/api/v1/notifications/{id}/retry", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(notificationId.toString()))
+        .andExpect(jsonPath("$.status").value("PENDING"));
+  }
+
+  @Test
+  void retry_notRetryable_returns409() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(retryFailedNotificationUseCase.retry(notificationId))
+        .thenThrow(new NotificationNotRetryableException(notificationId, NotificationStatus.SENT));
+
+    mockMvc.perform(post("/api/v1/notifications/{id}/retry", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void retry_notFound_returns404() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    when(retryFailedNotificationUseCase.retry(notificationId))
+        .thenThrow(new NotificationNotFoundException(notificationId));
+
+    mockMvc.perform(post("/api/v1/notifications/{id}/retry", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void retry_missingRequiredScope_returns403() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+
+    mockMvc.perform(post("/api/v1/notifications/{id}/retry", notificationId)
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
         .andExpect(status().isForbidden());
   }
 }

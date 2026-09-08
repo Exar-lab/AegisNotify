@@ -1,7 +1,9 @@
 package com.aegisnotify.notification.infrastructure.web;
 
 import com.aegisnotify.notification.domain.exception.InvalidRecipientException;
+import com.aegisnotify.notification.domain.exception.NotificationNotCancellableException;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
+import com.aegisnotify.notification.domain.exception.NotificationNotRetryableException;
 import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
 import com.aegisnotify.notification.domain.exception.TemplateRenderingException;
 import com.aegisnotify.notification.infrastructure.web.dto.ApiErrorResponse;
@@ -69,6 +71,26 @@ public class GlobalExceptionHandler {
         .body(ApiErrorResponse.of(
             HttpStatus.UNPROCESSABLE_ENTITY.value(),
             "Unprocessable Entity",
+            ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationNotCancellableException.class)
+  public ResponseEntity<ApiErrorResponse> handleNotificationNotCancellable(
+      NotificationNotCancellableException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationNotRetryableException.class)
+  public ResponseEntity<ApiErrorResponse> handleNotificationNotRetryable(
+      NotificationNotRetryableException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
             ex.getMessage()));
   }
 
