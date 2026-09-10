@@ -14,9 +14,11 @@ import com.aegisnotify.notification.application.dto.CreateNotificationCommand;
 import com.aegisnotify.notification.application.dto.NotificationLogEntry;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
+import com.aegisnotify.notification.application.dto.NotificationSummary;
 import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
+import com.aegisnotify.notification.application.port.in.ListNotificationsUseCase;
 import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.LogStatus;
@@ -61,6 +63,9 @@ class NotificationControllerTest {
 
   @MockitoBean
   private RetryFailedNotificationUseCase retryFailedNotificationUseCase;
+
+  @MockitoBean
+  private ListNotificationsUseCase listNotificationsUseCase;
 
   @MockitoBean
   private NotificationWebMapper mapper;
@@ -301,6 +306,57 @@ class NotificationControllerTest {
 
     mockMvc.perform(post("/api/v1/notifications/{id}/retry", notificationId)
             .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void list_bothFilters_returns200() throws Exception {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    NotificationSummary summary = new NotificationSummary(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        NotificationStatus.FAILED, Priority.HIGH, now);
+    when(listNotificationsUseCase.list(Channel.EMAIL, NotificationStatus.FAILED))
+        .thenReturn(List.of(summary));
+
+    mockMvc.perform(get("/api/v1/notifications")
+            .param("channel", "EMAIL")
+            .param("status", "FAILED")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(notificationId.toString()))
+        .andExpect(jsonPath("$[0].channel").value("EMAIL"))
+        .andExpect(jsonPath("$[0].status").value("FAILED"));
+  }
+
+  @Test
+  void list_noFilters_returns200() throws Exception {
+    when(listNotificationsUseCase.list(null, null)).thenReturn(List.of());
+
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
+  void list_invalidChannel_returns400() throws Exception {
+    mockMvc.perform(get("/api/v1/notifications")
+            .param("channel", "EMIAL")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void list_noToken_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/notifications"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void list_missingRequiredScope_returns403() throws Exception {
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
         .andExpect(status().isForbidden());
   }
 }

@@ -31,6 +31,8 @@ public class SecurityConfig {
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_WRITE))
             .requestMatchers(HttpMethod.POST, "/api/v1/notifications/*/retry")
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_WRITE))
+            .requestMatchers(HttpMethod.GET, "/api/v1/notifications")
+            .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_READ))
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
     return http.build();

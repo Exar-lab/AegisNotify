@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
+import com.aegisnotify.notification.application.port.in.ListNotificationsUseCase;
 import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
 import com.aegisnotify.notification.infrastructure.web.NotificationController;
 import com.aegisnotify.notification.infrastructure.web.mapper.NotificationWebMapper;
@@ -44,6 +45,9 @@ class SecurityConfigTest {
 
   @MockitoBean
   private RetryFailedNotificationUseCase retryFailedNotificationUseCase;
+
+  @MockitoBean
+  private ListNotificationsUseCase listNotificationsUseCase;
 
   @MockitoBean
   private NotificationWebMapper mapper;
