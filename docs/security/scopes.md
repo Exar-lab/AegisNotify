@@ -17,8 +17,8 @@ declare these same five scopes, byte-for-byte, as `clientScopes` with
 
 | Scope | Enforced by | Endpoint(s) | Status |
 |---|---|---|---|
-| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications` | Active |
-| `notification:read` | `aegis-notification-service`, `aegis-api-gateway` | `GET /api/v1/notifications/{id}/status` | Active |
+| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry` | Active |
+| `notification:read` | `aegis-notification-service`, `aegis-api-gateway` | `GET /api/v1/notifications/{id}/status`, `GET /api/v1/notifications` (filtered list) | Active |
 | `audit:read` | `aegis-audit-service`, `aegis-api-gateway` | `/api/v1/audit/**` | Active |
 | `user:read` | `aegis-user-service` (not yet built), `aegis-api-gateway` | `GET /api/v1/users`, `GET /api/v1/users/{id}` | Forward-looking — gateway rule reserved, `aegis-user-service` ships in a later slice |
 | `user:admin` | `aegis-user-service` (not yet built), `aegis-api-gateway` | `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/password` | Forward-looking — gateway rule reserved, `aegis-user-service` ships in a later slice |
