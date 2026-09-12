@@ -92,6 +92,36 @@ class SecurityConfigTest {
   }
 
   @Test
+  void listEndpoint_withoutNotificationReadScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .get().uri("/api/v1/notifications")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:read");
+  }
+
+  @Test
+  void cancelEndpoint_withoutNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .patch().uri("/api/v1/notifications/some-id/cancel")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:write");
+  }
+
+  @Test
+  void retryEndpoint_withoutNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .post().uri("/api/v1/notifications/some-id/retry")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:write");
+  }
+
+  @Test
   void auditEndpoint_withoutAuditReadScope_returns403WithRequiredScope() {
     webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
         .get().uri("/api/v1/audit")
