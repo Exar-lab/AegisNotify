@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.0...aegisnotify-v0.8.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** keep show_full_output enabled on claude-review permanently ([c60a494](https://github.com/Exar-lab/AegisNotify/commit/c60a494f95c2775d65c433ada661cd7014be15df))
+* **ci:** keep show_full_output enabled on claude-review permanently ([ed6be83](https://github.com/Exar-lab/AegisNotify/commit/ed6be83df4c4d9c1c5f69ddde4312f0f6ae40758))
+* **ci:** keep show_full_output enabled on claude-review permanently ([#106](https://github.com/Exar-lab/AegisNotify/issues/106)) ([c60a494](https://github.com/Exar-lab/AegisNotify/commit/c60a494f95c2775d65c433ada661cd7014be15df))
+* **ci:** unpin claude-code-action and skip review on fork PRs ([20b9537](https://github.com/Exar-lab/AegisNotify/commit/20b9537a98df2f1f5dce2f5c122fa6b28de438b0))
+* **ci:** unpin claude-code-action and skip review on fork PRs ([35630d5](https://github.com/Exar-lab/AegisNotify/commit/35630d5f2ff59e48a7c0d608213f4b591ed3f8ea))
+
 ## [0.8.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.7.0...aegisnotify-v0.8.0) (2026-09-05)
 
 
