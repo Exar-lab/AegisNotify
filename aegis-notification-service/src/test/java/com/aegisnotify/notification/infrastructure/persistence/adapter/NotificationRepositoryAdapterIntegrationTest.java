@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -33,6 +34,10 @@ import org.testcontainers.utility.DockerImageName;
  * whether the underlying {@code @Query} actually compiles and binds against Postgres, which is
  * the entire risk this test exists to catch.
  *
+ * <p>{@code @Transactional}: each test seeds its own rows into the shared container; without a
+ * per-test rollback, {@code search}'s nullable filters would match rows left behind by earlier
+ * tests, same rationale as {@code AggregationBufferRepositoryAdapterIntegrationTest}.</p>
+ *
  * <p>Docker is unreachable in some sandboxes, the same pre-existing limitation already
  * documented on {@code AggregationBufferRepositoryAdapterIntegrationTest} and
  * {@code CancelRetryNotificationIntegrationTest} (Slice A) — this follows the identical
@@ -41,6 +46,7 @@ import org.testcontainers.utility.DockerImageName;
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
+@Transactional
 class NotificationRepositoryAdapterIntegrationTest {
 
   @Container
