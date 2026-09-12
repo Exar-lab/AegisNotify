@@ -52,4 +52,10 @@ jobs:
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
+          # show_full_output must stay true: with it false, the action's own
+          # output-suppression path reliably breaks its result parsing and
+          # reports a spurious is_error:true after ~2s/1 turn/$0 cost, with no
+          # real review ever happening (confirmed 3/3 success vs 5/5 failure
+          # across repeated same-PR reruns differing only in this flag).
+          show_full_output: true
 
