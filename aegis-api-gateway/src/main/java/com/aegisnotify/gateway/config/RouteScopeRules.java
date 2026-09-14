@@ -27,6 +27,15 @@ public class RouteScopeRules {
           pathMatchers(HttpMethod.GET, "/api/v1/notifications/*/status"),
           SecurityScopes.NOTIFICATION_READ),
       new RouteScopeRule(
+          pathMatchers(HttpMethod.GET, "/api/v1/notifications"),
+          SecurityScopes.NOTIFICATION_READ),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.PATCH, "/api/v1/notifications/*/cancel"),
+          SecurityScopes.NOTIFICATION_WRITE),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.POST, "/api/v1/notifications/*/retry"),
+          SecurityScopes.NOTIFICATION_WRITE),
+      new RouteScopeRule(
           pathMatchers("/api/v1/audit/**"),
           SecurityScopes.AUDIT_READ),
       new RouteScopeRule(
