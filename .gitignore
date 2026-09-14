@@ -29,6 +29,7 @@ desktop.ini
 # Env
 .env
 *.env.local
+*.env.development
 
 # Logs
 *.log
