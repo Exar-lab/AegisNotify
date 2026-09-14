@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.2...aegisnotify-v0.8.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* **notification:** expose cancel and retry endpoints, close cancellation DB gap ([4a774fe](https://github.com/Exar-lab/AegisNotify/commit/4a774febf38626ede2d20acf8699548c95cb06e2))
+
 ## [0.8.2](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.1...aegisnotify-v0.8.2) (2026-09-12)
 
 
