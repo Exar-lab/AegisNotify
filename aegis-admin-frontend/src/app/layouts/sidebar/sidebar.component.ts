@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { SidebarService } from '../../core/layout/sidebar.service';
 
@@ -37,7 +38,7 @@ export class SidebarComponent {
 
   constructor() {
     // Listen for route changes to close the sidebar automatically on mobile
-    this.router.events.subscribe((event) => {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationEnd && this.sidebarService.isMobile()) {
         this.sidebarService.close();
       }
