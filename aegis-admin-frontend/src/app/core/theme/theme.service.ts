@@ -22,8 +22,7 @@ export class ThemeService {
     } else if (savedTheme === 'light') {
       this.setDarkTheme(false);
     } else {
-      // Default is light according to requirements
-      this.setDarkTheme(false);
+      this.setDarkTheme(this.darkThemeMedia.matches);
     }
   }
 
