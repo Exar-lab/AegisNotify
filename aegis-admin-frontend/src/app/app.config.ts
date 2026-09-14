@@ -13,6 +13,13 @@ import {
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 
+const normalizedApiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
+const apiBaseEndpoint = normalizedApiBaseUrl.endsWith('/api')
+  ? normalizedApiBaseUrl
+  : `${normalizedApiBaseUrl}/api`;
+const escapedApiEndpoint = apiBaseEndpoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const bearerTokenUrlPattern = new RegExp(`^(${escapedApiEndpoint})(\\/.*)?$`, 'i');
+
 /**
  * Main application configuration block for Angular.
  * Sets up routing, HTTP interceptors, and Keycloak integration for authentication.
@@ -48,7 +55,7 @@ export const appConfig: ApplicationConfig = {
           provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
           useValue: [
             {
-              urlPattern: /^(http:\/\/localhost:8080\/api)(\/.*)?$/i,
+              urlPattern: bearerTokenUrlPattern,
               bearerPrefix: 'Bearer',
             },
           ],
