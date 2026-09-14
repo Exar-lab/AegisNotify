@@ -37,10 +37,15 @@ flowchart LR
     User -.-> IdP
 ```
 
-The gateway routes notification submission and status requests, and enforces the OAuth2 scope
-required for each route before proxying (`RouteScopeRules`). Audit and user endpoints are still
-called directly, on ports `8083` and `8084` respectively — `aegis-user-service` routes are defined
-in the gateway's scope rule table but not yet proxied. Config Server use is optional, but its Git
+The gateway routes notification submission, status, and audit read requests, and enforces the
+OAuth2 scope required for each route before proxying (`RouteScopeRules`). `GET /api/v1/audit/**`
+is now proxied to `aegis-audit-service`, scope-gated on `audit:read`. The user endpoint is still
+called directly, on port `8084` — `aegis-user-service` routes are defined in the gateway's scope
+rule table but not yet proxied. The gateway also depends on Redis (`REDIS_HOST`/`REDIS_PORT`) to
+back a per-JWT-subject token-bucket rate limiter on `POST /api/v1/notifications`; if Redis is
+unreachable, the limiter degrades open (traffic is allowed through) rather than blocking
+submissions, and the degradation is observable at `/actuator/health`. Config Server use is
+optional, but its Git
 backend and credentials must be supplied when enabled. Keycloak (`docker-compose.yml`) is the only
 piece of infrastructure this repository starts for you; PostgreSQL, Kafka, and MongoDB are run
 separately (see the [README](../README.md#installation)).
