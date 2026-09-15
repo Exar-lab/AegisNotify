@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.2](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.1...aegisnotify-v0.8.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** allow github-actions[bot] PRs in claude-review ([4c0b5d5](https://github.com/Exar-lab/AegisNotify/commit/4c0b5d5bf0d741b300d3397d89d3837ec6e66132))
+* **ci:** allow github-actions[bot] PRs in claude-review ([7ca987c](https://github.com/Exar-lab/AegisNotify/commit/7ca987cc6b76421f9f1b95317df5b0e0ef6deead))
+* **gateway:** wire cancel, retry, and list routes into scope rules ([144c8a3](https://github.com/Exar-lab/AegisNotify/commit/144c8a3678d27cc1c00b48a1d426addf1d8ca678))
+* **gateway:** wire cancel, retry, and list routes into scope rules ([9d018c0](https://github.com/Exar-lab/AegisNotify/commit/9d018c02c7c69aae93170c72a5117fb890af91d1))
+
+## [0.8.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.0...aegisnotify-v0.8.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** keep show_full_output enabled on claude-review permanently ([c60a494](https://github.com/Exar-lab/AegisNotify/commit/c60a494f95c2775d65c433ada661cd7014be15df))
+* **ci:** keep show_full_output enabled on claude-review permanently ([ed6be83](https://github.com/Exar-lab/AegisNotify/commit/ed6be83df4c4d9c1c5f69ddde4312f0f6ae40758))
+* **ci:** keep show_full_output enabled on claude-review permanently ([#106](https://github.com/Exar-lab/AegisNotify/issues/106)) ([c60a494](https://github.com/Exar-lab/AegisNotify/commit/c60a494f95c2775d65c433ada661cd7014be15df))
+* **ci:** unpin claude-code-action and skip review on fork PRs ([20b9537](https://github.com/Exar-lab/AegisNotify/commit/20b9537a98df2f1f5dce2f5c122fa6b28de438b0))
+* **ci:** unpin claude-code-action and skip review on fork PRs ([35630d5](https://github.com/Exar-lab/AegisNotify/commit/35630d5f2ff59e48a7c0d608213f4b591ed3f8ea))
+
 ## [0.8.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.7.0...aegisnotify-v0.8.0) (2026-09-05)
 
 
