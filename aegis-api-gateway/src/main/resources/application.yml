@@ -11,20 +11,43 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWKS_URI:http://localhost:8088/realms/aegis/protocol/openid-connect/certs}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: ${REDIS_TIMEOUT:250ms}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:500ms}
   cloud:
     gateway:
-      default-filters:
-        - TokenRelay=
+      # No default-filters here: the caller's Authorization header reaches every
+      # downstream route unchanged via Spring Cloud Gateway's normal proxy header
+      # forwarding. A `TokenRelay=` filter was previously listed here, but this
+      # gateway authenticates callers as an OAuth2 resource server (JwtAuthenticationToken),
+      # and TokenRelayGatewayFilterFactory only relays a token for an oauth2Login
+      # client principal (OAuth2AuthenticationToken) - it was a no-op. See
+      # TokenRelayPropagationTest for the evidence.
       routes:
         - id: notification-submit
           uri: lb://aegis-notification-service
           predicates:
             - Path=/api/v1/notifications
             - Method=POST
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: ${aegis.gateway.rate-limit.notification-submit.replenish-rate}
+                redis-rate-limiter.burstCapacity: ${aegis.gateway.rate-limit.notification-submit.burst-capacity}
+                redis-rate-limiter.requestedTokens: ${aegis.gateway.rate-limit.notification-submit.requested-tokens}
+                key-resolver: "#{@userKeyResolver}"
         - id: notification-status
           uri: lb://aegis-notification-service
           predicates:
             - Path=/api/v1/notifications/*/status
+            - Method=GET
+        - id: audit-read
+          uri: lb://aegis-audit-service
+          predicates:
+            - Path=/api/v1/audit/**
             - Method=GET
       globalcors:
         corsConfigurations:
@@ -37,6 +60,16 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
+
+aegis:
+  gateway:
+    rate-limit:
+      notification-submit:
+        # 100 tokens/s / 60 tokens per request = 100 requests per minute sustained
+        replenish-rate: ${RATE_LIMIT_REPLENISH_RATE:100}
+        # 1200 tokens / 60 = 20-request instantaneous burst
+        burst-capacity: ${RATE_LIMIT_BURST_CAPACITY:1200}
+        requested-tokens: ${RATE_LIMIT_REQUESTED_TOKENS:60}
 
 eureka:
   client:

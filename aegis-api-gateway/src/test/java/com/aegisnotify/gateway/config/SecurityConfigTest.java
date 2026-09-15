@@ -132,6 +132,32 @@ class SecurityConfigTest {
   }
 
   @Test
+  void auditEndpoint_withAuditReadScope_isNotForbidden() {
+    // Symmetric positive case for the existing audit 403 test. No live
+    // aegis-audit-service in this context (application-test.yml points at a closed
+    // port), so a correctly scoped request clears security and fails downstream at
+    // routing with a 5xx, proving it passed authorization, not 401/403.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_audit:read"))
+        .get().uri("/api/v1/audit/notifications/some-id")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void auditEndpoint_withAuditReadScope_postDoesNotMatchAuditRoute() {
+    // RouteScopeRules gates /api/v1/audit/** on any method, so a POST with the
+    // audit:read scope clears security same as GET does. The audit-read route's
+    // Method=GET predicate must still exclude it: with no other route registered
+    // for this path, Spring Cloud Gateway finds no matching route and returns 404 -
+    // a different failure mode than the 5xx the GET pass-through test above expects,
+    // proving Method=GET actually restricts the verb rather than merely existing.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_audit:read"))
+        .post().uri("/api/v1/audit/notifications/some-id")
+        .exchange()
+        .expectStatus().isNotFound();
+  }
+
+  @Test
   void usersEndpoint_withoutUserReadScope_returns403WithRequiredScope() {
     // aegis-user-service isn't proxied yet (see RouteScopeRules javadoc), but the
     // security layer must still reject a missing-scope request with 403 before
