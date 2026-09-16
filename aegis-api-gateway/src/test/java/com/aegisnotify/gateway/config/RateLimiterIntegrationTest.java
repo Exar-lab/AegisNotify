@@ -28,8 +28,20 @@ import org.testcontainers.utility.DockerImageName;
  * {@code requestedTokens=1}) to keep the drain loop fast and avoid the one-token-per-second refill
  * window (design decision D5 — rate-limiter route config lives in this test class, not
  * {@code application-test.yml}).</p>
+ *
+ * <p>The route is defined here as one fully self-contained property source (own
+ * {@code id}/{@code uri}/{@code predicates}/{@code filters}), not a partial override of index 0
+ * from {@code application-test.yml}: Spring Boot's relaxed binder resolves the entire
+ * {@code spring.cloud.gateway.routes} list from whichever property source first supplies it, so a
+ * higher-priority source defining only {@code routes[0].filters[...]} leaves {@code uri} and
+ * {@code predicates} unbound and fails {@code GatewayProperties} validation — the same binder
+ * limitation documented in {@link TokenRelayPropagationTest}.</p>
  */
 @SpringBootTest(properties = {
+    "spring.cloud.gateway.routes[0].id=rate-limit-probe",
+    "spring.cloud.gateway.routes[0].uri=lb://aegis-notification-service",
+    "spring.cloud.gateway.routes[0].predicates[0]=Path=/api/v1/notifications",
+    "spring.cloud.gateway.routes[0].predicates[1]=Method=POST",
     "spring.cloud.gateway.routes[0].filters[0].name=RequestRateLimiter",
     "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.replenishRate=1",
     "spring.cloud.gateway.routes[0].filters[0].args.redis-rate-limiter.burstCapacity=2",
