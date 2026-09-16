@@ -12,11 +12,11 @@ on:
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Skip fork PRs: GitHub never issues OIDC tokens (or shares secrets) to
+    # workflows triggered by pull_request from a fork, no matter what
+    # `permissions:` below says, so the job can never authenticate there —
+    # it would just fail with "Could not fetch an OIDC token" every time.
+    if: github.event.pull_request.head.repo.full_name == github.repository
 
     runs-on: ubuntu-latest
     permissions:
