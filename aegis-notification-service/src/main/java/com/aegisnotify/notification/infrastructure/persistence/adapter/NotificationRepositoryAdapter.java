@@ -66,4 +66,11 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         .map(mapper::toDomain)
         .toList();
   }
+
+  @Override
+  public List<Notification> search(Channel channel, NotificationStatus status) {
+    return springDataRepository.search(channel, status).stream()
+        .map(mapper::toDomain)
+        .toList();
+  }
 }

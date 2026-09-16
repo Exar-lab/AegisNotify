@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.8.3](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.2...aegisnotify-v0.8.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* **notification:** expose cancel and retry endpoints, close cancellation DB gap ([4a774fe](https://github.com/Exar-lab/AegisNotify/commit/4a774febf38626ede2d20acf8699548c95cb06e2))
+
+## [0.8.2](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.1...aegisnotify-v0.8.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* **ci:** allow github-actions[bot] PRs in claude-review ([4c0b5d5](https://github.com/Exar-lab/AegisNotify/commit/4c0b5d5bf0d741b300d3397d89d3837ec6e66132))
+* **ci:** allow github-actions[bot] PRs in claude-review ([7ca987c](https://github.com/Exar-lab/AegisNotify/commit/7ca987cc6b76421f9f1b95317df5b0e0ef6deead))
+* **gateway:** wire cancel, retry, and list routes into scope rules ([144c8a3](https://github.com/Exar-lab/AegisNotify/commit/144c8a3678d27cc1c00b48a1d426addf1d8ca678))
+* **gateway:** wire cancel, retry, and list routes into scope rules ([9d018c0](https://github.com/Exar-lab/AegisNotify/commit/9d018c02c7c69aae93170c72a5117fb890af91d1))
+
 ## [0.8.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.0...aegisnotify-v0.8.1) (2026-09-12)
 
 

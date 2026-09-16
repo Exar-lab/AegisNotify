@@ -1,7 +1,9 @@
 package com.aegisnotify.notification.infrastructure.web;
 
 import com.aegisnotify.notification.domain.exception.InvalidRecipientException;
+import com.aegisnotify.notification.domain.exception.NotificationNotCancellableException;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
+import com.aegisnotify.notification.domain.exception.NotificationNotRetryableException;
 import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
 import com.aegisnotify.notification.domain.exception.TemplateRenderingException;
 import com.aegisnotify.notification.infrastructure.web.dto.ApiErrorResponse;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -70,6 +73,36 @@ public class GlobalExceptionHandler {
             HttpStatus.UNPROCESSABLE_ENTITY.value(),
             "Unprocessable Entity",
             ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationNotCancellableException.class)
+  public ResponseEntity<ApiErrorResponse> handleNotificationNotCancellable(
+      NotificationNotCancellableException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            ex.getMessage()));
+  }
+
+  @ExceptionHandler(NotificationNotRetryableException.class)
+  public ResponseEntity<ApiErrorResponse> handleNotificationNotRetryable(
+      NotificationNotRetryableException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            ex.getMessage()));
+  }
+
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+      MethodArgumentTypeMismatchException ex) {
+    return ResponseEntity.badRequest()
+        .body(ApiErrorResponse.of(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            "Invalid value for parameter: " + ex.getName()));
   }
 
   @ExceptionHandler(Exception.class)

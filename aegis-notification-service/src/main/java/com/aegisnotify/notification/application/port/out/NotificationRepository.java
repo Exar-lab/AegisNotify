@@ -28,4 +28,16 @@ public interface NotificationRepository {
    * @return every notification carrying this aggregation id, leader included
    */
   List<Notification> findByAggregationId(UUID aggregationId);
+
+  /**
+   * Returns every notification matching the given optional filters. Both
+   * arguments are nullable and independently optional: a {@code null} filter
+   * is not applied. Passing {@code (null, null)} returns every notification.
+   * Results are ordered newest-first by creation time.
+   *
+   * @param channel the channel to filter by, or {@code null} for any channel
+   * @param status the status to filter by, or {@code null} for any status
+   * @return the matching notifications, newest first
+   */
+  List<Notification> search(Channel channel, NotificationStatus status);
 }
