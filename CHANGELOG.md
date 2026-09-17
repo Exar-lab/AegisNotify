@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.3...aegisnotify-v0.9.0) (2026-09-17)
+
+
+### Features
+
+* **gateway:** add audit-service routes and rate limiting ([#37](https://github.com/Exar-lab/AegisNotify/issues/37)) ([d34b45b](https://github.com/Exar-lab/AegisNotify/commit/d34b45bce5a346ac29b60320476ba8fae1f5df06))
+
+
+### Bug Fixes
+
+* **ci:** skip claude-review on fork PRs again ([70646a8](https://github.com/Exar-lab/AegisNotify/commit/70646a84d2f4a96b1c50770665d49ace145a30a9))
+* **ci:** skip claude-review on fork PRs again ([91a63c3](https://github.com/Exar-lab/AegisNotify/commit/91a63c3ff0ba7dbf4889aa726dbb5fbf6ec0bb50))
+* **gateway:** define RateLimiterIntegrationTest's route as one self-contained source ([ee44ed9](https://github.com/Exar-lab/AegisNotify/commit/ee44ed9c71ff5af40bf928f669705363a51276cd))
+
 ## [0.8.3](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.2...aegisnotify-v0.8.3) (2026-09-14)
 
 
