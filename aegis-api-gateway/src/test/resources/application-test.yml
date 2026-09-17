@@ -20,9 +20,28 @@ spring:
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
+        - id: audit-read
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/audit/**
+            - Method=GET
+        - id: relay-probe
+          # Dedicated to TokenRelayPropagationTest: no per-route filters, so it is governed by
+          # the same global default-filters chain as audit-read. Test-local override sets
+          # default-filters back to TokenRelay= (this profile normally clears it to []) and
+          # points this uri at an in-process HTTP server that records the headers it receives.
+          uri: http://localhost:8090
+          predicates:
+            - Path=/api/v1/relay-probe
+            - Method=GET
 
 eureka:
   client:
     enabled: false
     register-with-eureka: false
     fetch-registry: false
+
+management:
+  health:
+    redis:
+      enabled: false
