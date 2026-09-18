@@ -1,0 +1,47 @@
+name: CI Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "aegis-admin-frontend/**"
+      - ".github/workflows/ci-frontend.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "aegis-admin-frontend/**"
+      - ".github/workflows/ci-frontend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aegis-admin-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: aegis-admin-frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test -- --run
