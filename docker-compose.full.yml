@@ -1,0 +1,35 @@
+# Additional local development infrastructure for AegisNotify, layered on
+# top of docker-compose.yml (issue #38).
+#
+# This file does NOT redefine services already declared in docker-compose.yml
+# (Keycloak) — Docker Compose merges files passed together with `-f`, so
+# duplicating that service here would risk the two definitions drifting out
+# of sync over time. Run both files together:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
+#
+# Scope note: this slice adds PostgreSQL only, matching
+# aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD (see
+# aegis-notification-service/src/main/resources/application.yml). MongoDB,
+# Kafka+Zookeeper, and the five Spring Boot app containers (blocked on
+# issue #39) are tracked as follow-up slices of this same file.
+services:
+  postgres:
+    image: postgres:15
+    container_name: aegis-postgres
+    environment:
+      POSTGRES_DB: aegisnotify
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis
+    ports:
+      - "5432:5432"
+    volumes:
+      - aegis-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d aegisnotify"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  aegis-postgres-data:
