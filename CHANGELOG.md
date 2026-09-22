@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.9.0...aegisnotify-v0.10.0) (2026-09-22)
+
+
+### Features
+
+* **frontend:** scaffold Angular admin frontend project ([23c841a](https://github.com/Exar-lab/AegisNotify/commit/23c841a3930ddd0e9c6970605f32c690daf736a9))
+
+
+### Bug Fixes
+
+* **ci:** add cache-dependency-path for pnpm lockfile in subdirectory ([232e3aa](https://github.com/Exar-lab/AegisNotify/commit/232e3aaef2ca68c05f7a755c5f468d6e323d8da1))
+* **ci:** add pnpm.onlyBuiltDependencies to allow build scripts ([4009047](https://github.com/Exar-lab/AegisNotify/commit/40090478731e98599d50a74c6e9c14438e4b2808))
+* **ci:** move onlyBuiltDependencies to .npmrc for pnpm v11 ([fa49e14](https://github.com/Exar-lab/AegisNotify/commit/fa49e1456711e796accc75fb3c4620e5e96a3f4b))
+* **ci:** pin claude-code-action to last known-good SHA ([714a0ba](https://github.com/Exar-lab/AegisNotify/commit/714a0bae3b40fba0be2af495d1372d2a94a7282b))
+* **ci:** pin claude-code-action to last known-good SHA (v1.0.228) ([aaf01ad](https://github.com/Exar-lab/AegisNotify/commit/aaf01ad22a6af6d203958cada3a974aab5d9d691))
+* **ci:** run frontend tests via test:ci script without pnpm arg passthrough ([d749bd4](https://github.com/Exar-lab/AegisNotify/commit/d749bd49c5e453feb69017a1924709027bb4d557))
+* **ci:** unblock CI Frontend install and test steps ([058644e](https://github.com/Exar-lab/AegisNotify/commit/058644eacb4359d3d7f08fff2db01dd01dd3790c))
+* **ci:** use pnpm-workspace.yaml allowBuilds instead of .npmrc ([accbc9e](https://github.com/Exar-lab/AegisNotify/commit/accbc9e4f8904d89d8cf300c69e332e781ca0da8))
+
 ## [0.9.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.8.3...aegisnotify-v0.9.0) (2026-09-17)
 
 
