@@ -7,7 +7,12 @@ on:
       - "aegis-admin-frontend/**"
       - ".github/workflows/ci-frontend.yml"
   pull_request:
-    branches: [main]
+    # No `branches:` filter: the frontend work lands as a chain of stacked
+    # PRs (#115 onward), each targeting the previous slice's branch instead
+    # of main until the last one. Restricting this to branches: [main] meant
+    # every intermediate PR in the chain (e.g. #126) silently got zero CI —
+    # build/test only ran once, on the final PR, after several slices of
+    # unverified code had already stacked up.
     paths:
       - "aegis-admin-frontend/**"
       - ".github/workflows/ci-frontend.yml"

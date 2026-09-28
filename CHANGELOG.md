@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.10.0...aegisnotify-v0.10.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **ci:** run frontend CI on PRs targeting any branch, not just main ([b2a2f7c](https://github.com/Exar-lab/AegisNotify/commit/b2a2f7c3ef13e1de48cde014f356275ed4e05d0b))
+* **ci:** run frontend CI on PRs targeting any branch, not just main ([1faf853](https://github.com/Exar-lab/AegisNotify/commit/1faf85318ab72c54174029c538d1faabd19f4553))
+
 ## [0.10.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.9.0...aegisnotify-v0.10.0) (2026-09-22)
 
 
