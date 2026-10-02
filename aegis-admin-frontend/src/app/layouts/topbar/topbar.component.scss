@@ -1,13 +1,8 @@
-@use 'sass:color';
-
-$sidebar-bg: #0F172A;
-$topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
-
 .topbar {
   height: 64px;
   min-height: 64px;
-  background-color: $topbar-bg;
-  border-bottom: 1px solid #1E293B;
+  background-color: var(--bg-topbar);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -22,7 +17,7 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
     .feature-title {
       font-size: 1.125rem;
       font-weight: 700;
-      color: #F8FAFC;
+      color: var(--text-primary);
       letter-spacing: -0.02em;
       margin: 0;
     }
@@ -32,18 +27,18 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
       align-items: center;
       gap: var(--space-8, 8px);
       padding: 4px var(--space-8, 8px);
-      background-color: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
+      background-color: var(--env-badge-bg);
+      border: 1px solid var(--env-badge-border);
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #60A5FA;
+      color: var(--color-accent);
 
       .env-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background-color: var(--color-accent, #3B82F6);
+        background-color: var(--color-accent);
         box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
       }
     }
@@ -64,11 +59,11 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
         align-items: center;
         gap: var(--space-8, 8px);
         font-size: 0.75rem;
-        color: #94A3B8;
+        color: var(--text-secondary);
         padding: 4px var(--space-8, 8px);
-        background-color: rgba(255, 255, 255, 0.04);
+        background-color: var(--indicator-bg);
         border-radius: var(--space-8, 8px);
-        border: 1px solid #1E293B;
+        border: 1px solid var(--border-color);
 
         .indicator-dot {
           width: 6px;
@@ -76,12 +71,12 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
           border-radius: 50%;
 
           &.online {
-            background-color: #10B981;
+            background-color: var(--status-online, #10b981);
             box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
           }
 
           &.offline {
-            background-color: #EF4444;
+            background-color: var(--status-offline, #ef4444);
             box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
           }
         }
@@ -91,7 +86,7 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
     .topbar-divider {
       width: 1px;
       height: var(--space-24, 24px);
-      background-color: #1E293B;
+      background-color: var(--border-color);
     }
 
     .user-profile {
@@ -103,8 +98,8 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-        color: #FFFFFF;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -121,13 +116,13 @@ $topbar-bg: color.adjust($sidebar-bg, $lightness: 5%);
         .user-name {
           font-size: 0.8125rem;
           font-weight: 600;
-          color: #F8FAFC;
+          color: var(--text-primary);
           line-height: 1.2;
         }
 
         .user-role {
           font-size: 0.6875rem;
-          color: #94A3B8;
+          color: var(--text-secondary);
           line-height: 1.2;
         }
       }
