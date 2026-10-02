@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.10.1...aegisnotify-v0.11.0) (2026-10-02)
+
+
+### Features
+
+* **docker:** add PostgreSQL service to docker-compose.full.yml ([92c708b](https://github.com/Exar-lab/AegisNotify/commit/92c708bf9085e89137dbd6849b07d9b94c730cc8))
+* **docker:** add PostgreSQL service to docker-compose.full.yml ([#122](https://github.com/Exar-lab/AegisNotify/issues/122)) ([92c708b](https://github.com/Exar-lab/AegisNotify/commit/92c708bf9085e89137dbd6849b07d9b94c730cc8))
+
+
+### Bug Fixes
+
+* **docker:** use postgres:16-alpine, env-driven credentials, and bind to localhost ([bd50dd7](https://github.com/Exar-lab/AegisNotify/commit/bd50dd78183c4156e0073edd4ec7f4c8bdf6f5b2))
+
 ## [0.10.1](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.10.0...aegisnotify-v0.10.1) (2026-09-24)
 
 
