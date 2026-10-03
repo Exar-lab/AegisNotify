@@ -43,6 +43,16 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
  * unbounded retry count by default in this Kafka client version — making it
  * explicit documents the intent instead of relying on an implicit default
  * that could change with a future client upgrade.</p>
+ *
+ * <p>{@code reconnect.backoff(.max).ms} are widened from the client's
+ * defaults (50ms / 1000ms) to 1s / 30s. The retry count itself is still
+ * unbounded — a broker outage never drops a notification — only how often
+ * each retry is attempted changes. At the default backoff, an unreachable
+ * broker makes {@code NetworkClient} log a reconnect warning roughly once a
+ * second for as long as it stays down, which is noise, not signal, once
+ * you already know Kafka is unavailable; the capped exponential backoff
+ * still reaches a broker that comes back up within 30s of its next
+ * attempt.</p>
  */
 @Configuration
 public class KafkaMessageBrokerConfig {
@@ -63,6 +73,8 @@ public class KafkaMessageBrokerConfig {
     props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
     props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, 1_000);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, 30_000);
     props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
     return new DefaultKafkaProducerFactory<>(props);
   }

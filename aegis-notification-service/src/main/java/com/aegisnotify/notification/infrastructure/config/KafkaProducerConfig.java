@@ -21,6 +21,13 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
  * <p>Configures a {@link KafkaTemplate} with {@code acks=all} and idempotence
  * enabled for durable, exactly-once producer semantics. Uses
  * {@link JsonSerializer} for the {@link AuditEventMessage} value.</p>
+ *
+ * <p>{@code reconnect.backoff(.max).ms} are widened from the client's
+ * defaults (50ms / 1000ms) to 1s / 30s — same fix and same reasoning as
+ * {@link KafkaMessageBrokerConfig}'s {@code messageBrokerProducerFactory}:
+ * retries stay unbounded (idempotence implies that already), only the
+ * reconnect-attempt frequency against an unreachable broker changes, from
+ * roughly once a second to a capped exponential backoff.</p>
  */
 @Configuration
 @ConditionalOnProperty(name = "audit.publishing.enabled", matchIfMissing = true)
@@ -37,6 +44,8 @@ public class KafkaProducerConfig {
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
     props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, 1_000);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, 30_000);
     props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
     return new DefaultKafkaProducerFactory<>(props);
   }

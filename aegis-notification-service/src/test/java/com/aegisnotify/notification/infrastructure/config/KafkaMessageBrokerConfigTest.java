@@ -39,6 +39,23 @@ class KafkaMessageBrokerConfigTest {
   }
 
   @Test
+  void messageBrokerProducerFactory_widensReconnectBackoffWithoutBoundingRetries() {
+    // The outbox relay must keep retrying an unreachable broker forever
+    // (never drop a notification — asserted above), but at the client's
+    // default 50ms/1000ms backoff that means a reconnect warning roughly
+    // once a second for as long as the broker stays down. Widening the
+    // backoff window only changes how often each retry fires, not whether
+    // it keeps retrying.
+    ProducerFactory<String, Map<String, Object>> producerFactory =
+        config.messageBrokerProducerFactory();
+
+    Map<String, Object> props = producerFactory.getConfigurationProperties();
+
+    assertThat(props.get(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG)).isEqualTo(1_000);
+    assertThat(props.get(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG)).isEqualTo(30_000);
+  }
+
+  @Test
   void messageBrokerProducerFactory_configuresWireCompatibleSerializers() {
     ProducerFactory<String, Map<String, Object>> producerFactory =
         config.messageBrokerProducerFactory();
