@@ -26,6 +26,7 @@ class NotificationKafkaPropertiesTest {
   private static final short REPLICATION_FACTOR = 3;
   private static final int MIN_IN_SYNC_REPLICAS = 2;
   private static final String DLT_SUFFIX = "-dlt";
+  private static final String DLQ_TOPIC = "notifications-dlq";
   private static final java.time.Duration DEFAULT_POLL_INTERVAL = java.time.Duration.ofSeconds(5);
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withInitializer(new RemoveKafkaPropertySourcesInitializer())
@@ -64,6 +65,7 @@ class NotificationKafkaPropertiesTest {
       assertThat(properties.topics().replicationFactor()).isEqualTo(REPLICATION_FACTOR);
       assertThat(properties.topics().minInSyncReplicas()).isEqualTo(MIN_IN_SYNC_REPLICAS);
       assertThat(properties.topics().dltSuffix()).isEqualTo(DLT_SUFFIX);
+      assertThat(properties.topics().dlq()).isEqualTo(DLQ_TOPIC);
       assertThat(properties.sourceTopics()).containsExactly(
           HIGH_PRIORITY,
           MEDIUM_PRIORITY,
@@ -85,7 +87,8 @@ class NotificationKafkaPropertiesTest {
             "NOTIFICATION_KAFKA_TOPIC_PARTITIONS=8",
             "NOTIFICATION_KAFKA_TOPIC_REPLICATION_FACTOR=5",
             "NOTIFICATION_KAFKA_TOPIC_MIN_IN_SYNC_REPLICAS=4",
-            "NOTIFICATION_KAFKA_DLT_SUFFIX=.dead")
+            "NOTIFICATION_KAFKA_DLT_SUFFIX=.dead",
+            "NOTIFICATION_KAFKA_DLQ_TOPIC=contract.notifications.dlq")
         .run(context -> {
           NotificationKafkaProperties properties =
               context.getBean(NotificationKafkaProperties.class);
@@ -102,6 +105,7 @@ class NotificationKafkaPropertiesTest {
           assertThat(properties.topics().replicationFactor()).isEqualTo((short) 5);
           assertThat(properties.topics().minInSyncReplicas()).isEqualTo(4);
           assertThat(properties.topics().dltSuffix()).isEqualTo(".dead");
+          assertThat(properties.topics().dlq()).isEqualTo("contract.notifications.dlq");
         });
   }
 

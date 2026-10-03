@@ -76,6 +76,7 @@ notification:
       replication-factor: ${NOTIFICATION_KAFKA_TOPIC_REPLICATION_FACTOR:3}
       min-in-sync-replicas: ${NOTIFICATION_KAFKA_TOPIC_MIN_IN_SYNC_REPLICAS:2}
       dlt-suffix: ${NOTIFICATION_KAFKA_DLT_SUFFIX:-dlt}
+      dlq: ${NOTIFICATION_KAFKA_DLQ_TOPIC:notifications-dlq}
   providers:
     email:
       base-url: ${SENDGRID_BASE_URL:https://api.sendgrid.com}

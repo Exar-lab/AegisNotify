@@ -2,10 +2,14 @@ package com.aegisnotify.notification.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
+import com.aegisnotify.notification.infrastructure.messaging.kafka.KafkaDeadLetterQueueAdapter;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.Test;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
@@ -31,6 +35,7 @@ class KafkaMessageBrokerConfigTest {
 
     assertThat(props.get(ProducerConfig.ACKS_CONFIG)).isEqualTo("all");
     assertThat(props.get(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG)).isEqualTo(true);
+    assertThat(props.get(ProducerConfig.RETRIES_CONFIG)).isEqualTo(Integer.MAX_VALUE);
   }
 
   @Test
@@ -86,5 +91,19 @@ class KafkaMessageBrokerConfigTest {
         .containsEntry("high-priority-topic", "high-priority-topic")
         .containsEntry("medium-priority-topic", "medium-priority-topic")
         .containsEntry("low-priority-topic", "low-priority-topic");
+  }
+
+  @Test
+  void deadLetterQueuePort_isKafkaAdapterReusingMessageBrokerProducer() {
+    KafkaTemplate<String, Map<String, Object>> template =
+        new KafkaTemplate<>(config.messageBrokerProducerFactory());
+    NotificationKafkaProperties properties = new NotificationKafkaProperties(
+        new NotificationKafkaProperties.Consumer("notification-service"),
+        new NotificationKafkaProperties.Topics());
+
+    DeadLetterQueuePort port =
+        config.deadLetterQueuePort(template, properties, new SimpleMeterRegistry());
+
+    assertThat(port).isInstanceOf(KafkaDeadLetterQueueAdapter.class);
   }
 }
