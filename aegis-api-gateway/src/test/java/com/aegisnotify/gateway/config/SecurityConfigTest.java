@@ -184,6 +184,33 @@ class SecurityConfigTest {
   }
 
   @Test
+  void optionsRequest_withoutAuth_isNotRejectedForMissingCredentials() {
+    // A browser's CORS preflight OPTIONS request never carries credentials.
+    // Before this rule existed, OPTIONS fell through to the scoped/
+    // authenticated rules below and got a 401 (WWW-Authenticate: Bearer),
+    // which the browser reads as the whole CORS handshake failing — the
+    // real GET/POST is never even sent. Route chosen because it normally
+    // requires notification:read on GET.
+    //
+    // This only asserts the security-layer half of the fix (no auth
+    // challenge). The full preflight — status 200 plus
+    // Access-Control-Allow-Origin — can't be asserted here: this class's
+    // WebTestClient binds directly to the ApplicationContext (no
+    // webEnvironment = RANDOM_PORT), so the mock exchange's request URI has
+    // no real host/port. CorsConfigurationSource's own CORS WebFilter reads
+    // those via CorsUtils.isSameOrigin() and throws IllegalArgumentException
+    // on the null/undefined values, which DefaultCorsProcessor swallows into
+    // a bare 403 ("Reject: origin is malformed" at DEBUG) — a mock-harness
+    // artifact, not a real bug. Verified for real with the app running:
+    // `curl -i -X OPTIONS http://localhost:8090/api/v1/notifications -H
+    // "Origin: http://localhost:4200" -H "Access-Control-Request-Method:
+    // GET"` returns 200 with Access-Control-Allow-Origin set.
+    webTestClient.options().uri("/api/v1/notifications")
+        .exchange()
+        .expectHeader().doesNotExist("WWW-Authenticate");
+  }
+
+  @Test
   void malformedToken_returns401NotForbidden() {
     when(jwtDecoder.decode(anyString()))
         .thenReturn(Mono.error(new BadJwtException("malformed token")));
