@@ -1,8 +1,10 @@
 package com.aegisnotify.notification.application.port.out;
 
+import com.aegisnotify.notification.application.dto.DashboardAggregate;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.model.Notification;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,4 +42,17 @@ public interface NotificationRepository {
    * @return the matching notifications, newest first
    */
   List<Notification> search(Channel channel, NotificationStatus status);
+
+  /**
+   * Aggregates every notification created at or after {@code since} into
+   * dashboard KPI counts — total volume, terminal outcomes, and average
+   * delivery latency for notifications that reached {@code SENT} or {@code
+   * SENT_VIA_FALLBACK}. Used by {@code GetDashboardSummaryUseCase}; a
+   * single-pass aggregation so the dashboard endpoint never loads full
+   * notification rows just to count them.
+   *
+   * @param since the inclusive lower bound of the window
+   * @return the aggregated counts for the window
+   */
+  DashboardAggregate aggregateSince(Instant since);
 }

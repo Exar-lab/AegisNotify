@@ -1,11 +1,16 @@
 package com.aegisnotify.notification.infrastructure.persistence.adapter;
 
+import com.aegisnotify.notification.application.dto.DashboardAggregate;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.infrastructure.persistence.mapper.NotificationPersistenceMapper;
+import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationDashboardCountsProjection;
+import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationLatencyProjection;
 import com.aegisnotify.notification.infrastructure.persistence.repository.SpringDataNotificationRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,5 +77,27 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
     return springDataRepository.search(channel, status).stream()
         .map(mapper::toDomain)
         .toList();
+  }
+
+  @Override
+  public DashboardAggregate aggregateSince(Instant since) {
+    NotificationDashboardCountsProjection counts = springDataRepository.countByStatusSince(since);
+    List<NotificationLatencyProjection> terminalTimestamps =
+        springDataRepository.findTerminalTimestampsSince(since);
+
+    Double avgTerminalLatencyMillis = terminalTimestamps.isEmpty()
+        ? null
+        : terminalTimestamps.stream()
+            .mapToLong(t -> Duration.between(t.getCreatedAt(), t.getUpdatedAt()).toMillis())
+            .average()
+            .orElseThrow();
+
+    return new DashboardAggregate(
+        counts.getTotalCount(),
+        counts.getSentCount(),
+        counts.getSentViaFallbackCount(),
+        counts.getFailedCriticalCount(),
+        avgTerminalLatencyMillis
+    );
   }
 }
