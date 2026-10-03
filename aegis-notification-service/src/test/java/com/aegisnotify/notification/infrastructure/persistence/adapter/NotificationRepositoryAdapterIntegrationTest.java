@@ -3,6 +3,7 @@ package com.aegisnotify.notification.infrastructure.persistence.adapter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.NotificationServiceApplication;
+import com.aegisnotify.notification.application.dto.DashboardAggregate;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.enums.Channel;
@@ -138,5 +139,57 @@ class NotificationRepositoryAdapterIntegrationTest {
     List<Notification> result = repository.search(null, null);
 
     assertThat(result).extracting(Notification::getId).containsExactly(second, first);
+  }
+
+  @Test
+  void aggregateSince_emptyWindow_returnsZeroCountsNotNull() {
+    // The regression this test exists for: SQL SUM() over zero matching rows
+    // is NULL, not 0. NotificationDashboardCountsProjection declares its
+    // counts as primitive long, so an unguarded SUM blew up with
+    // AopInvocationException ("Null return value ... does not match
+    // primitive return type") the first time this endpoint was hit against
+    // an empty table — caught manually against the real app, not by
+    // GetDashboardSummaryServiceTest, since that test mocks the repository
+    // and never exercises the real @Query.
+    DashboardAggregate result = repository.aggregateSince(Instant.now().minusSeconds(3600));
+
+    assertThat(result.totalCount()).isZero();
+    assertThat(result.sentCount()).isZero();
+    assertThat(result.sentViaFallbackCount()).isZero();
+    assertThat(result.failedCriticalCount()).isZero();
+    assertThat(result.avgTerminalLatencyMillis()).isNull();
+  }
+
+  @Test
+  void aggregateSince_mixedOutcomes_countsEachBucketAndAveragesTerminalLatency() {
+    Instant since = Instant.now().minusSeconds(3600);
+    Instant createdAt = since.plusSeconds(60);
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.SENT, createdAt, createdAt.plusMillis(500));
+    seedNotificationWithTimestamps(
+        Channel.SMS, NotificationStatus.SENT_VIA_FALLBACK, createdAt, createdAt.plusMillis(1500));
+    seedNotificationWithTimestamps(
+        Channel.WHATSAPP, NotificationStatus.FAILED_CRITICAL, createdAt, createdAt);
+    seedNotificationWithTimestamps(
+        Channel.PUSH, NotificationStatus.PENDING, createdAt, createdAt);
+    // Outside the window — must not be counted.
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.SENT, since.minusSeconds(60), since.minusSeconds(60));
+
+    DashboardAggregate result = repository.aggregateSince(since);
+
+    assertThat(result.totalCount()).isEqualTo(4);
+    assertThat(result.sentCount()).isEqualTo(1);
+    assertThat(result.sentViaFallbackCount()).isEqualTo(1);
+    assertThat(result.failedCriticalCount()).isEqualTo(1);
+    // Average of the two terminal (SENT / SENT_VIA_FALLBACK) latencies: 500ms and 1500ms.
+    assertThat(result.avgTerminalLatencyMillis()).isEqualTo(1000.0);
+  }
+
+  private void seedNotificationWithTimestamps(
+      Channel channel, NotificationStatus status, Instant createdAt, Instant updatedAt) {
+    springDataRepository.save(new NotificationJpaEntity(
+        UUID.randomUUID(), channel, "user@example.com", "welcome", Map.of("name", "Jane"),
+        Priority.MEDIUM, status, null, null, createdAt, updatedAt));
   }
 }

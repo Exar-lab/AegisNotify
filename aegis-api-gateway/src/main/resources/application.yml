@@ -44,22 +44,29 @@ spring:
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
+        - id: notification-list
+          uri: lb://aegis-notification-service
+          predicates:
+            - Path=/api/v1/notifications
+            - Method=GET
+        - id: dashboard-summary
+          uri: lb://aegis-notification-service
+          predicates:
+            - Path=/api/v1/dashboard/summary
+            - Method=GET
+        - id: notification-circuitbreakers
+          uri: lb://aegis-notification-service
+          predicates:
+            - Path=/actuator/circuitbreakers
+            - Method=GET
         - id: audit-read
           uri: lb://aegis-audit-service
           predicates:
             - Path=/api/v1/audit/**
             - Method=GET
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins: "${CORS_ALLOWED_ORIGINS:http://localhost:3000}"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
+      # CORS is enforced in SecurityConfig's corsConfigurationSource bean, not
+      # here — see its javadoc for why Gateway's own globalcors filter can't
+      # be used safely alongside Spring Security in this app.
 
 aegis:
   gateway:

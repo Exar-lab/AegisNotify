@@ -3,9 +3,11 @@
   /* Light Theme (Default) */
   --bg-sidebar: #f8fafc;
   --bg-topbar: #ffffff;
-  --bg-sidebar-active: rgba(28, 210, 165, 0.15);
-  --bg-sidebar-hover: rgba(28, 210, 165, 0.05);
-  --color-accent: #1cd2a5;
+  --bg-sidebar-active: rgba(244, 9, 76, 0.12);
+  --bg-sidebar-hover: rgba(244, 9, 76, 0.05);
+  --color-accent: #f4094c;
+  --color-accent-hover: #d1073f;
+  --color-accent-subtle: rgba(244, 9, 76, 0.12);
   --bg-main: #f1f5f9;
   --bg-surface: #ffffff;
   --border-color: #e2e8f0;
@@ -15,10 +17,18 @@
   --text-sidebar: #475569;
   --text-sidebar-active: #0f172a;
   --status-online: #10B981;
-  --status-offline: #EF4444;
+  --status-offline: #EA580C;
+  --status-warning: #D97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.12);
+  --status-fallback: #8B5CF6;
+  --status-fallback-bg: rgba(139, 92, 246, 0.12);
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-danger-bg: rgba(234, 88, 12, 0.12);
+  --status-neutral: #64748b;
+  --status-neutral-bg: rgba(100, 116, 139, 0.12);
   --text-inverted: #ffffff;
-  --env-badge-bg: rgba(28, 210, 165, 0.15);
-  --env-badge-border: rgba(28, 210, 165, 0.3);
+  --env-badge-bg: rgba(244, 9, 76, 0.12);
+  --env-badge-border: rgba(244, 9, 76, 0.3);
   --indicator-bg: rgba(0, 0, 0, 0.04);
 
   /* 8px Grid Spacing Scale */
@@ -34,9 +44,11 @@
   /* Dark Theme */
   --bg-sidebar: #11151f;
   --bg-topbar: #181e2b;
-  --bg-sidebar-active: rgba(59, 246, 221, 0.15);
-  --bg-sidebar-hover: rgba(100, 255, 255, 0.05);
-  --color-accent: #1cd2a5;
+  --bg-sidebar-active: rgba(255, 77, 128, 0.18);
+  --bg-sidebar-hover: rgba(255, 77, 128, 0.07);
+  --color-accent: #f4094c;
+  --color-accent-hover: #ff4d80;
+  --color-accent-subtle: rgba(244, 9, 76, 0.18);
   --bg-main: #0b0d14;
   --bg-surface: #1f2937;
   --border-color: #374151;
@@ -45,9 +57,18 @@
   --text-secondary: #9ca3af;
   --text-sidebar: #94A3B8;
   --text-sidebar-active: #FFFFFF;
+  --status-offline: #FB923C;
+  --status-warning: #FBBF24;
+  --status-warning-bg: rgba(251, 191, 36, 0.16);
+  --status-fallback: #A78BFA;
+  --status-fallback-bg: rgba(167, 139, 250, 0.16);
+  --status-success-bg: rgba(16, 185, 129, 0.16);
+  --status-danger-bg: rgba(251, 146, 60, 0.16);
+  --status-neutral: #94A3B8;
+  --status-neutral-bg: rgba(148, 163, 184, 0.16);
   --text-inverted: #ffffff;
-  --env-badge-bg: rgba(0, 238, 255, 0.15);
-  --env-badge-border: rgba(0, 238, 255, 0.3);
+  --env-badge-bg: rgba(244, 9, 76, 0.18);
+  --env-badge-border: rgba(244, 9, 76, 0.35);
   --indicator-bg: rgba(255, 255, 255, 0.04);
 }
 

@@ -22,10 +22,10 @@
       justify-content: center;
       width: 40px;
       height: 40px;
-      background: linear-gradient(135deg, var(--color-accent, #3B82F6) 0%, #1D4ED8 100%);
+      background: linear-gradient(135deg, var(--color-accent, #F4094C) 0%, var(--color-accent-hover, #D1073F) 100%);
       color: #FFFFFF;
       border-radius: var(--space-8, 8px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 4px 12px rgba(244, 9, 76, 0.3);
     }
 
     .brand-text {
@@ -44,7 +44,7 @@
         display: inline-block;
         font-size: 0.625rem;
         font-weight: 700;
-        color: #38BDF8;
+        color: var(--color-accent, #F4094C);
         letter-spacing: 0.08em;
       }
     }
@@ -102,7 +102,7 @@
             font-weight: 600;
 
             .nav-icon {
-              color: var(--color-accent, #3B82F6);
+              color: var(--color-accent, #F4094C);
             }
 
             &::before {
@@ -112,7 +112,7 @@
               top: 4px;
               bottom: 4px;
               width: 4px;
-              background-color: var(--color-accent, #3B82F6);
+              background-color: var(--color-accent, #F4094C);
               border-radius: 0 4px 4px 0;
             }
           }
