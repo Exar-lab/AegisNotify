@@ -11,6 +11,13 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     component: AdminShellComponent,
-    children: []
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+    ]
   }
 ];

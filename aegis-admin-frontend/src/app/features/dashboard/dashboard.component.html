@@ -1,0 +1,94 @@
+<div class="dashboard">
+  <section class="kpi-grid">
+    @if (kpis(); as kpiState) {
+      @switch (kpiState.status) {
+        @case ('loading') {
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="kpi-card kpi-card--loading"></div>
+          }
+        }
+        @case ('error') {
+          <div class="panel-error">Couldn't load dashboard KPIs.</div>
+        }
+        @case ('ready') {
+          @for (tile of kpiState.data; track tile.label) {
+            <div class="kpi-card">
+              <span class="kpi-label">{{ tile.label }}</span>
+              <span class="kpi-value">{{ tile.value }}</span>
+            </div>
+          }
+        }
+      }
+    }
+  </section>
+
+  <section class="panel-grid">
+    <div class="panel">
+      <h2 class="panel-title">Provider Circuit Breakers</h2>
+      @if (providers(); as providerState) {
+        @switch (providerState.status) {
+          @case ('loading') {
+            <p class="panel-hint">Loading…</p>
+          }
+          @case ('error') {
+            <p class="panel-error">Couldn't load circuit breaker status.</p>
+          }
+          @case ('ready') {
+            @if (providerState.data.length === 0) {
+              <p class="panel-hint">No circuit breakers reporting.</p>
+            } @else {
+              <ul class="provider-list">
+                @for (row of providerState.data; track row.key) {
+                  <li class="provider-row">
+                    <span class="provider-label">{{ row.label }}</span>
+                    <span class="badge" [class]="breakerBadgeClass(row.state)">{{ row.state }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          }
+        }
+      }
+    </div>
+
+    <div class="panel">
+      <h2 class="panel-title">Recent Notifications</h2>
+      @if (recentNotifications(); as notificationsState) {
+        @switch (notificationsState.status) {
+          @case ('loading') {
+            <p class="panel-hint">Loading…</p>
+          }
+          @case ('error') {
+            <p class="panel-error">Couldn't load recent notifications.</p>
+          }
+          @case ('ready') {
+            @if (notificationsState.data.length === 0) {
+              <p class="panel-hint">No notifications yet.</p>
+            } @else {
+              <table class="notification-table">
+                <thead>
+                  <tr>
+                    <th>Channel</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (n of notificationsState.data; track n.id) {
+                    <tr>
+                      <td>{{ n.channel }}</td>
+                      <td>{{ n.priority }}</td>
+                      <td><span class="badge" [class]="statusBadgeClass(n.status)">{{ n.status }}</span></td>
+                      <td class="notification-time">{{ formatTime(n.createdAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+        }
+      }
+    </div>
+  </section>
+</div>
