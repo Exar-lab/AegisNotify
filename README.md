@@ -53,7 +53,7 @@ details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
 | Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
 | Provider circuit breakers and secondary-account failover | Implemented and unit-tested; production and end-to-end validation remain |
 | RabbitMQ transport | Not implemented |
-| One-command full-stack local environment | Not provided — `docker-compose.yml` starts Keycloak only; PostgreSQL, Kafka, and MongoDB are started separately (see [Installation](#installation)) |
+| One-command full-stack local environment | Infrastructure (Keycloak, PostgreSQL, Kafka, MongoDB) provided via `docker-compose.full.yml`; application services still run via Maven (see [Installation](#installation)) |
 
 ## Project scope
 
@@ -81,10 +81,9 @@ ready-to-deploy product.
 
 ### Out of scope (for now, and possibly permanently)
 
-- **A one-command full-stack environment.** `docker-compose.yml` is intentionally Keycloak-only
-  (see the comment at the top of that file); PostgreSQL, Kafka/Zookeeper, and MongoDB are run
-  separately, as documented in [Installation](#installation). A `docker-compose.full.yml` bundling
-  everything, including the app containers, is a possible future addition, not a current goal.
+- **A one-command app-container environment.** `docker-compose.full.yml` now bundles PostgreSQL,
+  MongoDB, and Kafka alongside `docker-compose.yml`'s Keycloak (issue #38). The five Spring Boot
+  app containers themselves remain out of scope, blocked on Dockerfiles for each module (issue #39).
 - **Multi-tenancy.** The platform assumes a single tenant/realm.
 - **A notification composition UI or template editor.** Templates are managed directly in
   PostgreSQL; there is no admin UI. Static mockups exist under [`design/`](design/) but no UI code
@@ -149,59 +148,25 @@ Confirm it's up:
 curl -s http://localhost:8088/realms/aegis/.well-known/openid-configuration
 ```
 
-### 3. Start PostgreSQL (notification service datastore)
-
-No compose service is provided yet for this — run it directly with Docker, matching the
-notification service's defaults (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD` in
-[Configuration](#configuration)):
+### 3. Start the remaining infrastructure (PostgreSQL, MongoDB, Kafka)
 
 ```bash
-docker run -d --name aegis-postgres \
-  -e POSTGRES_DB=aegisnotify \
-  -e POSTGRES_USER=aegis \
-  -e POSTGRES_PASSWORD=aegis \
-  -p 5432:5432 \
-  postgres:15
+docker compose -f docker-compose.yml -f docker-compose.full.yml up -d postgres mongo kafka
 ```
 
-Flyway creates the schema automatically the first time `aegis-notification-service` starts — no
-manual migration step is needed.
-
-### 4. Start MongoDB (audit service datastore)
-
-Matches the audit service's default `MONGODB_URI`:
-
-```bash
-docker run -d --name aegis-mongo \
-  -p 27017:27017 \
-  mongo:7
-```
-
-### 5. Start Kafka
-
-Using Kafka's built-in KRaft mode (no separate Zookeeper container needed), matching the default
-`KAFKA_BOOTSTRAP_SERVERS=localhost:9092`:
-
-```bash
-docker run -d --name aegis-kafka \
-  -p 9092:9092 \
-  -e KAFKA_NODE_ID=1 \
-  -e KAFKA_PROCESS_ROLES=broker,controller \
-  -e KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
-  -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
-  -e KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER \
-  -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
-  -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
-  -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
-  -e CLUSTER_ID=aegis-local-kraft-cluster \
-  confluentinc/cp-kafka:7.6.0
-```
+Matches the notification and audit services' defaults (`DB_URL`/`DB_USERNAME`/`DB_PASSWORD`,
+`MONGODB_URI`, `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` — see [Configuration](#configuration)).
+Flyway creates the PostgreSQL schema automatically the first time `aegis-notification-service`
+starts — no manual migration step is needed. See
+[`docker-compose.full.yml`](docker-compose.full.yml) for service details: MongoDB has no
+authentication configured (local development only), and Kafka runs in KRaft mode, single node, no
+separate Zookeeper container.
 
 Use the `local` Spring profile for the notification and audit services against a single local
-broker (replication factor and min in-sync replicas of 1 instead of the production defaults of 3
-and 2) — this is already wired into the run commands in step 8.
+Kafka broker (replication factor and min in-sync replicas of 1 instead of the production defaults
+of 3 and 2) — this is already wired into the run commands in step 6 (Start the services).
 
-### 6. Provision a template
+### 4. Provision a template
 
 The notification service has no template management endpoint or seed migration yet — insert at
 least one active template directly before submitting a notification:
@@ -220,7 +185,7 @@ Adjust column names if they've drifted from
 for the authoritative `templates` schema before running this against a newer version of the
 project than this guide was written against.
 
-### 7. Set provider and encryption environment variables
+### 5. Set provider and encryption environment variables
 
 ```bash
 export SENDGRID_API_KEY=your-sendgrid-key
@@ -238,7 +203,7 @@ The `local` Spring profile provides a development-only `AUDIT_ENCRYPTION_KEY` fa
 not need to be set for local runs. See [Configuration](#configuration) for the complete variable
 reference, including secondary-provider variables for failover.
 
-### 8. Start the services
+### 6. Start the services
 
 In separate terminals, in this order:
 
@@ -267,7 +232,7 @@ In separate terminals, in this order:
   outbox → Kafka → provider delivery) is still blocked by the missing outbox broker adapter and
   relay trigger — see [Current implementation status](#current-implementation-status).
 
-### 9. Get a token and call the API
+### 7. Get a token and call the API
 
 ```bash
 ACCESS_TOKEN=$(curl -s -X POST http://localhost:8088/realms/aegis/protocol/openid-connect/token \
@@ -299,8 +264,7 @@ If scopes drift after editing that file, re-import with
 ### Tearing down
 
 ```bash
-docker compose down -v
-docker rm -f aegis-postgres aegis-mongo aegis-kafka
+docker compose -f docker-compose.yml -f docker-compose.full.yml down -v
 ```
 
 ## Services
@@ -361,7 +325,7 @@ Supported request values:
 | `priority` | `HIGH`, `MEDIUM`, or `LOW` |
 
 At least one active template must be provisioned before a submit request can succeed — see
-[Installation, step 6](#6-provision-a-template).
+[Installation, step 4](#4-provision-a-template).
 
 ### Query notification status
 
@@ -505,8 +469,6 @@ The following work remains before the documented asynchronous platform is comple
   forward-looking).
 - Validate Resilience4j and secondary-provider behavior in an end-to-end provider environment and
   define production thresholds and operational procedures.
-- Extend `docker-compose.yml` with PostgreSQL, Kafka, and MongoDB (currently Keycloak-only by
-  design) if a one-command environment becomes a goal — see [Project scope](#project-scope).
 
 ## Technology stack
 
