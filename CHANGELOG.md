@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.12.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.11.0...aegisnotify-v0.12.0) (2026-10-04)
+
+
+### Features
+
+* **dashboard:** live admin Dashboard with real backend data + reliability fixes ([2136b83](https://github.com/Exar-lab/AegisNotify/commit/2136b831b40f8c0342fb459d94add93947cc459e))
+* **frontend:** build the Dashboard screen wired to real backend data ([3162b78](https://github.com/Exar-lab/AegisNotify/commit/3162b783dbce99504c45f05d734372f4cbe3ce80))
+* **frontend:** integrate scaffold + Keycloak auth + theme + admin shell into main ([50f50bd](https://github.com/Exar-lab/AegisNotify/commit/50f50bd0922eea8068ea21faabdd79481fef00db))
+* **frontend:** set up Tailwind CSS and define brand/status color tokens ([35afa7a](https://github.com/Exar-lab/AegisNotify/commit/35afa7a809ffe4c20636c540b7cb2b58c5f0db9d))
+* **notification-service:** add dashboard summary aggregation endpoint ([7749aa9](https://github.com/Exar-lab/AegisNotify/commit/7749aa9218123fd9e2a735876d7277b0741c2514))
+* **notification:** implement DeadLetterQueuePort with Kafka DLQ adapter ([6b235ec](https://github.com/Exar-lab/AegisNotify/commit/6b235ec1d34ab72dbb430fcf77e1db682e2b6af3))
+* **notification:** implement DeadLetterQueuePort with Kafka DLQ adapter ([2c77113](https://github.com/Exar-lab/AegisNotify/commit/2c7711343ad717c25fa163d4c8c1808ee878793a)), closes [#30](https://github.com/Exar-lab/AegisNotify/issues/30)
+
+
+### Bug Fixes
+
+* **api-gateway:** don't crash the rate limiter key resolver on a null subject ([ef148c4](https://github.com/Exar-lab/AegisNotify/commit/ef148c4fada8c4f2de2e437263e3010b648f1f0a))
+* **api-gateway:** let Spring Security own CORS and permit preflight without auth ([35d112f](https://github.com/Exar-lab/AegisNotify/commit/35d112f5a4bf08c64174318f1f313e8aa32d636d))
+* **notification-service:** widen Kafka producer reconnect backoff ([6b1c232](https://github.com/Exar-lab/AegisNotify/commit/6b1c2329dbc2d60d8ca48b3e9166d63bda26da84))
+* **user-service:** mark KeycloakTokenProvider's production constructor @Autowired ([76d6f3b](https://github.com/Exar-lab/AegisNotify/commit/76d6f3b5979649538896483eec20cf496658318c))
+* **user-service:** mark KeycloakTokenProvider's production constructor @Autowired ([7e44ed3](https://github.com/Exar-lab/AegisNotify/commit/7e44ed391523ff0803516845020970222631986c))
+
 ## [0.11.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.10.1...aegisnotify-v0.11.0) (2026-10-02)
 
 
