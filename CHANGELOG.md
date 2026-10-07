@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.13.0...aegisnotify-v0.14.0) (2026-10-07)
+
+
+### Features
+
+* **docker:** add MongoDB and Kafka (KRaft) services to docker-compose.full.yml ([23d7ccf](https://github.com/Exar-lab/AegisNotify/commit/23d7ccfa60916de0b0a903d4e0cd9f6a283c56bc))
+
+
+### Documentation
+
+* **docker:** add .env.example variables and README quickstart for issue [#38](https://github.com/Exar-lab/AegisNotify/issues/38) ([73b9c2c](https://github.com/Exar-lab/AegisNotify/commit/73b9c2c2cfe44c5231d8b6fc50e21492b8329729))
+
 ## [0.13.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.12.0...aegisnotify-v0.13.0) (2026-10-07)
 
 
