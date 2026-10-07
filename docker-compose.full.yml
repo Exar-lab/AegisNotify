@@ -8,11 +8,29 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
 #
-# Scope note: this slice adds PostgreSQL only, matching
-# aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD (see
-# aegis-notification-service/src/main/resources/application.yml). MongoDB,
-# Kafka+Zookeeper, and the five Spring Boot app containers (blocked on
-# issue #39) are tracked as follow-up slices of this same file.
+# Scope note: this slice adds PostgreSQL, MongoDB, and Kafka, matching
+# aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD,
+# aegis-audit-service's default MONGODB_URI, and the Kafka version pinned
+# in KafkaMessageBrokerAdapterIntegrationTest.java (see each service's
+# src/main/resources/application.yml or test file). The five Spring Boot
+# app containers (blocked on issue #39) remain a follow-up slice.
+#
+# MongoDB note: no authentication is configured here, matching
+# aegis-audit-service's default MONGODB_URI (mongodb://localhost:27017/...),
+# which carries no credentials. This is intentional for local development —
+# the container is bound to 127.0.0.1 only, not exposed beyond the host. If
+# auth is added later, update MONGODB_URI in
+# aegis-audit-service/src/main/resources/application.yml accordingly. The
+# mongo:7 tag is not verified against any test in this repo (no Testcontainers
+# MongoDB integration test exists yet) — it is chosen to match the version
+# mentioned in README.md.
+#
+# Kafka note: issue #38 describes "Apache Kafka + Zookeeper", but neither
+# README.md nor KafkaMessageBrokerAdapterIntegrationTest.java use
+# Zookeeper — the test only imports org.testcontainers.containers.KafkaContainer,
+# which runs KRaft mode by default for images that support it (cp-kafka
+# 7.x does). This slice follows the code, not the issue text: a single
+# Kafka container in KRaft mode, no separate Zookeeper service.
 services:
   postgres:
     image: postgres:16-alpine
@@ -31,5 +49,48 @@ services:
       timeout: 5s
       retries: 10
 
+  mongo:
+    image: mongo:7
+    container_name: aegis-mongo
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - aegis-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: aegis-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Fixed cluster ID for this single-node dev instance (any valid
+      # base64 UUID works here — this one is Confluent's own published
+      # example value from their official KRaft quickstart compose file).
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+    ports:
+      - "127.0.0.1:9092:9092"
+    volumes:
+      - aegis-kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
 volumes:
   aegis-postgres-data:
+  aegis-mongo-data:
+  aegis-kafka-data:
