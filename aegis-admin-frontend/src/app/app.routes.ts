@@ -1,23 +1,68 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/auth/auth.guard';
 import { AdminShellComponent } from './layouts/admin-shell/admin-shell.component';
+import { authGuard } from './core/auth/auth.guard';
 
 /**
- * Root routing configuration for the application.
- * All routes are protected by the authGuard.
+ * Global application route definitions.
+ * Configures the main shell, applies the authentication guard, and lazy loads feature pages.
  */
 export const routes: Routes = [
   {
     path: '',
-    canActivate: [authGuard],
     component: AdminShellComponent,
+    canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+          import('./features/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent,
+          ),
       },
-    ]
-  }
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/pages/notifications.page').then(
+            (m) => m.NotificationsPage,
+          ),
+      },
+      {
+        path: 'notifications/:id',
+        loadComponent: () =>
+          import('./features/notifications/pages/notification-detail.page').then(
+            (m) => m.NotificationDetailPage,
+          ),
+      },
+      {
+        path: 'providers',
+        loadComponent: () =>
+          import('./features/providers/pages/providers.page').then(
+            (m) => m.ProvidersPage,
+          ),
+      },
+      {
+        path: 'metrics',
+        loadComponent: () =>
+          import('./features/metrics/pages/metrics.page').then(
+            (m) => m.MetricsPage,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/pages/settings.page').then(
+            (m) => m.SettingsPage,
+          ),
+      },
+    ],
+  },
+  {
+    path: '**',
+    redirectTo: 'dashboard',
+  },
 ];
