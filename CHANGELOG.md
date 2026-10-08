@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.14.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.13.0...aegisnotify-v0.14.0) (2026-10-07)
+
+
+### Features
+
+* **docker:** add MongoDB and Kafka (KRaft) services to docker-compose.full.yml ([23d7ccf](https://github.com/Exar-lab/AegisNotify/commit/23d7ccfa60916de0b0a903d4e0cd9f6a283c56bc))
+
+
+### Documentation
+
+* **docker:** add .env.example variables and README quickstart for issue [#38](https://github.com/Exar-lab/AegisNotify/issues/38) ([73b9c2c](https://github.com/Exar-lab/AegisNotify/commit/73b9c2c2cfe44c5231d8b6fc50e21492b8329729))
+
+## [0.13.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.12.0...aegisnotify-v0.13.0) (2026-10-07)
+
+
+### Features
+
+* **frontend:** implement admin shell interactions and responsiveness ([b80fabb](https://github.com/Exar-lab/AegisNotify/commit/b80fabb355f8519bf68320b28c4f553957237839))
+
+
+### Bug Fixes
+
+* **api-gateway:** stop RateLimiterIntegrationTest flaking on Redis second-boundary rollover ([9bda8a3](https://github.com/Exar-lab/AegisNotify/commit/9bda8a3e1a0dbfd8edcc6f4d27a4ead162e7f29d))
+* **api-gateway:** stop RateLimiterIntegrationTest flaking on Redis second-boundary rollover ([58a5e7d](https://github.com/Exar-lab/AegisNotify/commit/58a5e7db47b9c7cdf50f8a41bcee91f22dbdc454))
+* **layout:** manage route events subscription with takeUntilDestroyed in sidebar ([14e355d](https://github.com/Exar-lab/AegisNotify/commit/14e355d1e8f2031a534e8a2f8b5e7526bd318f98))
+* **layout:** use theme tokens for topbar styles ([4b7b55c](https://github.com/Exar-lab/AegisNotify/commit/4b7b55cd4195b9b2fb83d4918b2428b26560d434))
+
 ## [0.12.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.11.0...aegisnotify-v0.12.0) (2026-10-04)
 
 
