@@ -3,6 +3,7 @@ package com.aegisnotify.notification.infrastructure.messaging.kafka;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.NotificationServiceApplication;
+import com.aegisnotify.notification.application.dto.NotificationEvent;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
@@ -11,7 +12,7 @@ import com.aegisnotify.notification.infrastructure.persistence.adapter.Notificat
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.TemplateRepositoryAdapter;
-import java.nio.charset.StandardCharsets;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -23,7 +24,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -39,32 +39,34 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * Testcontainers integration test for {@link KafkaDeadLetterQueueAdapter}
+ * Testcontainers integration test for {@link KafkaMessageBrokerAdapter}
  * wired via {@link com.aegisnotify.notification.infrastructure.config.KafkaMessageBrokerConfig}
- * (issue #30 acceptance criterion).
+ * (issue #27 acceptance criterion).
  *
- * <p>Proves end-to-end that {@code DeadLetterQueuePort#sendToDlq} actually
- * lands a message on the configured {@code notification.kafka.topics.dlq}
- * topic (overridden here to a custom name, mirroring
- * {@link KafkaMessageBrokerAdapterIntegrationTest}'s override pattern), with
- * the notification id as the partition key and both the notification id and
- * the failure reason present as real Kafka headers.</p>
+ * <p>Proves K2 end-to-end: publishing to the logical topic names hardcoded in
+ * {@code PublishOutboxEventTransactions.TOPIC_MAP} actually lands on the
+ * <em>configured</em> {@code notification.kafka.topics.*} topics — which are
+ * deliberately overridden here to different physical names — with the
+ * correct partition key and a body deserializable as {@link NotificationEvent}.</p>
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @ActiveProfiles("test")
 @Testcontainers
-class KafkaDeadLetterQueueAdapterIntegrationTest {
+class KafkaMessageBrokerAdapterIT {
 
   @Container
   static final KafkaContainer KAFKA = new KafkaContainer(
-      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"))
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
     registry.add("eureka.client.enabled", () -> false);
     registry.add("spring.cloud.discovery.enabled", () -> false);
-    registry.add("notification.kafka.topics.dlq", () -> "custom-notifications-dlq");
+    registry.add("notification.kafka.topics.high-priority", () -> "custom-high-priority-topic");
+    registry.add("notification.kafka.topics.medium-priority", () -> "custom-medium-priority-topic");
+    registry.add("notification.kafka.topics.low-priority", () -> "custom-low-priority-topic");
   }
 
   @MockitoBean
@@ -79,6 +81,12 @@ class KafkaDeadLetterQueueAdapterIntegrationTest {
   @MockitoBean
   private OutboxEventRepositoryAdapter outboxEventRepositoryAdapter;
 
+  // @ActiveProfiles("test") excludes JPA repository auto-configuration
+  // entirely (application-test.yml), so every JPA-backed adapter bean must
+  // be explicitly mocked here — same reason as the other 4 adapters above.
+  // Added when issue #86 introduced this adapter after this test was
+  // originally written for issue #27, alongside NotificationServiceContext
+  // SmokeTest's identical fix.
   @MockitoBean
   private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
 
@@ -86,10 +94,12 @@ class KafkaDeadLetterQueueAdapterIntegrationTest {
   private NotificationProviderPort notificationProviderPort;
 
   @MockitoBean
-  private MessageBrokerPort messageBrokerPort;
+  private DeadLetterQueuePort deadLetterQueuePort;
 
   @Autowired
-  private DeadLetterQueuePort deadLetterQueuePort;
+  private MessageBrokerPort messageBrokerPort;
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private Consumer<String, String> testConsumer;
 
@@ -101,37 +111,51 @@ class KafkaDeadLetterQueueAdapterIntegrationTest {
   }
 
   @Test
-  void sendToDlq_publishesToConfiguredDlqTopicWithHeaders() {
+  void publish_highPriorityAlias_landsOnConfiguredHighPriorityTopic() throws Exception {
+    assertRoutesToConfiguredTopic("high-priority-topic", "custom-high-priority-topic", "HIGH");
+  }
+
+  @Test
+  void publish_mediumPriorityAlias_landsOnConfiguredMediumPriorityTopic() throws Exception {
+    assertRoutesToConfiguredTopic(
+        "medium-priority-topic", "custom-medium-priority-topic", "MEDIUM");
+  }
+
+  @Test
+  void publish_lowPriorityAlias_landsOnConfiguredLowPriorityTopic() throws Exception {
+    assertRoutesToConfiguredTopic("low-priority-topic", "custom-low-priority-topic", "LOW");
+  }
+
+  private void assertRoutesToConfiguredTopic(
+      String logicalTopic, String configuredTopic, String priority) throws Exception {
     testConsumer = createConsumer();
-    testConsumer.subscribe(List.of("custom-notifications-dlq"));
+    testConsumer.subscribe(List.of(configuredTopic));
 
     UUID notificationId = UUID.randomUUID();
     Map<String, Object> payload = Map.of(
-        "notificationId", notificationId.toString(),
+        "id", notificationId.toString(),
         "channel", "EMAIL",
         "recipient", "user@example.com",
-        "templateName", "welcome"
+        "templateName", "welcome",
+        "parameters", Map.of("name", "John"),
+        "priority", priority
     );
-    String reason = "Critical failure after processing";
 
-    deadLetterQueuePort.sendToDlq(notificationId, payload, reason);
+    messageBrokerPort.publish(logicalTopic, payload);
 
     ConsumerRecords<String, String> records = pollUntilRecordsPresent(testConsumer);
     assertThat(records.count()).isEqualTo(1);
 
     ConsumerRecord<String, String> record = records.iterator().next();
-    assertThat(record.topic()).isEqualTo("custom-notifications-dlq");
+    assertThat(record.topic()).isEqualTo(configuredTopic);
     assertThat(record.key()).isEqualTo(notificationId.toString());
 
-    Header notificationIdHeader = record.headers().lastHeader("notificationId");
-    Header reasonHeader = record.headers().lastHeader("reason");
-    assertThat(notificationIdHeader).isNotNull();
-    assertThat(reasonHeader).isNotNull();
-    assertThat(new String(notificationIdHeader.value(), StandardCharsets.UTF_8))
-        .isEqualTo(notificationId.toString());
-    assertThat(new String(reasonHeader.value(), StandardCharsets.UTF_8)).isEqualTo(reason);
-
-    assertThat(record.value()).contains(notificationId.toString()).contains("EMAIL");
+    NotificationEvent event = objectMapper.readValue(record.value(), NotificationEvent.class);
+    assertThat(event.id()).isEqualTo(notificationId);
+    assertThat(event.channel()).isEqualTo("EMAIL");
+    assertThat(event.recipient()).isEqualTo("user@example.com");
+    assertThat(event.templateName()).isEqualTo("welcome");
+    assertThat(event.priority()).isEqualTo(priority);
   }
 
   private static ConsumerRecords<String, String> pollUntilRecordsPresent(
