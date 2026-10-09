@@ -37,25 +37,27 @@ import org.testcontainers.utility.DockerImageName;
  * Transactional Outbox pattern.
  *
  * <p>Docker is unreachable in some sandboxes (same pre-existing limitation
- * documented for {@code KafkaMessageBrokerAdapterIntegrationTest} and
- * {@code KafkaNotificationConsumerIntegrationTest} in Slice 0a) — this test
+ * documented for {@code KafkaMessageBrokerAdapterIT} and
+ * {@code KafkaNotificationConsumerIT} in Slice 0a) — this test
  * follows the same Testcontainers pattern as those and is expected to pass
  * wherever a real Docker daemon is available.</p>
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
-class OutboxWorkerSchedulerIntegrationTest {
+class OutboxWorkerSchedulerIT {
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
       DockerImageName.parse("postgres:16-alpine"))
       .withDatabaseName("aegisnotify")
       .withUsername("aegis")
-      .withPassword("aegis");
+      .withPassword("aegis")
+      .withReuse(true);
 
   @Container
   static final KafkaContainer KAFKA = new KafkaContainer(
-      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"))
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {

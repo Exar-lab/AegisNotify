@@ -11,7 +11,7 @@
 # Scope note: this slice adds PostgreSQL, MongoDB, and Kafka, matching
 # aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD,
 # aegis-audit-service's default MONGODB_URI, and the Kafka version pinned
-# in KafkaMessageBrokerAdapterIntegrationTest.java (see each service's
+# in KafkaMessageBrokerAdapterIT.java (see each service's
 # src/main/resources/application.yml or test file). The five Spring Boot
 # app containers (blocked on issue #39) remain a follow-up slice.
 #
@@ -26,7 +26,7 @@
 # mentioned in README.md.
 #
 # Kafka note: issue #38 describes "Apache Kafka + Zookeeper", but neither
-# README.md nor KafkaMessageBrokerAdapterIntegrationTest.java use
+# README.md nor KafkaMessageBrokerAdapterIT.java use
 # Zookeeper — the test only imports org.testcontainers.containers.KafkaContainer,
 # which runs KRaft mode by default for images that support it (cp-kafka
 # 7.x does). This slice follows the code, not the issue text: a single

@@ -37,25 +37,26 @@ import org.testcontainers.utility.DockerImageName;
  *
  * <p>{@code @Transactional}: each test seeds its own rows into the shared container; without a
  * per-test rollback, {@code search}'s nullable filters would match rows left behind by earlier
- * tests, same rationale as {@code AggregationBufferRepositoryAdapterIntegrationTest}.</p>
+ * tests, same rationale as {@code AggregationBufferRepositoryAdapterIT}.</p>
  *
  * <p>Docker is unreachable in some sandboxes, the same pre-existing limitation already
- * documented on {@code AggregationBufferRepositoryAdapterIntegrationTest} and
- * {@code CancelRetryNotificationIntegrationTest} (Slice A) — this follows the identical
+ * documented on {@code AggregationBufferRepositoryAdapterIT} and
+ * {@code CancelRetryNotificationIT} (Slice A) — this follows the identical
  * Testcontainers-Postgres pattern and is expected to pass wherever a real Docker daemon is
  * available.</p>
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
 @Transactional
-class NotificationRepositoryAdapterIntegrationTest {
+class NotificationRepositoryAdapterIT {
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
       DockerImageName.parse("postgres:16-alpine"))
       .withDatabaseName("aegisnotify")
       .withUsername("aegis")
-      .withPassword("aegis");
+      .withPassword("aegis")
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
