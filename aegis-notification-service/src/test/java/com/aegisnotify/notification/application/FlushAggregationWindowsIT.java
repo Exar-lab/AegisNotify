@@ -52,22 +52,23 @@ import org.testcontainers.utility.DockerImageName;
  * AnthropicMessagesSummarizerAdapterTest} (MockWebServer).
  *
  * <p>Docker is unreachable in some sandboxes, same pre-existing limitation
- * documented for {@code KafkaMessageBrokerAdapterIntegrationTest}/{@code
- * OutboxWorkerSchedulerIntegrationTest}/{@code
- * AggregationBufferRepositoryAdapterIntegrationTest} — this follows the
+ * documented for {@code KafkaMessageBrokerAdapterIT}/{@code
+ * OutboxWorkerSchedulerIT}/{@code
+ * AggregationBufferRepositoryAdapterIT} — this follows the
  * identical Testcontainers-Postgres pattern and is expected to pass wherever
  * a real Docker daemon is available.</p>
  */
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
-class FlushAggregationWindowsIntegrationTest {
+class FlushAggregationWindowsIT {
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
       DockerImageName.parse("postgres:16-alpine"))
       .withDatabaseName("aegisnotify")
       .withUsername("aegis")
-      .withPassword("aegis");
+      .withPassword("aegis")
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {

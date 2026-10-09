@@ -47,20 +47,22 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(classes = NotificationServiceApplication.class)
-@Import(KafkaNotificationConsumerIntegrationTest.KafkaTestProducerConfig.class)
+@Import(KafkaNotificationConsumerIT.KafkaTestProducerConfig.class)
 @Testcontainers
-class KafkaNotificationConsumerIntegrationTest {
+class KafkaNotificationConsumerIT {
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
       DockerImageName.parse("postgres:16-alpine"))
       .withDatabaseName("aegisnotify")
       .withUsername("aegis")
-      .withPassword("aegis");
+      .withPassword("aegis")
+      .withReuse(true);
 
   @Container
   static final KafkaContainer KAFKA = new KafkaContainer(
-      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"));
+      DockerImageName.parse("confluentinc/cp-kafka:7.6.1"))
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
