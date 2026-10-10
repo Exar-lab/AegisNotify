@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.15.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.14.0...aegisnotify-v0.15.0) (2026-10-10)
+
+
+### Features
+
+* **frontend:** implement feature routing and page stubs ([314ff5f](https://github.com/Exar-lab/AegisNotify/commit/314ff5f9c915be8c3094a7e805d7a8eb671280c3))
+
+
+### Bug Fixes
+
+* **audit:** combine createdAt range criteria and add Testcontainers ITs ([04d7db1](https://github.com/Exar-lab/AegisNotify/commit/04d7db1149d0dc18a12a816e1c6e24f3d0aba1dc))
+* **audit:** combine createdAt range criteria and add Testcontainers ITs ([f45b435](https://github.com/Exar-lab/AegisNotify/commit/f45b4353d8c21fbffd9abc727731b06286a885cd)), closes [#40](https://github.com/Exar-lab/AegisNotify/issues/40)
+
+
+### Tests
+
+* **notification:** run container-backed ITs via Failsafe and add OutboxEventRepositoryAdapterIT ([6b1999f](https://github.com/Exar-lab/AegisNotify/commit/6b1999f5e70c8780c3ea8781cbee3b7dcc492a3a))
+* **notification:** run container-backed ITs via Failsafe and add OutboxEventRepositoryAdapterIT ([31274b9](https://github.com/Exar-lab/AegisNotify/commit/31274b9a009d31d1dbc486d4441f3b7be85d077b)), closes [#40](https://github.com/Exar-lab/AegisNotify/issues/40)
+
+
+### CI/CD
+
+* **release:** use RELEASE_PLEASE_TOKEN so release PRs trigger required checks ([50f467e](https://github.com/Exar-lab/AegisNotify/commit/50f467e13ed92969d99a210dda26ecc78125011b))
+* **release:** use RELEASE_PLEASE_TOKEN so release PRs trigger required checks ([14c48d9](https://github.com/Exar-lab/AegisNotify/commit/14c48d9b7e30a54c0e10d8a834facf313286687a))
+
 ## [0.14.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.13.0...aegisnotify-v0.14.0) (2026-10-07)
 
 
