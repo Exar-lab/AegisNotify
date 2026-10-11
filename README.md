@@ -82,8 +82,10 @@ ready-to-deploy product.
 ### Out of scope (for now, and possibly permanently)
 
 - **A one-command app-container environment.** `docker-compose.full.yml` now bundles PostgreSQL,
-  MongoDB, and Kafka alongside `docker-compose.yml`'s Keycloak (issue #38). The five Spring Boot
-  app containers themselves remain out of scope, blocked on Dockerfiles for each module (issue #39).
+  MongoDB, and Kafka alongside `docker-compose.yml`'s Keycloak (issue #38). Each Spring Boot module
+  has a Dockerfile (issue #39; build from the repo root with
+  `docker build -f <module>/Dockerfile .`), but the app containers are not wired into
+  `docker-compose.full.yml` yet.
 - **Multi-tenancy.** The platform assumes a single tenant/realm.
 - **A notification composition UI or template editor.** Templates are managed directly in
   PostgreSQL; there is no admin UI. Static mockups exist under [`design/`](design/) but no UI code
