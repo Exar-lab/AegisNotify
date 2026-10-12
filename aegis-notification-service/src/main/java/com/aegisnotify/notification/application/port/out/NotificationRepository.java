@@ -55,4 +55,6 @@ public interface NotificationRepository {
    * @return the aggregated counts for the window
    */
   DashboardAggregate aggregateSince(Instant since);
+
+  DashboardAggregate aggregateBetween(Instant start, Instant end);
 }
