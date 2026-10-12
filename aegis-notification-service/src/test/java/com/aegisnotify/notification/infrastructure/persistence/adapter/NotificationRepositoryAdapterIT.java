@@ -187,6 +187,40 @@ class NotificationRepositoryAdapterIT {
     assertThat(result.avgTerminalLatencyMillis()).isEqualTo(1000.0);
   }
 
+  @Test
+  void aggregateBetween_mixedOutcomes_countsBucketsAndAveragesLatencyNatively() {
+    final Instant start = Instant.now().minusSeconds(7200);
+    final Instant end = start.plusSeconds(3600);
+    Instant inside = start.plusSeconds(60);
+
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.SENT, inside, inside.plusMillis(500));
+    seedNotificationWithTimestamps(
+        Channel.SMS, NotificationStatus.SENT_VIA_FALLBACK, inside, inside.plusMillis(1500));
+    seedNotificationWithTimestamps(
+        Channel.WHATSAPP, NotificationStatus.FAILED, inside, inside);
+    seedNotificationWithTimestamps(
+        Channel.PUSH, NotificationStatus.FAILED_CRITICAL, inside, inside);
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.PENDING, inside, inside);
+
+    // Before start - should not be included
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.SENT, start.minusSeconds(10), start.minusSeconds(10));
+    // After end - should not be included
+    seedNotificationWithTimestamps(
+        Channel.EMAIL, NotificationStatus.SENT, end.plusSeconds(10), end.plusSeconds(10));
+
+    DashboardAggregate result = repository.aggregateBetween(start, end);
+
+    assertThat(result.totalCount()).isEqualTo(5);
+    assertThat(result.sentCount()).isEqualTo(1);
+    assertThat(result.sentViaFallbackCount()).isEqualTo(1);
+    assertThat(result.failedCount()).isEqualTo(1);
+    assertThat(result.failedCriticalCount()).isEqualTo(1);
+    assertThat(result.avgTerminalLatencyMillis()).isEqualTo(1000.0);
+  }
+
   private void seedNotificationWithTimestamps(
       Channel channel, NotificationStatus status, Instant createdAt, Instant updatedAt) {
     springDataRepository.save(new NotificationJpaEntity(

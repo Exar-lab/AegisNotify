@@ -96,6 +96,7 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         counts.getTotalCount(),
         counts.getSentCount(),
         counts.getSentViaFallbackCount(),
+        counts.getFailedCount(),
         counts.getFailedCriticalCount(),
         avgTerminalLatencyMillis
     );

@@ -44,7 +44,8 @@ public interface SpringDataNotificationRepository
       @Param("start") Instant start,
       @Param("end") Instant end);
 
-  @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (n.updated_at - n.created_at)) * 1000.0), 0.0) "
+  @Query(value = "SELECT COALESCE(AVG("
+      + "EXTRACT(EPOCH FROM (n.updated_at - n.created_at)) * 1000.0), 0.0) "
       + "FROM notifications n "
       + "WHERE n.created_at >= :start AND n.created_at < :end "
       + "AND n.status IN ('SENT', 'SENT_VIA_FALLBACK')", nativeQuery = true)
@@ -62,6 +63,9 @@ public interface SpringDataNotificationRepository
       + "COALESCE(SUM(CASE WHEN n.status = "
       + "    com.aegisnotify.notification.domain.enums.NotificationStatus.SENT_VIA_FALLBACK "
       + "    THEN 1L ELSE 0L END), 0L) AS sentViaFallbackCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED "
+      + "    THEN 1L ELSE 0L END), 0L) AS failedCount, "
       + "COALESCE(SUM(CASE WHEN n.status = "
       + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED_CRITICAL "
       + "    THEN 1L ELSE 0L END), 0L) AS failedCriticalCount "
