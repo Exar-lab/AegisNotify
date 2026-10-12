@@ -12,5 +12,7 @@ public interface NotificationDashboardCountsProjection {
 
   long getSentViaFallbackCount();
 
+  long getFailedCount();
+
   long getFailedCriticalCount();
 }

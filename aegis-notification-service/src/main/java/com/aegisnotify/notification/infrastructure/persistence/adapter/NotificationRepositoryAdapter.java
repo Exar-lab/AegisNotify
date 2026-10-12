@@ -96,6 +96,24 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         counts.getTotalCount(),
         counts.getSentCount(),
         counts.getSentViaFallbackCount(),
+        counts.getFailedCount(),
+        counts.getFailedCriticalCount(),
+        avgTerminalLatencyMillis
+    );
+  }
+
+  @Override
+  public DashboardAggregate aggregateBetween(Instant start, Instant end) {
+    NotificationDashboardCountsProjection counts =
+        springDataRepository.countByStatusBetween(start, end);
+    Double avgTerminalLatencyMillis =
+        springDataRepository.findAvgTerminalLatencyBetween(start, end);
+
+    return new DashboardAggregate(
+        counts.getTotalCount(),
+        counts.getSentCount(),
+        counts.getSentViaFallbackCount(),
+        counts.getFailedCount(),
         counts.getFailedCriticalCount(),
         avgTerminalLatencyMillis
     );

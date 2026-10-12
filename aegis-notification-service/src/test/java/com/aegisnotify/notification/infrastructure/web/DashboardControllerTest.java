@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aegisnotify.notification.application.dto.DashboardSummaryResponse;
+import com.aegisnotify.notification.application.dto.MetricDelta;
 import com.aegisnotify.notification.application.port.in.GetDashboardSummaryUseCase;
 import com.aegisnotify.notification.infrastructure.config.SecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -30,15 +31,30 @@ class DashboardControllerTest {
   @Test
   void summary_authorized_returns200() throws Exception {
     when(getDashboardSummaryUseCase.getSummary(any()))
-        .thenReturn(new DashboardSummaryResponse(48392L, 99.12, 312L, 842L));
+        .thenReturn(new DashboardSummaryResponse(
+            new MetricDelta(48392.0, 42100.0, 14.94, null),
+            new MetricDelta(99.12, 98.45, null, 0.67),
+            new MetricDelta(312.0, 340.0, -8.24, null),
+            new MetricDelta(842.0, 915.0, -7.98, null)
+        ));
 
     mockMvc.perform(get("/api/v1/dashboard/summary")
             .with(jwt().authorities(() -> "SCOPE_notification:read")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.totalRequests").value(48392))
-        .andExpect(jsonPath("$.successRatePercent").value(99.12))
-        .andExpect(jsonPath("$.fallbackActivations").value(312))
-        .andExpect(jsonPath("$.avgDeliveryLatencyMillis").value(842));
+        .andExpect(jsonPath("$.totalRequests.currentValue").value(48392.0))
+        .andExpect(jsonPath("$.totalRequests.previousValue").value(42100.0))
+        .andExpect(jsonPath("$.totalRequests.deltaPercent").value(14.94))
+        .andExpect(jsonPath("$.totalRequests.deltaPoints").doesNotExist())
+        .andExpect(jsonPath("$.successRate.currentValue").value(99.12))
+        .andExpect(jsonPath("$.successRate.previousValue").value(98.45))
+        .andExpect(jsonPath("$.successRate.deltaPercent").doesNotExist())
+        .andExpect(jsonPath("$.successRate.deltaPoints").value(0.67))
+        .andExpect(jsonPath("$.fallbackActivations.currentValue").value(312.0))
+        .andExpect(jsonPath("$.fallbackActivations.previousValue").value(340.0))
+        .andExpect(jsonPath("$.fallbackActivations.deltaPercent").value(-8.24))
+        .andExpect(jsonPath("$.avgDeliveryLatency.currentValue").value(842.0))
+        .andExpect(jsonPath("$.avgDeliveryLatency.previousValue").value(915.0))
+        .andExpect(jsonPath("$.avgDeliveryLatency.deltaPercent").value(-7.98));
   }
 
   @Test
