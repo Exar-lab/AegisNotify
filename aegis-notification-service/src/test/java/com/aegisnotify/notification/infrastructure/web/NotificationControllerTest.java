@@ -316,7 +316,7 @@ class NotificationControllerTest {
     NotificationSummary summary = new NotificationSummary(
         notificationId, Channel.EMAIL, "user@example.com", "welcome",
         NotificationStatus.FAILED, Priority.HIGH, now);
-    when(listNotificationsUseCase.list(Channel.EMAIL, NotificationStatus.FAILED))
+    when(listNotificationsUseCase.list(Channel.EMAIL, NotificationStatus.FAILED, 20))
         .thenReturn(List.of(summary));
 
     mockMvc.perform(get("/api/v1/notifications")
@@ -330,8 +330,19 @@ class NotificationControllerTest {
   }
 
   @Test
+  void list_withExplicitLimit_propagatesLimitAndReturns200() throws Exception {
+    when(listNotificationsUseCase.list(null, null, 50)).thenReturn(List.of());
+
+    mockMvc.perform(get("/api/v1/notifications")
+            .param("limit", "50")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
   void list_noFilters_returns200() throws Exception {
-    when(listNotificationsUseCase.list(null, null)).thenReturn(List.of());
+    when(listNotificationsUseCase.list(null, null, 20)).thenReturn(List.of());
 
     mockMvc.perform(get("/api/v1/notifications")
             .with(jwt().authorities(() -> "SCOPE_notification:read")))
