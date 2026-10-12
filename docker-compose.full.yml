@@ -12,8 +12,8 @@
 # aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD,
 # aegis-audit-service's default MONGODB_URI, and the Kafka version pinned
 # in KafkaMessageBrokerAdapterIT.java (see each service's
-# src/main/resources/application.yml or test file). The five Spring Boot
-# app containers (blocked on issue #39) remain a follow-up slice.
+# src/main/resources/application.yml or test file). The six Spring Boot
+# app containers (Dockerfiles: issue #39) remain a follow-up slice.
 #
 # MongoDB note: no authentication is configured here, matching
 # aegis-audit-service's default MONGODB_URI (mongodb://localhost:27017/...),
