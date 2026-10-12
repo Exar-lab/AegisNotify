@@ -7,14 +7,9 @@ import java.util.List;
 
 public interface ListNotificationsUseCase {
 
-  /**
-   * Returns every notification matching the given optional filters. Both
-   * arguments are nullable and independently optional: a {@code null} filter
-   * is not applied. Passing {@code (null, null)} returns every notification.
-   *
-   * @param channel the channel to filter by, or {@code null} for any channel
-   * @param status the status to filter by, or {@code null} for any status
-   * @return the matching notifications, newest first
-   */
-  List<NotificationSummary> list(Channel channel, NotificationStatus status);
+  default List<NotificationSummary> list(Channel channel, NotificationStatus status) {
+    return list(channel, status, 20);
+  }
+
+  List<NotificationSummary> list(Channel channel, NotificationStatus status, Integer limit);
 }

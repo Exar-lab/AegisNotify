@@ -91,8 +91,9 @@ public class NotificationController {
   @GetMapping
   public ResponseEntity<List<NotificationSummary>> list(
       @RequestParam(required = false) Channel channel,
-      @RequestParam(required = false) NotificationStatus status) {
-    var response = listNotificationsUseCase.list(channel, status);
+      @RequestParam(required = false) NotificationStatus status,
+      @RequestParam(required = false, defaultValue = "20") Integer limit) {
+    var response = listNotificationsUseCase.list(channel, status, limit);
     return ResponseEntity.ok(response);
   }
 }

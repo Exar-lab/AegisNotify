@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -74,7 +75,13 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
 
   @Override
   public List<Notification> search(Channel channel, NotificationStatus status) {
-    return springDataRepository.search(channel, status).stream()
+    return search(channel, status, 20);
+  }
+
+  @Override
+  public List<Notification> search(Channel channel, NotificationStatus status, Integer limit) {
+    return springDataRepository.search(
+        channel, status, PageRequest.of(0, limit != null ? limit : 20)).stream()
         .map(mapper::toDomain)
         .toList();
   }
