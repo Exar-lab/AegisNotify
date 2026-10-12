@@ -1,0 +1,28 @@
+# Keep the build context small and deterministic: images are built from source,
+# so anything that is not needed by `mvnw package` stays out.
+
+# Version control and local tooling
+.git
+.gitignore
+.github
+.idea
+.vscode
+.claude
+.mcp.json
+.gga
+*.iml
+
+# Build output from the host (the image compiles its own)
+**/target
+
+# Not part of the Spring Boot images
+aegis-admin-frontend
+docs
+design
+docker
+db
+docker-compose*.yml
+**/*.md
+
+# Local environment files and secrets
+.env*

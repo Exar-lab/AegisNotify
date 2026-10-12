@@ -41,3 +41,59 @@ jobs:
             **/target/surefire-reports/
             **/target/failsafe-reports/
           retention-days: 7
+
+  docker-build:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - aegis-eureka-server
+          - aegis-config-server
+          - aegis-notification-service
+          - aegis-audit-service
+          - aegis-api-gateway
+          - aegis-user-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve project version and image owner
+        id: vars
+        run: |
+          chmod +x ./mvnw
+          echo "version=$(./mvnw -q -ntp -DforceStdout help:evaluate -Dexpression=project.version | tail -n 1)" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/${{ matrix.module }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=sha
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (push only on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.module }}/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
