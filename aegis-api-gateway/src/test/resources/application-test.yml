@@ -20,6 +20,11 @@ spring:
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
+        - id: dashboard-summary
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/dashboard/**
+            - Method=GET
         - id: audit-read
           uri: http://localhost:8083
           predicates:

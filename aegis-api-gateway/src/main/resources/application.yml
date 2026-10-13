@@ -52,12 +52,7 @@ spring:
         - id: dashboard-summary
           uri: lb://aegis-notification-service
           predicates:
-            - Path=/api/v1/dashboard/summary
-            - Method=GET
-        - id: notification-circuitbreakers
-          uri: lb://aegis-notification-service
-          predicates:
-            - Path=/actuator/circuitbreakers
+            - Path=/api/v1/dashboard/**
             - Method=GET
         - id: audit-read
           uri: lb://aegis-audit-service
