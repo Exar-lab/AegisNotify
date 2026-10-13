@@ -43,6 +43,8 @@ public interface NotificationRepository {
    */
   List<Notification> search(Channel channel, NotificationStatus status);
 
+  List<Notification> search(Channel channel, NotificationStatus status, Integer limit);
+
   /**
    * Aggregates every notification created at or after {@code since} into
    * dashboard KPI counts — total volume, terminal outcomes, and average

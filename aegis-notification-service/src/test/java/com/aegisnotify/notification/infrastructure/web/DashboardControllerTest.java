@@ -9,8 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.aegisnotify.notification.application.dto.DashboardSummaryResponse;
 import com.aegisnotify.notification.application.dto.MetricDelta;
+import com.aegisnotify.notification.application.dto.ProviderCircuitBreakerStatus;
 import com.aegisnotify.notification.application.port.in.GetDashboardSummaryUseCase;
+import com.aegisnotify.notification.application.port.in.GetProviderCircuitBreakersUseCase;
+import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.infrastructure.config.SecurityConfig;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -27,6 +31,9 @@ class DashboardControllerTest {
 
   @MockitoBean
   private GetDashboardSummaryUseCase getDashboardSummaryUseCase;
+
+  @MockitoBean
+  private GetProviderCircuitBreakersUseCase getProviderCircuitBreakersUseCase;
 
   @Test
   void summary_authorized_returns200() throws Exception {
@@ -66,6 +73,41 @@ class DashboardControllerTest {
   @Test
   void summary_missingRequiredScope_returns403() throws Exception {
     mockMvc.perform(get("/api/v1/dashboard/summary")
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void circuitBreakers_authorized_returns200() throws Exception {
+    List<ProviderCircuitBreakerStatus> statuses = List.of(
+        new ProviderCircuitBreakerStatus(
+            "email-provider", "SendGrid", Channel.EMAIL, "PRIMARY",
+            "SendGrid Secondary", "CLOSED"
+        )
+    );
+    when(getProviderCircuitBreakersUseCase.getCircuitBreakers())
+        .thenReturn(statuses);
+
+    mockMvc.perform(get("/api/v1/dashboard/circuit-breakers")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].key").value("email-provider"))
+        .andExpect(jsonPath("$[0].name").value("SendGrid"))
+        .andExpect(jsonPath("$[0].channel").value("EMAIL"))
+        .andExpect(jsonPath("$[0].role").value("PRIMARY"))
+        .andExpect(jsonPath("$[0].fallbackProvider").value("SendGrid Secondary"))
+        .andExpect(jsonPath("$[0].state").value("CLOSED"));
+  }
+
+  @Test
+  void circuitBreakers_noToken_returns401() throws Exception {
+    mockMvc.perform(get("/api/v1/dashboard/circuit-breakers"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void circuitBreakers_missingRequiredScope_returns403() throws Exception {
+    mockMvc.perform(get("/api/v1/dashboard/circuit-breakers")
             .with(jwt().authorities(() -> "SCOPE_notification:write")))
         .andExpect(status().isForbidden());
   }

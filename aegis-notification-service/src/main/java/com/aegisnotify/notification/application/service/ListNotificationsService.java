@@ -19,8 +19,9 @@ public class ListNotificationsService implements ListNotificationsUseCase {
   }
 
   @Override
-  public List<NotificationSummary> list(Channel channel, NotificationStatus status) {
-    return notificationRepository.search(channel, status).stream()
+  public List<NotificationSummary> list(
+      Channel channel, NotificationStatus status, Integer limit) {
+    return notificationRepository.search(channel, status, limit).stream()
         .map(this::toSummary)
         .toList();
   }
