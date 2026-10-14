@@ -1,0 +1,255 @@
+:host {
+  display: block;
+}
+.detail-page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.breadcrumb {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+.page-header p {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 24px;
+}
+.panel {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+h2 {
+  font-size: 1rem;
+  margin-bottom: 24px;
+}
+.count {
+  margin-left: 8px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+dl {
+  display: grid;
+  gap: 20px;
+}
+dl > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  font-size: 0.8125rem;
+}
+dt,
+.hint,
+time {
+  color: var(--text-secondary);
+}
+dd,
+.attempt-details {
+  overflow-wrap: anywhere;
+}
+.identifier {
+  font-family: monospace;
+}
+.hint {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+dl + .hint {
+  margin-top: 24px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.large {
+  padding: 10px 16px;
+  font-size: 0.875rem;
+}
+[data-tone='success'] {
+  color: var(--status-online);
+  background: var(--status-success-bg);
+}
+[data-tone='fallback'] {
+  color: var(--status-fallback);
+  background: var(--status-fallback-bg);
+}
+[data-tone='danger'] {
+  color: var(--status-offline);
+  background: var(--status-danger-bg);
+}
+[data-tone='warning'] {
+  color: var(--status-warning);
+  background: var(--status-warning-bg);
+}
+[data-tone='neutral'] {
+  color: var(--status-neutral);
+  background: var(--status-neutral-bg);
+}
+.timeline {
+  list-style: none;
+}
+.timeline li {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 28px;
+}
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+.timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-color);
+}
+.step-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+}
+.step-content {
+  min-width: 0;
+  padding-top: 2px;
+}
+h3 {
+  font-size: 0.8125rem;
+  margin-bottom: 6px;
+}
+time {
+  font-size: 0.75rem;
+}
+.step-content p {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+th {
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+th,
+td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+td {
+  min-width: 90px;
+}
+.attempt-details {
+  margin-top: 8px;
+  min-width: 180px;
+  line-height: 1.5;
+}
+.dlq-notice {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--status-danger-bg);
+  color: var(--status-offline);
+  font-size: 0.875rem;
+}
+.empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.empty-state p {
+  color: var(--text-secondary);
+}
+button {
+  background: var(--color-accent);
+  color: var(--text-inverted);
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .detail-page,
+  .panel {
+    padding: 16px;
+  }
+  dl > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
