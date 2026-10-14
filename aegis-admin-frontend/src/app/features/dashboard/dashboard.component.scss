@@ -5,14 +5,14 @@
   padding: var(--space-24, 24px);
 }
 
-/* KPI Cards Grid (desktop-first >= 1280px) */
+/* KPI Cards Grid (desktop-first >= 1280px, responsive via Tailwind & CSS grid) */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-16, 16px);
 
   @media (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   @media (max-width: 640px) {
@@ -24,15 +24,13 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: var(--space-16, 16px) 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 
   &--loading {
     min-height: 96px;
-    display: flex;
-    flex-direction: column;
     justify-content: space-between;
     gap: 8px;
   }
@@ -82,7 +80,7 @@
 /* Split Panel Grid */
 .panel-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-16, 16px);
 
   @media (max-width: 1024px) {
@@ -163,8 +161,9 @@
   }
 }
 
-/* Provider Circuit Breakers Table */
-.provider-table {
+/* Consolidated Table Styles for Provider Circuit Breakers & Recent Notifications */
+.provider-table,
+.notification-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8125rem;
@@ -229,30 +228,6 @@
   font-weight: 600;
 }
 
-/* Recent Notifications Table */
-.notification-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-
-  th {
-    text-align: left;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-secondary);
-    padding: 0 12px 10px 0;
-  }
-
-  td {
-    padding: 10px 12px 10px 0;
-    border-top: 1px solid var(--border-color);
-    color: var(--text-primary);
-    vertical-align: middle;
-  }
-}
-
 .notification-row {
   transition: background-color 0.15s ease-in-out;
 
@@ -288,7 +263,7 @@
   white-space: nowrap;
 }
 
-/* Badges */
+/* Status Badges */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -324,7 +299,7 @@
   }
 }
 
-/* Skeletons & Shimmer */
+/* Skeletons & Shimmer Animation */
 @keyframes shimmer {
   0% {
     background-position: 200% 0;
@@ -368,4 +343,36 @@
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 6px;
+}
+
+/* Desktop-first enhancements for large displays (>= 1280px) */
+@media (min-width: 1280px) {
+  .dashboard {
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .kpi-card,
+  .panel {
+    padding: 24px;
+  }
+
+  .kpi-value {
+    font-size: 2.25rem;
+  }
+
+  .provider-table,
+  .notification-table {
+    font-size: 0.875rem;
+
+    th {
+      font-size: 0.75rem;
+      padding: 0 16px 12px 0;
+    }
+
+    td {
+      padding: 12px 16px 12px 0;
+    }
+  }
 }

@@ -1,5 +1,5 @@
 <div class="dashboard">
-  <section class="kpi-grid">
+  <section class="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
     @if (kpis(); as kpiState) {
       @switch (kpiState.status) {
         @case ('loading') {
@@ -37,7 +37,7 @@
     }
   </section>
 
-  <section class="panel-grid">
+  <section class="panel-grid grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div class="panel">
       <div class="panel-header">
         <h2 class="panel-title">Provider Circuit Breakers</h2>
