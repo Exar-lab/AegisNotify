@@ -17,15 +17,9 @@ const normalizedApiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
 const apiBaseEndpoint = normalizedApiBaseUrl.endsWith('/api')
   ? normalizedApiBaseUrl
   : `${normalizedApiBaseUrl}/api`;
-const escapedBaseUrl = normalizedApiBaseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const escapedApiEndpoint = apiBaseEndpoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// Covers both the REST API (/api/**, gateway-routed) and the actuator
-// endpoints the Providers/Dashboard screens read directly (e.g.
-// /actuator/circuitbreakers) — both sit behind the same gateway and the
-// same JWT, so both need the bearer token attached.
-const bearerTokenUrlPattern = new RegExp(
-  `^(${escapedApiEndpoint}|${escapedBaseUrl}/actuator)(\\/.*)?$`, 'i'
-);
+// Covers the REST API (/api/**, gateway-routed) protected by JWT bearer token.
+const bearerTokenUrlPattern = new RegExp(`^${escapedApiEndpoint}(\\/.*)?$`, 'i');
 
 /**
  * Main application configuration block for Angular.

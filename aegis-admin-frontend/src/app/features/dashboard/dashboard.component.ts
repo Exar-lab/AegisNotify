@@ -58,15 +58,21 @@ export class DashboardComponent {
           this.kpis.set({
             status: 'ready',
             data: [
-              { label: 'Total Requests (24h)', value: summary.totalRequests.toLocaleString() },
-              { label: 'Success Rate', value: `${summary.successRatePercent.toFixed(2)}%` },
+              {
+                label: 'Total Requests (24h)',
+                value: summary.totalRequests.currentValue.toLocaleString(),
+              },
+              {
+                label: 'Success Rate',
+                value: `${summary.successRate.currentValue.toFixed(2)}%`,
+              },
               {
                 label: 'Fallback Activations',
-                value: summary.fallbackActivations.toLocaleString(),
+                value: summary.fallbackActivations.currentValue.toLocaleString(),
               },
               {
                 label: 'Avg Delivery Latency',
-                value: `${summary.avgDeliveryLatencyMillis.toLocaleString()} ms`,
+                value: `${summary.avgDeliveryLatency.currentValue.toLocaleString()} ms`,
               },
             ],
           }),
@@ -80,13 +86,11 @@ export class DashboardComponent {
         next: (response) =>
           this.providers.set({
             status: 'ready',
-            data: Object.entries(CHANNEL_BREAKER_LABELS)
-              .filter(([key]) => key in response.circuitBreakers)
-              .map(([key, label]) => ({
-                key,
-                label,
-                state: response.circuitBreakers[key].state,
-              })),
+            data: response.map((item) => ({
+              key: item.key,
+              label: CHANNEL_BREAKER_LABELS[item.key] ?? item.name,
+              state: item.state,
+            })),
           }),
         error: () => this.providers.set({ status: 'error' }),
       });
