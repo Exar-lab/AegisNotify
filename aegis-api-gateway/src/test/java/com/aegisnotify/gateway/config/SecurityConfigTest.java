@@ -122,6 +122,39 @@ class SecurityConfigTest {
   }
 
   @Test
+  void dashboardSummary_noToken_returns401() {
+    webTestClient.get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().isUnauthorized();
+  }
+
+  @Test
+  void dashboardSummary_withNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:read");
+  }
+
+  @Test
+  void dashboardSummary_withNotificationReadScope_isNotForbidden() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void actuatorCircuitBreakers_isNotRoutedAsBusinessEndpoint() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/actuator/circuitbreakers")
+        .exchange()
+        .expectStatus().isNotFound();
+  }
+
+  @Test
   void auditEndpoint_withoutAuditReadScope_returns403WithRequiredScope() {
     webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
         .get().uri("/api/v1/audit")
