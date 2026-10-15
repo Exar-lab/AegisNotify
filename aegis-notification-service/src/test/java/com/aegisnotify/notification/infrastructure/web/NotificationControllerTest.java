@@ -169,7 +169,8 @@ class NotificationControllerTest {
     NotificationStatusResponse statusResponse = new NotificationStatusResponse(
         notificationId, Channel.EMAIL, "user@example.com", "welcome",
         NotificationStatus.PENDING, now, now,
-        List.of(new NotificationLogEntry(LogStatus.PENDING, "Accepted", now))
+        List.of(new NotificationLogEntry(LogStatus.PENDING, "Accepted", now)),
+        Priority.HIGH, notificationId, List.of()
     );
     when(getNotificationStatusUseCase.getStatus(notificationId))
         .thenReturn(statusResponse);
@@ -181,6 +182,9 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.channel").value("EMAIL"))
         .andExpect(jsonPath("$.status").value("PENDING"))
         .andExpect(jsonPath("$.auditTrail").isArray())
+        .andExpect(jsonPath("$.priority").value("HIGH"))
+        .andExpect(jsonPath("$.correlationId").value(notificationId.toString()))
+        .andExpect(jsonPath("$.providerAttempts").isArray())
         .andExpect(jsonPath("$.auditTrail[0].status").value("PENDING"));
   }
 

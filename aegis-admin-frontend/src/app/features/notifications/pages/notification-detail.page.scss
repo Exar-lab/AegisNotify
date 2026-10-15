@@ -1,6 +1,10 @@
 :host {
   display: block;
 }
+.result-code {
+  margin-left: 8px;
+  font-family: monospace;
+}
 .detail-page {
   padding: 24px;
   display: flex;
@@ -12,6 +16,14 @@
   gap: 12px;
   font-size: 0.8125rem;
   color: var(--text-secondary);
+}
+.breadcrumb a,
+.breadcrumb [aria-hidden='true'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.breadcrumb [aria-current='page'] {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 a {

@@ -3,14 +3,33 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import {
-  NotificationDetail,
-  providerAttempts,
-} from '../../../core/models/notification-detail.models';
+import { NotificationDetail } from '../../../core/models/notification-detail.models';
 import { environment } from '../../../../environments/environment';
 import { NotificationDetailPage } from './notification-detail.page';
 
 const notification: NotificationDetail = {
+  priority: 'HIGH',
+  correlationId: 'test-id',
+  providerAttempts: [
+    {
+      role: 'PRIMARY',
+      providerName: 'SendGrid',
+      success: false,
+      code: '503',
+      errorDetail: 'HTTP 503: unavailable',
+      latencyMillis: 42,
+      timestamp: '2026-10-14T10:00:30Z',
+    },
+    {
+      role: 'FALLBACK',
+      providerName: 'Backup',
+      success: true,
+      code: '202',
+      errorDetail: null,
+      latencyMillis: 17,
+      timestamp: '2026-10-14T10:01:00Z',
+    },
+  ],
   id: 'test-id',
   channel: 'EMAIL',
   recipient: 'operator@example.com',
@@ -105,17 +124,18 @@ describe('NotificationDetailPage', () => {
     expect(fixture.componentInstance.notification()?.id).toBe('other-id');
   });
 
-  it('distinguishes recorded primary and fallback outcomes without inventing attempts', () => {
-    const attempts = providerAttempts(notification.auditTrail);
-    expect(attempts.map((attempt) => [attempt.role, attempt.result])).toEqual([
-      ['Primary', 'Failure'],
-      ['Fallback', 'Success'],
-    ]);
-    expect(
-      providerAttempts([
-        { status: 'FAILED_CRITICAL', details: 'Sent to DLQ', timestamp: notification.updatedAt },
-      ]),
-    ).toEqual([]);
-    expect(notification.auditTrail[0].status).toBe('SENT_VIA_FALLBACK');
+  it('renders structured attempt data and does not fabricate attempts for legacy records', () => {
+    const fixture = TestBed.createComponent(NotificationDetailPage);
+    http.expectOne(url('test-id')).flush(notification);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('PRIMARY');
+    expect(text).toContain('FALLBACK');
+    expect(text).toContain('42 ms');
+    expect(text).toContain('202');
+    params.next(convertToParamMap({ id: 'legacy' }));
+    http.expectOne(url('legacy')).flush({ ...notification, providerAttempts: [] });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No individual provider attempts');
   });
 });

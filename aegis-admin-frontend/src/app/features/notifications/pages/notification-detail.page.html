@@ -2,7 +2,7 @@
   <nav aria-label="Breadcrumb" class="breadcrumb">
     <a routerLink="/notifications" aria-label="Back to Notifications">Notifications</a>
     <span aria-hidden="true">/</span>
-    <span aria-current="page">{{ notification()?.id ?? 'Notification detail' }}</span>
+    <span aria-current="page">{{ notification()?.correlationId ?? 'Notification detail' }}</span>
   </nav>
 
   @if (state().kind === 'loading') {
@@ -46,7 +46,7 @@
           </div>
           <div>
             <dt>Priority</dt>
-            <dd>Unavailable</dd>
+            <dd>{{ item.priority }}</dd>
           </div>
           <div>
             <dt>Template name</dt>
@@ -58,7 +58,7 @@
           </div>
           <div>
             <dt>Correlation ID</dt>
-            <dd>Unavailable</dd>
+            <dd class="identifier">{{ item.correlationId }}</dd>
           </div>
           <div>
             <dt>Created at</dt>
@@ -69,7 +69,6 @@
             <dd>{{ item.updatedAt | date: 'medium' }}</dd>
           </div>
         </dl>
-        <p class="hint">Priority and correlation ID are not included in the status response.</p>
       </section>
 
       <section class="panel" aria-labelledby="timeline-title">
@@ -105,8 +104,8 @@
     <section class="panel" aria-labelledby="attempts-title">
       <h2 id="attempts-title">Provider Attempts</h2>
       <p class="hint">
-        Recorded provider outcomes only. Individual retries, latency and HTTP codes are not provided
-        by the status endpoint. Failure details appear when recorded.
+        Each recorded invocation is shown, including primary retries and fallback delivery.
+        CIRCUIT_OPEN means the provider call was blocked before an HTTP request was sent.
       </p>
       <div class="table-scroll">
         <table>
@@ -127,19 +126,20 @@
             @for (attempt of attempts(); track $index) {
               <tr>
                 <td>{{ $index + 1 }}</td>
-                <td>{{ attempt.provider }}</td>
+                <td>{{ attempt.providerName }}</td>
                 <td>{{ attempt.role }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    [attr.data-tone]="attempt.result === 'Success' ? 'success' : 'danger'"
-                    >{{ attempt.result }}</span
-                  >
-                  @if (attempt.details) {
-                    <p class="attempt-details">{{ attempt.details }}</p>
+                  <span class="badge" [attr.data-tone]="attempt.success ? 'success' : 'danger'">{{
+                    attempt.success ? 'Success' : 'Failure'
+                  }}</span>
+                  @if (attempt.code) {
+                    <span class="result-code">{{ attempt.code }}</span>
+                  }
+                  @if (attempt.errorDetail) {
+                    <p class="attempt-details">{{ attempt.errorDetail }}</p>
                   }
                 </td>
-                <td>Unavailable</td>
+                <td>{{ attempt.latencyMillis }} ms</td>
                 <td>
                   <time [attr.datetime]="attempt.timestamp">{{
                     attempt.timestamp | date: 'medium'

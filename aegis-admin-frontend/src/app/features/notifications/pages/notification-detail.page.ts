@@ -8,7 +8,6 @@ import {
   chronologicalLogs,
   LogStatus,
   NotificationDetail,
-  providerAttempts,
 } from '../../../core/models/notification-detail.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
 
@@ -57,7 +56,7 @@ export class NotificationDetailPage {
     return state.kind === 'ready' ? state.notification : null;
   });
   readonly timeline = computed(() => chronologicalLogs(this.notification()?.auditTrail ?? []));
-  readonly attempts = computed(() => providerAttempts(this.timeline()));
+  readonly attempts = computed(() => this.notification()?.providerAttempts ?? []);
 
   retry(): void {
     this.refresh.next();
