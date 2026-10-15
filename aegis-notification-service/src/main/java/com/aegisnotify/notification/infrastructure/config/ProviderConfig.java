@@ -38,7 +38,7 @@ public class ProviderConfig {
   private static final NotificationProviderPort NO_SECONDARY_PROVIDER =
       (channel, recipient, renderedContent, subject) -> new ProviderResult(
           ProviderResult.Outcome.FAILED, "none",
-          "No secondary provider configured for channel " + channel);
+          "No secondary provider configured for channel " + channel).withCode("NOT_CONFIGURED");
 
   @Bean
   public SendGridEmailProviderAdapter sendGridEmailProviderAdapter(

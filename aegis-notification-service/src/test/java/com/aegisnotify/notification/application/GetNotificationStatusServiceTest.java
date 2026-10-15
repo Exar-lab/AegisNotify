@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
+import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.service.GetNotificationStatusService;
@@ -13,6 +14,7 @@ import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
+import com.aegisnotify.notification.domain.model.DeliveryAttempt;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import java.time.Instant;
@@ -38,6 +40,9 @@ class GetNotificationStatusServiceTest {
   @InjectMocks
   private GetNotificationStatusService service;
 
+  @Mock
+  private DeliveryAttemptRepository deliveryAttemptRepository;
+
   @Test
   void getStatus_found_returnsStatusWithAuditTrail() {
     UUID notificationId = UUID.randomUUID();
@@ -61,10 +66,17 @@ class GetNotificationStatusServiceTest {
     );
     when(notificationLogRepository.findByNotificationIdOrderByCreatedAt(notificationId))
         .thenReturn(List.of(log1, log2));
+    DeliveryAttempt attempt = new DeliveryAttempt("SendGrid", "PRIMARY", false,
+        "503", "Unavailable", 42, now);
+    when(deliveryAttemptRepository.findByNotificationId(notificationId))
+        .thenReturn(List.of(attempt));
 
     NotificationStatusResponse response = service.getStatus(notificationId);
 
     assertEquals(notificationId, response.id());
+    assertEquals(notificationId, response.correlationId());
+    assertEquals(Priority.HIGH, response.priority());
+    assertEquals(List.of(attempt), response.providerAttempts());
     assertEquals(Channel.EMAIL, response.channel());
     assertEquals("user@example.com", response.recipient());
     assertEquals("welcome", response.templateName());

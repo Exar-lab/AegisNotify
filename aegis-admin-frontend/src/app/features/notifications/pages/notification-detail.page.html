@@ -1,0 +1,164 @@
+<main class="detail-page" [attr.aria-busy]="state().kind === 'loading'">
+  <nav aria-label="Breadcrumb" class="breadcrumb">
+    <a routerLink="/notifications" aria-label="Back to Notifications">Notifications</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ notification()?.correlationId ?? 'Notification detail' }}</span>
+  </nav>
+
+  @if (state().kind === 'loading') {
+    <section class="panel empty-state" role="status">Loading notification…</section>
+  } @else if (state().kind === 'not-found') {
+    <section class="panel empty-state">
+      <h1>Notification not found</h1>
+      <p>This notification does not exist or is no longer available.</p>
+      <a routerLink="/notifications">Back to Notifications</a>
+    </section>
+  } @else if (state().kind === 'error') {
+    <section class="panel empty-state" role="alert">
+      <h1>Unable to load notification</h1>
+      <p>Check your connection and access permissions, then try again.</p>
+      <button type="button" (click)="retry()">Try again</button>
+    </section>
+  } @else if (notification(); as item) {
+    <header class="page-header">
+      <div>
+        <h1>Notification Detail</h1>
+        <p>Delivery status and audit trail</p>
+      </div>
+      <span class="badge large" [attr.data-tone]="tone(item.status)">
+        <span aria-hidden="true">{{ icon(item.status) }}</span> {{ label(item.status) }}
+      </span>
+    </header>
+
+    <div class="detail-grid">
+      <section class="panel" aria-labelledby="details-title">
+        <h2 id="details-title">Notification Details</h2>
+        <dl>
+          <div>
+            <dt>Recipient</dt>
+            <dd>{{ item.recipient }}</dd>
+          </div>
+          <div>
+            <dt>Channel</dt>
+            <dd>
+              <span class="badge" data-tone="neutral">{{ item.channel }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Priority</dt>
+            <dd>{{ item.priority }}</dd>
+          </div>
+          <div>
+            <dt>Template name</dt>
+            <dd>{{ item.templateName }}</dd>
+          </div>
+          <div>
+            <dt>Notification ID</dt>
+            <dd class="identifier">{{ item.id }}</dd>
+          </div>
+          <div>
+            <dt>Correlation ID</dt>
+            <dd class="identifier">{{ item.correlationId }}</dd>
+          </div>
+          <div>
+            <dt>Created at</dt>
+            <dd>{{ item.createdAt | date: 'medium' }}</dd>
+          </div>
+          <div>
+            <dt>Last updated</dt>
+            <dd>{{ item.updatedAt | date: 'medium' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel" aria-labelledby="timeline-title">
+        <h2 id="timeline-title">
+          Delivery Timeline <span class="count">{{ timeline().length }} events</span>
+        </h2>
+        <ol class="timeline">
+          @for (entry of timeline(); track $index) {
+            <li>
+              <span
+                class="step-icon badge"
+                [attr.data-tone]="tone(entry.status)"
+                aria-hidden="true"
+                >{{ icon(entry.status) }}</span
+              >
+              <div class="step-content">
+                <h3>{{ label(entry.status) }}</h3>
+                <time [attr.datetime]="entry.timestamp">{{
+                  entry.timestamp | date: 'medium'
+                }}</time>
+                @if (entry.details) {
+                  <p>{{ entry.details }}</p>
+                }
+              </div>
+            </li>
+          } @empty {
+            <li class="hint">No delivery events have been recorded yet.</li>
+          }
+        </ol>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="attempts-title">
+      <h2 id="attempts-title">Provider Attempts</h2>
+      <p class="hint">
+        Each recorded invocation is shown, including primary retries and fallback delivery.
+        CIRCUIT_OPEN means the provider call was blocked before an HTTP request was sent.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <caption class="sr-only">
+            Recorded provider outcomes in chronological order
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Recorded attempt</th>
+              <th scope="col">Provider</th>
+              <th scope="col">Role</th>
+              <th scope="col">Result / error details</th>
+              <th scope="col">Latency</th>
+              <th scope="col">Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (attempt of attempts(); track $index) {
+              <tr>
+                <td>{{ $index + 1 }}</td>
+                <td>{{ attempt.providerName }}</td>
+                <td>{{ attempt.role }}</td>
+                <td>
+                  <span class="badge" [attr.data-tone]="attempt.success ? 'success' : 'danger'">{{
+                    attempt.success ? 'Success' : 'Failure'
+                  }}</span>
+                  @if (attempt.code) {
+                    <span class="result-code">{{ attempt.code }}</span>
+                  }
+                  @if (attempt.errorDetail) {
+                    <p class="attempt-details">{{ attempt.errorDetail }}</p>
+                  }
+                </td>
+                <td>{{ attempt.latencyMillis }} ms</td>
+                <td>
+                  <time [attr.datetime]="attempt.timestamp">{{
+                    attempt.timestamp | date: 'medium'
+                  }}</time>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="hint">No individual provider attempts were recorded.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (item.status === 'FAILED_CRITICAL') {
+        <p class="dlq-notice" role="status">
+          Delivery failed critically. Check the timeline for dead-letter queue routing details.
+        </p>
+      }
+    </section>
+  }
+</main>
