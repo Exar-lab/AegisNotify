@@ -50,7 +50,7 @@ class TwilioMessageClient {
 
     Timer.Sample sample = metrics.startTimer();
     try {
-      webClient.post()
+      var response = webClient.post()
           .uri("/2010-04-01/Accounts/{accountSid}/Messages.json", accountSid)
           .contentType(MediaType.APPLICATION_FORM_URLENCODED)
           .bodyValue(form)
@@ -58,18 +58,20 @@ class TwilioMessageClient {
           .toBodilessEntity()
           .timeout(REQUEST_TIMEOUT)
           .block();
-      return new ProviderResult(Outcome.SENT, providerName, null);
+      return new ProviderResult(Outcome.SENT, providerName, null).withCode(
+          String.valueOf(response.getStatusCode().value()));
     } catch (WebClientResponseException ex) {
       log.warn("twilio_send_failed provider={} status={} body={}", providerName,
           ex.getStatusCode(), ex.getResponseBodyAsString());
       metrics.recordError(providerName, String.valueOf(ex.getStatusCode().value()));
       return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage(),
-          RetryClassification.isRetryable(ex.getStatusCode()));
+          RetryClassification.isRetryable(ex.getStatusCode()))
+          .withCode(String.valueOf(ex.getStatusCode().value()));
     } catch (Exception ex) {
       log.warn("twilio_send_failed provider={} error={}", providerName, ex.getMessage());
       metrics.recordError(providerName, ex.getClass().getSimpleName());
       return new ProviderResult(Outcome.FAILED, providerName, ex.getMessage(),
-          RetryClassification.isRetryable(ex));
+          RetryClassification.isRetryable(ex)).withCode(ex.getClass().getSimpleName());
     } finally {
       metrics.stopTimer(sample, providerName);
     }

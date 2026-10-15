@@ -10,6 +10,7 @@ import {
   ProviderCircuitBreakerStatus,
 } from '../../core/models/dashboard.models';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
+import { notificationTone } from '../../core/models/notification-presentation';
 
 export type LoadState<T> =
   | { status: 'loading' }
@@ -150,22 +151,7 @@ export class DashboardComponent {
   }
 
   statusBadgeClass(status: NotificationStatus): string {
-    switch (status) {
-      case 'SENT':
-        return 'badge-success';
-      case 'SENT_VIA_FALLBACK':
-        return 'badge-fallback';
-      case 'PROCESSING':
-        return 'badge-warning';
-      case 'FAILED':
-      case 'FAILED_CRITICAL':
-        return 'badge-danger';
-      case 'PENDING':
-      case 'QUEUED':
-      case 'CANCELLED':
-      default:
-        return 'badge-neutral';
-    }
+    return `badge-${notificationTone(status)}`;
   }
 
   breakerBadgeClass(state: CircuitBreakerState): string {

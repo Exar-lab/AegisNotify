@@ -1,0 +1,68 @@
+<article [class]="'provider-card ' + circuitTone()">
+  <header>
+    <div>
+      <h3>{{ provider().name }}</h3>
+      <span class="role" [class.fallback]="provider().role === 'FALLBACK'">{{
+        provider().role
+      }}</span>
+    </div>
+    <span class="state">{{
+      provider().state === 'NOT_PROTECTED' ? 'NO CIRCUIT' : provider().state.replaceAll('_', ' ')
+    }}</span>
+  </header>
+  <dl>
+    <div>
+      <dt title="Current Resilience4j sliding window; unavailable until minimum calls is reached">
+        Failure rate
+      </dt>
+      <dd>
+        {{
+          provider().failureRate == null ? '—' : (provider().failureRate | number: '1.0-1') + '%'
+        }}
+      </dd>
+    </div>
+    <div>
+      <dt title="Current Resilience4j sliding window; unavailable until minimum calls is reached">
+        Slow-call rate
+      </dt>
+      <dd>
+        {{
+          provider().slowCallRate == null ? '—' : (provider().slowCallRate | number: '1.0-1') + '%'
+        }}
+      </dd>
+    </div>
+    <div>
+      <dt>Calls (24h)</dt>
+      <dd>{{ provider().calls24h == null ? '—' : (provider().calls24h | number) }}</dd>
+    </div>
+  </dl>
+  <div class="success-label">
+    <span>Success rate (24h)</span
+    ><strong>{{
+      successRate() === null ? 'No calls' : (successRate() | number: '1.0-1') + '%'
+    }}</strong>
+  </div>
+  @if (successRate() !== null) {
+    <div
+      class="track"
+      role="progressbar"
+      [attr.aria-label]="provider().name + ' success rate'"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="successRate()"
+    >
+      <span [class]="successTone()" [style.width.%]="successRate()"></span>
+    </div>
+  } @else {
+    <div class="track" aria-label="Success rate unavailable"></div>
+  }
+  <footer>
+    <p>{{ message() }}</p>
+    <a
+      routerLink="/notifications"
+      [queryParams]="{ channel: provider().channel }"
+      [attr.aria-label]="'View ' + provider().channel + ' delivery logs'"
+      >View Logs <span aria-hidden="true">↗</span></a
+    >
+  </footer>
+</article>

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.aegisnotify.notification.NotificationServiceApplication;
 import com.aegisnotify.notification.application.dto.DashboardAggregate;
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
 import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.enums.Channel;
@@ -93,6 +94,28 @@ class NotificationRepositoryAdapterIT {
         notificationId, channel, "user@example.com", "welcome", Map.of("name", "Jane"),
         Priority.MEDIUM, status, null, null, createdAt, createdAt));
     return notificationId;
+  }
+
+  @Test
+  void paginatedSearch_combinesFiltersCountsAndSearchesUuid() {
+    Instant now = Instant.parse("2026-01-15T12:00:00Z");
+    UUID id = seedNotification(Channel.EMAIL, NotificationStatus.SENT, now);
+    seedNotification(Channel.SMS, NotificationStatus.SENT, now);
+    var query = new NotificationListQuery(
+        id.toString().substring(0, 8), "USER@EXAMPLE", Channel.EMAIL, Priority.MEDIUM,
+        NotificationStatus.SENT, now.minusSeconds(1), now.plusSeconds(1), 0, 1);
+    var result = repository.searchPage(query);
+    assertThat(result.totalElements()).isEqualTo(1);
+    assertThat(result.content()).extracting(Notification::getId).containsExactly(id);
+    var secondPage = repository.searchPage(
+        new NotificationListQuery(
+            null, null, null, null, null, now.minusSeconds(1), now.plusSeconds(1), 1, 1));
+    assertThat(secondPage.totalElements()).isEqualTo(2);
+    assertThat(secondPage.content()).hasSize(1);
+    var escaped = repository.searchPage(
+        new NotificationListQuery(
+            "%", null, null, null, null, null, null, 0, 20));
+    assertThat(escaped.content()).isEmpty();
   }
 
   @Test

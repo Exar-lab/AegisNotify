@@ -52,7 +52,7 @@ public class SendGridEmailProviderAdapter {
 
     Timer.Sample sample = metrics.startTimer();
     try {
-      webClient.post()
+      var response = webClient.post()
           .uri("/v3/mail/send")
           .headers(headers -> headers.setBearerAuth(apiKey))
           .bodyValue(request)
@@ -60,18 +60,20 @@ public class SendGridEmailProviderAdapter {
           .toBodilessEntity()
           .timeout(REQUEST_TIMEOUT)
           .block();
-      return new ProviderResult(Outcome.SENT, PROVIDER_NAME, null);
+      return new ProviderResult(Outcome.SENT, PROVIDER_NAME, null).withCode(
+          String.valueOf(response.getStatusCode().value()));
     } catch (WebClientResponseException ex) {
       log.warn("sendgrid_send_failed status={} body={}", ex.getStatusCode(),
           ex.getResponseBodyAsString());
       metrics.recordError(PROVIDER_NAME, String.valueOf(ex.getStatusCode().value()));
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage(),
-          RetryClassification.isRetryable(ex.getStatusCode()));
+          RetryClassification.isRetryable(ex.getStatusCode()))
+          .withCode(String.valueOf(ex.getStatusCode().value()));
     } catch (Exception ex) {
       log.warn("sendgrid_send_failed error={}", ex.getMessage());
       metrics.recordError(PROVIDER_NAME, ex.getClass().getSimpleName());
       return new ProviderResult(Outcome.FAILED, PROVIDER_NAME, ex.getMessage(),
-          RetryClassification.isRetryable(ex));
+          RetryClassification.isRetryable(ex)).withCode(ex.getClass().getSimpleName());
     } finally {
       metrics.stopTimer(sample, PROVIDER_NAME);
     }

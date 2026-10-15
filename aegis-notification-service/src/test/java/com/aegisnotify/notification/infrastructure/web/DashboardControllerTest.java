@@ -82,7 +82,8 @@ class DashboardControllerTest {
     List<ProviderCircuitBreakerStatus> statuses = List.of(
         new ProviderCircuitBreakerStatus(
             "email-provider", "SendGrid", Channel.EMAIL, "PRIMARY",
-            "SendGrid Secondary", "CLOSED"
+            "SendGrid Secondary", "CLOSED", 5.0, 10.0,
+            java.time.Instant.parse("2026-10-15T12:00:00Z"), 100L, 50L, 95.0
         )
     );
     when(getProviderCircuitBreakersUseCase.getCircuitBreakers())
@@ -96,7 +97,13 @@ class DashboardControllerTest {
         .andExpect(jsonPath("$[0].channel").value("EMAIL"))
         .andExpect(jsonPath("$[0].role").value("PRIMARY"))
         .andExpect(jsonPath("$[0].fallbackProvider").value("SendGrid Secondary"))
-        .andExpect(jsonPath("$[0].state").value("CLOSED"));
+        .andExpect(jsonPath("$[0].state").value("CLOSED"))
+        .andExpect(jsonPath("$[0].failureRate").value(5.0))
+        .andExpect(jsonPath("$[0].slowCallRate").value(10.0))
+        .andExpect(jsonPath("$[0].calls24h").value(100))
+        .andExpect(jsonPath("$[0].callsToday").value(50))
+        .andExpect(jsonPath("$[0].successRate").value(95.0))
+        .andExpect(jsonPath("$[0].lastStateChange").value("2026-10-15T12:00:00Z"));
   }
 
   @Test

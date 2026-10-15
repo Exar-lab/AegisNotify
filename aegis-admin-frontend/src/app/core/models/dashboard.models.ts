@@ -41,6 +41,7 @@ export type CircuitBreakerState =
   | 'DISABLED'
   | 'FORCED_OPEN'
   | 'METRICS_ONLY'
+  | 'NOT_PROTECTED'
   | 'UNKNOWN';
 
 export interface ProviderCircuitBreakerStatus {
@@ -48,6 +49,12 @@ export interface ProviderCircuitBreakerStatus {
   name: string;
   channel: Channel;
   role: string;
-  fallbackProvider: string;
+  fallbackProvider: string | null;
   state: CircuitBreakerState;
+  failureRate?: number | null;
+  slowCallRate?: number | null;
+  lastStateChange?: string | null;
+  calls24h?: number | null;
+  callsToday?: number | null;
+  successRate?: number | null;
 }

@@ -14,6 +14,7 @@ import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
+import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.TemplateRenderer;
@@ -21,10 +22,12 @@ import com.aegisnotify.notification.application.port.out.TemplateRepository;
 import com.aegisnotify.notification.application.service.NotificationProcessingTransactions;
 import com.aegisnotify.notification.application.service.NotificationProcessingTransactions.PreparedNotification;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
 import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
+import com.aegisnotify.notification.domain.model.DeliveryAttempt;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
 import com.aegisnotify.notification.domain.model.Template;
@@ -61,11 +64,37 @@ class NotificationProcessingTransactionsTest {
 
   private NotificationProcessingTransactions transactions;
 
+  @Mock
+  private DeliveryAttemptRepository deliveryAttemptRepository;
+
   @BeforeEach
   void setUp() {
     transactions = new NotificationProcessingTransactions(notificationRepository,
         notificationLogRepository, templateRepository, templateRenderer,
-        auditEventPublisherPort);
+        auditEventPublisherPort, deliveryAttemptRepository);
+  }
+
+  @Test
+  void applyResult_persistsAttemptsAndFailureTimelineBeforeTerminalState() {
+    Notification processing = Notification.create(Channel.EMAIL, "test@example.com", "welcome",
+        Map.of(), Priority.HIGH).markProcessing();
+    DeliveryAttempt primary = new DeliveryAttempt("SendGrid", "PRIMARY", false,
+        "503", "Unavailable", 35, Instant.now());
+    DeliveryAttempt fallback = new DeliveryAttempt("Backup", "FALLBACK", true,
+        "202", null, 12, Instant.now());
+    ProviderResult result = new ProviderResult(ProviderResult.Outcome.SENT_VIA_FALLBACK,
+        "Backup", null).withAttempts(List.of(primary, fallback));
+
+    transactions.applyResult(processing, result);
+
+    Mockito.verify(deliveryAttemptRepository).saveAll(processing.getId(), result.attempts());
+    ArgumentCaptor<NotificationLog> logs = ArgumentCaptor.forClass(NotificationLog.class);
+    Mockito.verify(notificationLogRepository, times(2)).save(logs.capture());
+    assertEquals(LogStatus.PROVIDER_A_FAIL,
+        logs.getAllValues().get(0).getStatus());
+    assertTrue(logs.getAllValues().get(0).getDetails().contains("503"));
+    assertEquals(LogStatus.SENT_VIA_FALLBACK,
+        logs.getAllValues().get(1).getStatus());
   }
 
   @Test
