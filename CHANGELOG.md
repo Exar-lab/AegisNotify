@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.15.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.14.0...aegisnotify-v0.15.0) (2026-10-14)
+
+
+### Features
+
+* **frontend:** implement feature routing and page stubs ([314ff5f](https://github.com/Exar-lab/AegisNotify/commit/314ff5f9c915be8c3094a7e805d7a8eb671280c3))
+* **frontend:** update dashboard models with MetricDelta and ProviderCircuitBreakerStatus ([7f04bf8](https://github.com/Exar-lab/AegisNotify/commit/7f04bf8b2698a972b059e95065ed75907f68ae10))
+* **frontend:** update DashboardApiService with domain circuit-breakers and notification limits ([116583b](https://github.com/Exar-lab/AegisNotify/commit/116583bb1bab443cf0984e08236219188900195e))
+* **gateway:** enforce notification:read on /api/v1/dashboard/** ([ee0a490](https://github.com/Exar-lab/AegisNotify/commit/ee0a490a5d1f4b1351e16c235bd4303494ee1b17))
+* **gateway:** route /api/v1/dashboard/** and decommission /actuator/circuitbreakers route ([4b64294](https://github.com/Exar-lab/AegisNotify/commit/4b64294421afcd6bd05c870fe56477802981ff17))
+* **notification:** add aggregateBetween to NotificationRepository and adapter ([a724431](https://github.com/Exar-lab/AegisNotify/commit/a72443144d1062d551083210843eb782051ba688))
+* **notification:** add bounded limit query to recent notifications ([7185c84](https://github.com/Exar-lab/AegisNotify/commit/7185c84d5c8c3607f9ef662ea169c455df7289b7))
+* **notification:** add CircuitBreakerInspectionPort outbound port ([7461b73](https://github.com/Exar-lab/AegisNotify/commit/7461b735d38441561b53cff614fde329b1ca3fcf))
+* **notification:** add countByStatusBetween and native latency aggregation queries ([b139f19](https://github.com/Exar-lab/AegisNotify/commit/b139f193a307d9a9f4b51e9af01e2a9603067f14))
+* **notification:** add failedCount to NotificationDashboardCountsProjection ([ebd6097](https://github.com/Exar-lab/AegisNotify/commit/ebd609780649314cd20d7e42ff5fc096159b553f))
+* **notification:** add GetProviderCircuitBreakersUseCase port ([f8c7668](https://github.com/Exar-lab/AegisNotify/commit/f8c7668fc4c2f860f5d5d066799b485f6fe765c1))
+* **notification:** add ProviderCircuitBreakerStatus DTO ([11ce954](https://github.com/Exar-lab/AegisNotify/commit/11ce95439ab9a50316601bd84a81223bc60a291e))
+* **notification:** expose /circuit-breakers endpoint on DashboardController ([dc8d0f8](https://github.com/Exar-lab/AegisNotify/commit/dc8d0f82c985b1d812ea13913a71fcb6d2224cac))
+* **notification:** implement GetProviderCircuitBreakersService application service ([e0cb7c3](https://github.com/Exar-lab/AegisNotify/commit/e0cb7c372c2f2568d8147ad854b077bda93d4b5d))
+* **notification:** implement Resilience4jCircuitBreakerAdapter ([60ff200](https://github.com/Exar-lab/AegisNotify/commit/60ff2000603f4324c9162532d6c3c31f6566e0fc))
+* **notification:** refactor GetDashboardSummaryService with window deltas and terminal success rate ([1bef9b1](https://github.com/Exar-lab/AegisNotify/commit/1bef9b1d2bccb4d34c3431496829e2ca6b931594))
+* **notification:** update dashboard DTOs with MetricDelta and aggregate counts ([7a25fc6](https://github.com/Exar-lab/AegisNotify/commit/7a25fc6fc6172b26d35830efaf4dfee2bda1fe89))
+
+
+### Bug Fixes
+
+* **audit:** combine createdAt range criteria and add Testcontainers ITs ([04d7db1](https://github.com/Exar-lab/AegisNotify/commit/04d7db1149d0dc18a12a816e1c6e24f3d0aba1dc))
+* **audit:** combine createdAt range criteria and add Testcontainers ITs ([f45b435](https://github.com/Exar-lab/AegisNotify/commit/f45b4353d8c21fbffd9abc727731b06286a885cd)), closes [#40](https://github.com/Exar-lab/AegisNotify/issues/40)
+
+
+### Refactoring
+
+* **frontend:** adapt dashboard component subscriptions to MetricDelta and array response ([66af738](https://github.com/Exar-lab/AegisNotify/commit/66af738ddd1f4761074e9fb54fa31374e039a9a2))
+* **frontend:** simplify keycloak bearer interceptor to match only /api/** ([354c641](https://github.com/Exar-lab/AegisNotify/commit/354c6417e0f65aee90ac3101cedfb92cc4065c0d))
+
+
+### Documentation
+
+* **readme:** document module Dockerfiles and root build context ([f968ca6](https://github.com/Exar-lab/AegisNotify/commit/f968ca617c8e89294649628fdda07f2bbd60eef3))
+
+
+### Tests
+
+* **frontend:** add unit tests for DashboardApiService ([90ad7cd](https://github.com/Exar-lab/AegisNotify/commit/90ad7cd2e4774b441fa44b23871dd4f87dea67bf))
+* **gateway:** verify scope authorization for /api/v1/dashboard/** and decommissioned actuator route ([73c4ed1](https://github.com/Exar-lab/AegisNotify/commit/73c4ed1c4ad00ccf3f33972948c14739d9c79123))
+* **notification:** add unit and web tests for circuit breakers and bounded notifications query ([fa3f315](https://github.com/Exar-lab/AegisNotify/commit/fa3f3159a754f25ebf90b779d66945a9e2b20dda))
+* **notification:** run container-backed ITs via Failsafe and add OutboxEventRepositoryAdapterIT ([6b1999f](https://github.com/Exar-lab/AegisNotify/commit/6b1999f5e70c8780c3ea8781cbee3b7dcc492a3a))
+* **notification:** run container-backed ITs via Failsafe and add OutboxEventRepositoryAdapterIT ([31274b9](https://github.com/Exar-lab/AegisNotify/commit/31274b9a009d31d1dbc486d4441f3b7be85d077b)), closes [#40](https://github.com/Exar-lab/AegisNotify/issues/40)
+* **notification:** update tests for KPI deltas, terminal success rate, and native SQL latency ([8f258be](https://github.com/Exar-lab/AegisNotify/commit/8f258bebb6bf52a426c0e4a64ab9409f348f4d36))
+
+
+### CI/CD
+
+* **docker:** build and push module images to GHCR ([e6d21c8](https://github.com/Exar-lab/AegisNotify/commit/e6d21c8036563e9cfa19264c8bd8f1810fccd2a6))
+* **release:** use RELEASE_PLEASE_TOKEN so release PRs trigger required checks ([50f467e](https://github.com/Exar-lab/AegisNotify/commit/50f467e13ed92969d99a210dda26ecc78125011b))
+* **release:** use RELEASE_PLEASE_TOKEN so release PRs trigger required checks ([14c48d9](https://github.com/Exar-lab/AegisNotify/commit/14c48d9b7e30a54c0e10d8a834facf313286687a))
+
 ## [0.14.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.13.0...aegisnotify-v0.14.0) (2026-10-07)
 
 
