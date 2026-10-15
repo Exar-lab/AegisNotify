@@ -1,19 +1,35 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
 import { NotificationsPage } from './notifications.page';
 
 describe('NotificationsPage', () => {
   let http: HttpTestingController;
+  let route: { snapshot: { queryParamMap: ParamMap } };
   beforeEach(() => {
+    route = { snapshot: { queryParamMap: convertToParamMap({}) } };
     TestBed.configureTestingModule({
       imports: [NotificationsPage],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: route },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('initializes the channel filter from the providers logs link', () => {
+    route.snapshot.queryParamMap = convertToParamMap({ channel: 'SMS' });
+    const fixture = TestBed.createComponent(NotificationsPage);
+    fixture.detectChanges();
+    http
+      .expectOne((request) => request.params.get('channel') === 'SMS')
+      .flush({ content: [], totalElements: 0, page: 0, size: 20 });
+    expect(fixture.componentInstance.filters.channel).toBe('SMS');
+  });
   it('loads real totals, applies filters and resets pagination', () => {
     const fixture = TestBed.createComponent(NotificationsPage);
     fixture.detectChanges();

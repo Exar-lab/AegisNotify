@@ -3,7 +3,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { NotificationPage } from '../../../core/models/notification-list.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
@@ -28,9 +28,17 @@ const defaults = {
 })
 export class NotificationsPage {
   private readonly api = inject(NotificationsApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly initialChannel = this.route.snapshot.queryParamMap.get('channel') ?? '';
+  private readonly initialQuery = {
+    ...defaults,
+    channel: ['EMAIL', 'SMS', 'WHATSAPP', 'PUSH'].includes(this.initialChannel)
+      ? this.initialChannel
+      : '',
+  };
   private readonly requests = new Subject<typeof defaults>();
-  readonly filters = { search: '', channel: '', priority: '', status: '' };
-  readonly query = signal({ ...defaults });
+  readonly filters = { search: '', channel: this.initialQuery.channel, priority: '', status: '' };
+  readonly query = signal({ ...this.initialQuery });
   readonly channels = ['EMAIL', 'SMS', 'WHATSAPP', 'PUSH'];
   readonly priorities = ['HIGH', 'MEDIUM', 'LOW'];
   readonly statuses = [
@@ -45,7 +53,7 @@ export class NotificationsPage {
   ];
   readonly state = toSignal(
     this.requests.pipe(
-      startWith(defaults),
+      startWith(this.initialQuery),
       switchMap((query) =>
         this.api.list(query).pipe(
           map((data): ListState => ({ kind: 'ready', data })),
