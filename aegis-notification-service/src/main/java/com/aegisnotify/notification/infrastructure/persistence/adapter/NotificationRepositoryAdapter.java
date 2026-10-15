@@ -1,6 +1,8 @@
 package com.aegisnotify.notification.infrastructure.persistence.adapter;
 
 import com.aegisnotify.notification.application.dto.DashboardAggregate;
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
@@ -8,6 +10,7 @@ import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.infrastructure.persistence.mapper.NotificationPersistenceMapper;
 import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationDashboardCountsProjection;
 import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationLatencyProjection;
+import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationSpecifications;
 import com.aegisnotify.notification.infrastructure.persistence.repository.SpringDataNotificationRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -15,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -28,6 +32,19 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
       NotificationPersistenceMapper mapper) {
     this.springDataRepository = springDataRepository;
     this.mapper = mapper;
+  }
+
+  @Override
+  public NotificationPage<Notification> searchPage(
+      NotificationListQuery query) {
+    var sort = Sort.by(
+        Sort.Direction.DESC, "createdAt", "id");
+    var result = springDataRepository.findAll(
+        NotificationSpecifications.matching(query),
+        PageRequest.of(query.page(), query.size(), sort));
+    return new NotificationPage<>(
+        result.getContent().stream().map(mapper::toDomain).toList(),
+        result.getTotalElements(), query.page(), query.size());
   }
 
   @Override

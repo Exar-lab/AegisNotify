@@ -5,6 +5,7 @@ import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.TemplateRenderRequest;
 import com.aegisnotify.notification.application.port.out.AuditEventPublisherPort;
+import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.TemplateRenderer;
@@ -43,17 +44,20 @@ public class NotificationProcessingTransactions {
   private final TemplateRepository templateRepository;
   private final TemplateRenderer templateRenderer;
   private final AuditEventPublisherPort auditEventPublisherPort;
+  private final DeliveryAttemptRepository deliveryAttemptRepository;
 
   public NotificationProcessingTransactions(NotificationRepository notificationRepository,
       NotificationLogRepository notificationLogRepository,
       TemplateRepository templateRepository,
       TemplateRenderer templateRenderer,
-      AuditEventPublisherPort auditEventPublisherPort) {
+      AuditEventPublisherPort auditEventPublisherPort,
+      DeliveryAttemptRepository deliveryAttemptRepository) {
     this.notificationRepository = notificationRepository;
     this.notificationLogRepository = notificationLogRepository;
     this.templateRepository = templateRepository;
     this.templateRenderer = templateRenderer;
     this.auditEventPublisherPort = auditEventPublisherPort;
+    this.deliveryAttemptRepository = deliveryAttemptRepository;
   }
 
   @Transactional
@@ -92,6 +96,17 @@ public class NotificationProcessingTransactions {
 
   @Transactional
   public NotificationResponse applyResult(Notification processing, ProviderResult result) {
+    deliveryAttemptRepository.saveAll(processing.getId(), result.attempts());
+    for (var attempt : result.attempts()) {
+      if (!attempt.success()) {
+        notificationLogRepository.save(NotificationLog.reconstitute(
+            UUID.randomUUID(), processing.getId(),
+            "PRIMARY".equals(attempt.role())
+                ? LogStatus.PROVIDER_A_FAIL : LogStatus.PROVIDER_B_FAIL,
+            attempt.providerName() + " [" + attempt.code() + "]: " + attempt.errorDetail(),
+            attempt.timestamp()));
+      }
+    }
     Notification updated = applyOutcomeAndRecord(processing, result, "");
     return new NotificationResponse(updated.getId(), updated.getStatus());
   }

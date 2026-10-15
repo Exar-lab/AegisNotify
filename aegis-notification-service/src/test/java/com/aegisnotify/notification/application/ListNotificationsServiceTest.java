@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.application.dto.NotificationSummary;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.service.ListNotificationsService;
@@ -30,6 +32,24 @@ class ListNotificationsServiceTest {
 
   @InjectMocks
   private ListNotificationsService service;
+
+  @Test
+  void listPage_preservesTotalsAndProviderWithoutLoadingOtherPages() {
+    var query = new NotificationListQuery(
+        "welcome", null, Channel.EMAIL, Priority.HIGH, null, null, null, 2, 10);
+    Instant now = Instant.now();
+    var notification = Notification.reconstitute(
+        UUID.randomUUID(), Channel.EMAIL, "user@example.com", "welcome", Map.of(),
+        Priority.HIGH, NotificationStatus.SENT, "SendGrid", null, now, now);
+    when(notificationRepository.searchPage(query))
+        .thenReturn(new NotificationPage<>(List.of(notification), 21, 2, 10));
+    var result = service.listPage(query);
+    assertEquals(21, result.totalElements());
+    assertEquals(2, result.page());
+    assertEquals(10, result.size());
+    assertEquals("SendGrid", result.content().getFirst().providerUsed());
+    verify(notificationRepository).searchPage(query);
+  }
 
   @Test
   void list_bothFilters_passesBothToRepositoryAndMapsSummaries() {
