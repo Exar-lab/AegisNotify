@@ -8,6 +8,7 @@ import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.AggregationBufferRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.DeliveryAttemptRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
@@ -89,6 +90,9 @@ class KafkaMessageBrokerAdapterIT {
   // SmokeTest's identical fix.
   @MockitoBean
   private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
+
+  @MockitoBean
+  private DeliveryAttemptRepositoryAdapter deliveryAttemptRepositoryAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;

@@ -1,3 +1,4 @@
+import { notificationTone } from '../../core/models/notification-presentation';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
@@ -7,10 +8,7 @@ import {
   NotificationSummary,
 } from '../../core/models/dashboard.models';
 
-type LoadState<T> =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ready'; data: T };
+type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
 
 interface KpiTile {
   label: string;
@@ -109,19 +107,7 @@ export class DashboardComponent {
   }
 
   statusBadgeClass(status: NotificationStatus): string {
-    switch (status) {
-      case 'SENT':
-        return 'badge-success';
-      case 'SENT_VIA_FALLBACK':
-        return 'badge-fallback';
-      case 'PROCESSING':
-        return 'badge-warning';
-      case 'FAILED_CRITICAL':
-      case 'FAILED':
-        return 'badge-danger';
-      default:
-        return 'badge-neutral';
-    }
+    return `badge-${notificationTone(status)}`;
   }
 
   breakerBadgeClass(state: CircuitBreakerState): string {

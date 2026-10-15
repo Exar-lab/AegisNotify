@@ -11,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aegisnotify.notification.application.dto.CreateNotificationCommand;
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
 import com.aegisnotify.notification.application.dto.NotificationLogEntry;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
 import com.aegisnotify.notification.application.dto.NotificationSummary;
@@ -69,6 +71,39 @@ class NotificationControllerTest {
 
   @MockitoBean
   private NotificationWebMapper mapper;
+
+  @Test
+  void listPage_returnsRealTotalsAndPassesFilters() throws Exception {
+    var query = new NotificationListQuery(
+        "welcome", "user", Channel.EMAIL, Priority.HIGH, NotificationStatus.SENT,
+        Instant.parse("2026-01-01T00:00:00Z"), Instant.parse("2026-02-01T00:00:00Z"), 2, 10);
+    when(listNotificationsUseCase.listPage(query)).thenReturn(
+        new NotificationPage<>(List.of(), 25, 2, 10));
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:read"))
+            .param("search", "welcome").param("recipient", "user")
+            .param("channel", "EMAIL").param("priority", "HIGH").param("status", "SENT")
+            .param("from", "2026-01-01T00:00:00Z").param("to", "2026-02-01T00:00:00Z")
+            .param("page", "2").param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(25))
+        .andExpect(jsonPath("$.page").value(2));
+  }
+
+  @Test
+  void listPage_rejectsInvalidPaginationAndDates() throws Exception {
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:read")).param("page", "-1"))
+        .andExpect(status().isBadRequest());
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:read"))
+            .param("page", "0").param("size", "101"))
+        .andExpect(status().isBadRequest());
+    mockMvc.perform(get("/api/v1/notifications")
+            .with(jwt().authorities(() -> "SCOPE_notification:read"))
+            .param("from", "2026-02-01T00:00:00Z").param("to", "2026-01-01T00:00:00Z"))
+        .andExpect(status().isBadRequest());
+  }
 
   @Test
   void postNotification_validRequest_returns202() throws Exception {

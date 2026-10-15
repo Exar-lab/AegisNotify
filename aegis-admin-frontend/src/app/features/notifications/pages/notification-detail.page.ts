@@ -1,3 +1,4 @@
+import { notificationTone, notificationIcon } from '../../../core/models/notification-presentation';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
@@ -6,7 +7,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, startWith, Subject, switchMap } from 'rxjs';
 import {
   chronologicalLogs,
-  LogStatus,
   NotificationDetail,
 } from '../../../core/models/notification-detail.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
@@ -66,44 +66,6 @@ export class NotificationDetailPage {
     return status.replaceAll('_', ' ');
   }
 
-  tone(status: LogStatus): string {
-    switch (status) {
-      case 'SENT':
-        return 'success';
-      case 'SENT_VIA_FALLBACK':
-        return 'fallback';
-      case 'FAILED':
-      case 'FAILED_CRITICAL':
-      case 'PROVIDER_A_FAIL':
-      case 'PROVIDER_B_FAIL':
-        return 'danger';
-      case 'QUEUED':
-      case 'PROCESSING':
-        return 'warning';
-      default:
-        return 'neutral';
-    }
-  }
-
-  icon(status: LogStatus): string {
-    switch (status) {
-      case 'SENT':
-        return '✓';
-      case 'SENT_VIA_FALLBACK':
-        return '↪';
-      case 'FAILED':
-      case 'FAILED_CRITICAL':
-      case 'PROVIDER_A_FAIL':
-      case 'PROVIDER_B_FAIL':
-        return '!';
-      case 'CANCELLED':
-        return '×';
-      case 'PROCESSING':
-        return '↻';
-      case 'QUEUED':
-        return '→';
-      default:
-        return '◷';
-    }
-  }
+  readonly tone = notificationTone;
+  readonly icon = notificationIcon;
 }
