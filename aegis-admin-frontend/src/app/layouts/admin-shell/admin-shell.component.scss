@@ -6,18 +6,103 @@
   background-color: var(--bg-main, #F8FAFC);
 
   .main-wrapper {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     flex: 1;
     min-width: 0;
     height: 100vh;
     overflow: hidden;
+    background-color: var(--bg-main, #F8FAFC);
+
+    /* Everything above the ambient layer paints on top of it. */
+    > app-topbar,
+    > .content-area {
+      position: relative;
+      z-index: 1;
+    }
 
     .content-area {
       flex: 1;
       overflow-y: auto;
       padding: var(--space-24, 24px);
-      background-color: var(--bg-main, #F8FAFC);
+      /* Transparent so the ambient wash shows through behind glass cards. */
+      background-color: transparent;
     }
+  }
+}
+
+/* Ambient backdrop — pinned to .main-wrapper (which never scrolls; only
+   .content-area does), so it stays put while page content scrolls. It is
+   clipped to its own box, adds no scrollable area, and ignores input. */
+.ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+
+  &__blob {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+    animation: ambient-drift-a 32s ease-in-out infinite alternate;
+
+    /* Very soft falloff: the color fades out long before the circle edge,
+       so no hard rim is ever visible. */
+    &--accent {
+      top: -22vmax;
+      right: -14vmax;
+      width: 58vmax;
+      height: 58vmax;
+      background: radial-gradient(circle at center, var(--ambient-accent) 0%, transparent 68%);
+    }
+
+    &--cool {
+      bottom: -26vmax;
+      left: -18vmax;
+      width: 64vmax;
+      height: 64vmax;
+      background: radial-gradient(circle at center, var(--ambient-cool) 0%, transparent 68%);
+      animation-name: ambient-drift-b;
+      animation-duration: 38s;
+    }
+
+    &--accent-soft {
+      top: 30%;
+      left: 38%;
+      width: 40vmax;
+      height: 40vmax;
+      background: radial-gradient(circle at center, var(--ambient-accent-soft) 0%, transparent 70%);
+      animation-name: ambient-drift-c;
+      animation-duration: 27s;
+    }
+  }
+}
+
+@keyframes ambient-drift-a {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-6vmax, 5vmax, 0) scale(1.08); }
+  100% { transform: translate3d(-2vmax, 9vmax, 0) scale(0.96); }
+}
+
+@keyframes ambient-drift-b {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(7vmax, -4vmax, 0) scale(1.06); }
+  100% { transform: translate3d(3vmax, -8vmax, 0) scale(1); }
+}
+
+@keyframes ambient-drift-c {
+  0% { transform: translate3d(0, 0, 0) scale(0.95); }
+  50% { transform: translate3d(-8vmax, -5vmax, 0) scale(1.05); }
+  100% { transform: translate3d(5vmax, -2vmax, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient__blob {
+    animation: none;
+    will-change: auto;
   }
 }

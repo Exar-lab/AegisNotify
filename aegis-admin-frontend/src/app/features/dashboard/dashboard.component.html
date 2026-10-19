@@ -1,30 +1,58 @@
 <div class="dashboard">
-  <section class="kpi-grid">
-    @if (kpis(); as kpiState) {
-      @switch (kpiState.status) {
-        @case ('loading') {
-          @for (i of [1, 2, 3, 4]; track i) {
-            <div class="kpi-card kpi-card--loading"></div>
+  <section class="hero-grid">
+    <div class="hero-card hero-card--donut glass-card" appGlassTilt="3">
+      <span class="kpi-label">Delivery Outcomes</span>
+      @if (deliveryOutcomes(); as outcomesState) {
+        @switch (outcomesState.status) {
+          @case ('loading') {
+            <p class="panel-hint">No delivery data yet.</p>
           }
-        }
-        @case ('error') {
-          <div class="panel-error">Couldn't load dashboard KPIs.</div>
-        }
-        @case ('ready') {
-          @for (tile of kpiState.data; track tile.label) {
-            <div class="kpi-card">
-              <span class="kpi-label">{{ tile.label }}</span>
-              <span class="kpi-value">{{ tile.value }}</span>
+          @case ('error') {
+            <p class="panel-error">Couldn't load delivery outcomes.</p>
+          }
+          @case ('ready') {
+            <div class="chart-container">
+              <canvas #outcomesCanvas></canvas>
+              @if (kpis().status === 'ready' && totalRequestsTile(); as totalTile) {
+                <div class="donut-center">
+                  <span class="donut-center-value">{{ totalTile.value }}</span>
+                  <span class="donut-center-label">requests</span>
+                </div>
+              }
             </div>
           }
         }
       }
-    }
+    </div>
+
+    <div class="hero-kpi-stack">
+      @if (secondaryKpis(); as kpiState) {
+        @switch (kpiState.status) {
+          @case ('loading') {
+            @for (i of [1, 2, 3]; track i) {
+              <div class="kpi-card kpi-card--loading"></div>
+            }
+          }
+          @case ('error') {
+            <div class="panel-error">Couldn't load dashboard KPIs.</div>
+          }
+          @case ('ready') {
+            @for (tile of kpiState.data; track tile.label) {
+              <div class="kpi-card glass-card" appGlassTilt>
+                <span class="kpi-label">{{ tile.label }}</span>
+                <span class="kpi-value">{{ tile.value }}</span>
+              </div>
+            }
+          }
+        }
+      }
+    </div>
   </section>
 
   <section class="panel-grid">
-    <div class="panel">
-      <h2 class="panel-title">Provider Circuit Breakers</h2>
+    <div class="panel panel--resilience glass-card" appGlassTilt="1.5">
+      <h2 class="panel-title">Channel Resilience</h2>
+      <p class="panel-subtitle">Primary → secondary provider path per channel, live</p>
       @if (providers(); as providerState) {
         @switch (providerState.status) {
           @case ('loading') {
@@ -37,23 +65,179 @@
             @if (providerState.data.length === 0) {
               <p class="panel-hint">No circuit breakers reporting.</p>
             } @else {
-              <ul class="provider-list">
+              <div class="resilience-grid">
                 @for (row of providerState.data; track row.key) {
-                  <li class="provider-row">
-                    <span class="provider-label">{{ row.label }}</span>
-                    <span class="badge" [class]="breakerBadgeClass(row.state)">{{ row.state }}</span>
-                  </li>
+                  <article class="resilience-card glass-card" appGlassTilt="4" [class]="breakerCardClass(row.state)">
+                    <header class="resilience-header">
+                      <div class="resilience-channel">
+                        @switch (row.key) {
+                          @case ('email-provider') {
+                            <svg class="channel-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="2" y="4" width="20" height="16" rx="2"/>
+                              <path d="m2 7 10 6 10-6"/>
+                            </svg>
+                          }
+                          @case ('sms-provider') {
+                            <svg class="channel-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                          }
+                          @case ('whatsapp-provider') {
+                            <svg class="channel-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <rect x="5" y="2" width="14" height="20" rx="2"/>
+                              <line x1="12" y1="18" x2="12.01" y2="18"/>
+                            </svg>
+                          }
+                          @case ('push-provider') {
+                            <svg class="channel-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                          }
+                        }
+                        <span>{{ row.label }}</span>
+                      </div>
+                      <span class="badge" [class]="breakerBadgeClass(row.state)">{{ row.state }}</span>
+                    </header>
+
+                    <div class="resilience-flow">
+                      <div class="flow-node flow-node--primary">
+                        <span class="flow-role">Primary</span>
+                        <span class="flow-vendor">{{ vendorFor(row.key) }}</span>
+                      </div>
+                      <div class="flow-connector" [class]="breakerCardClass(row.state)"></div>
+                      <div class="flow-node flow-node--secondary">
+                        <span class="flow-role">Secondary</span>
+                        <span class="flow-vendor">{{ vendorFor(row.key) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="success-bar-track">
+                      <div
+                        class="success-bar-fill"
+                        [class]="breakerCardClass(row.state)"
+                        [style.width.%]="successRate(row)"
+                      ></div>
+                    </div>
+
+                    <div class="resilience-stats">
+                      <div class="stat">
+                        <span class="stat-label">Failure rate</span>
+                        <span class="stat-value" [class.danger]="row.failureRate > 0">{{ row.failureRate.toFixed(1) }}%</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Slow calls</span>
+                        <span class="stat-value" [class.warning]="row.slowCallRate > 0">{{ row.slowCallRate.toFixed(1) }}%</span>
+                      </div>
+                      <div class="stat">
+                        <span class="stat-label">Calls (window)</span>
+                        <span class="stat-value">{{ row.bufferedCalls }}</span>
+                      </div>
+                    </div>
+                  </article>
                 }
-              </ul>
+              </div>
             }
           }
         }
       }
     </div>
 
-    <div class="panel">
+    <div class="panel-side">
+      <div class="panel panel--queues glass-card" appGlassTilt="3">
+        <h2 class="panel-title">Priority Queues</h2>
+        @if (priorityQueues(); as queueState) {
+          @switch (queueState.status) {
+            @case ('loading') {
+              <p class="panel-hint">Loading…</p>
+            }
+            @case ('error') {
+              <p class="panel-error">Couldn't load priority queues.</p>
+            }
+            @case ('ready') {
+              @if (queueState.data.length === 0 || maxPriorityCount() === 0) {
+                <p class="panel-hint">No queued notifications.</p>
+              } @else {
+                <div class="priority-list">
+                  @for (row of queueState.data; track row.priority) {
+                    <div class="priority-row">
+                      <div class="priority-row-header">
+                        <span class="priority-label">{{ row.priority }}</span>
+                        <span class="priority-count">{{ row.count }}</span>
+                      </div>
+                      <div class="priority-bar-track">
+                        <div
+                          class="priority-bar-fill"
+                          [style.width.%]="(row.count / maxPriorityCount()) * 100"
+                        ></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          }
+        }
+      </div>
+
+      <div class="panel panel--critical glass-card" appGlassTilt="2">
+        <h2 class="panel-title">Recent Critical Events</h2>
+        @if (criticalEventsPage(); as criticalState) {
+          @switch (criticalState.status) {
+            @case ('loading') {
+              <p class="panel-hint">Loading…</p>
+            }
+            @case ('error') {
+              <p class="panel-error">Couldn't load critical events.</p>
+            }
+            @case ('ready') {
+              @if (criticalState.data.total === 0) {
+                <p class="panel-hint">No critical events.</p>
+              } @else {
+                <ul class="critical-list">
+                  @for (event of criticalState.data.items; track event.id) {
+                    <li class="critical-item">
+                      <div class="critical-main">
+                        <span class="critical-title">{{ event.channel }} → {{ event.status }}</span>
+                        <span class="critical-meta">{{ maskRecipient(event.recipient) }}</span>
+                      </div>
+                      <span class="critical-time">{{ relativeTime(event.createdAt) }}</span>
+                    </li>
+                  }
+                </ul>
+                <div class="pagination">
+                  <span class="pagination-summary">
+                    {{ criticalState.data.rangeStart }}–{{ criticalState.data.rangeEnd }}
+                    of {{ criticalState.data.total }}
+                  </span>
+                  <div class="pagination-controls">
+                    <button
+                      type="button"
+                      class="pagination-btn"
+                      [disabled]="criticalPageIndex() === 0"
+                      (click)="criticalPageIndex.set(criticalPageIndex() - 1)"
+                    >Prev</button>
+                    <span class="pagination-page">
+                      Page {{ criticalState.data.pageIndex + 1 }} of {{ criticalState.data.pageCount }}
+                    </span>
+                    <button
+                      type="button"
+                      class="pagination-btn"
+                      [disabled]="criticalState.data.pageIndex >= criticalState.data.pageCount - 1"
+                      (click)="criticalPageIndex.set(criticalPageIndex() + 1)"
+                    >Next</button>
+                  </div>
+                </div>
+              }
+            }
+          }
+        }
+      </div>
+    </div>
+
+    <div class="panel panel--table glass-card">
       <h2 class="panel-title">Recent Notifications</h2>
-      @if (recentNotifications(); as notificationsState) {
+      @if (notificationsPage(); as notificationsState) {
         @switch (notificationsState.status) {
           @case ('loading') {
             <p class="panel-hint">Loading…</p>
@@ -62,7 +246,7 @@
             <p class="panel-error">Couldn't load recent notifications.</p>
           }
           @case ('ready') {
-            @if (notificationsState.data.length === 0) {
+            @if (notificationsState.data.total === 0) {
               <p class="panel-hint">No notifications yet.</p>
             } @else {
               <table class="notification-table">
@@ -75,7 +259,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @for (n of notificationsState.data; track n.id) {
+                  @for (n of notificationsState.data.items; track n.id) {
                     <tr>
                       <td>{{ n.channel }}</td>
                       <td>{{ n.priority }}</td>
@@ -85,6 +269,29 @@
                   }
                 </tbody>
               </table>
+              <div class="pagination">
+                <span class="pagination-summary">
+                  {{ notificationsState.data.rangeStart }}–{{ notificationsState.data.rangeEnd }}
+                  of {{ notificationsState.data.total }}
+                </span>
+                <div class="pagination-controls">
+                  <button
+                    type="button"
+                    class="pagination-btn"
+                    [disabled]="notificationsPageIndex() === 0"
+                    (click)="notificationsPageIndex.set(notificationsPageIndex() - 1)"
+                  >Prev</button>
+                  <span class="pagination-page">
+                    Page {{ notificationsState.data.pageIndex + 1 }} of {{ notificationsState.data.pageCount }}
+                  </span>
+                  <button
+                    type="button"
+                    class="pagination-btn"
+                    [disabled]="notificationsState.data.pageIndex >= notificationsState.data.pageCount - 1"
+                    (click)="notificationsPageIndex.set(notificationsPageIndex() + 1)"
+                  >Next</button>
+                </div>
+              </div>
             }
           }
         }

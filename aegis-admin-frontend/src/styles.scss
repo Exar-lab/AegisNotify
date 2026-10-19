@@ -3,8 +3,8 @@
   /* Light Theme (Default) */
   --bg-sidebar: #f8fafc;
   --bg-topbar: #ffffff;
-  --bg-sidebar-active: rgba(244, 9, 76, 0.12);
-  --bg-sidebar-hover: rgba(244, 9, 76, 0.05);
+  --bg-sidebar-hover-surface: rgba(15, 23, 42, 0.04);
+  --bg-sidebar-active-surface: rgba(15, 23, 42, 0.07);
   --color-accent: #f4094c;
   --color-accent-hover: #d1073f;
   --color-accent-subtle: rgba(244, 9, 76, 0.12);
@@ -17,14 +17,14 @@
   --text-sidebar: #475569;
   --text-sidebar-active: #0f172a;
   --status-online: #10B981;
-  --status-offline: #EA580C;
+  --status-offline: #DC2626;
   --status-warning: #D97706;
   --status-warning-bg: rgba(217, 119, 6, 0.12);
-  --status-fallback: #8B5CF6;
-  --status-fallback-bg: rgba(139, 92, 246, 0.12);
+  --status-fallback: #DB2777;
+  --status-fallback-bg: rgba(219, 39, 119, 0.12);
   --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-danger-bg: rgba(234, 88, 12, 0.12);
-  --status-neutral: #64748b;
+  --status-danger-bg: rgba(220, 38, 38, 0.12);
+  --status-neutral: #94a3b8;
   --status-neutral-bg: rgba(100, 116, 139, 0.12);
   --text-inverted: #ffffff;
   --env-badge-bg: rgba(244, 9, 76, 0.12);
@@ -38,38 +38,82 @@
 
   /* Typography */
   --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-family-display: 'Outfit', var(--font-family-base);
+  --font-family-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* Radius Scale */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* Tinted Surface Shadow */
+  --shadow-surface: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 24px -16px rgba(15, 23, 42, 0.18);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms ease;
+
+  /* Glass Depth surfaces (light) */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(226, 232, 240, 0.9);
+  --glass-highlight: rgba(255, 255, 255, 0.85);
+  --glass-blur: 18px;
+  --glow-accent: rgba(244, 9, 76, 0.14);
+  --shadow-glass-hover: 0 2px 4px rgba(15, 23, 42, 0.06), 0 24px 40px -20px rgba(15, 23, 42, 0.28), 0 12px 32px -18px rgba(244, 9, 76, 0.22);
+
+  /* Ambient backdrop wash (light) — kept faint so light surfaces stay clean.
+     Cool tone is indigo: distinct from status green/amber/red/pink. */
+  --ambient-accent: rgba(244, 9, 76, 0.09);
+  --ambient-cool: rgba(99, 102, 241, 0.09);
+  --ambient-accent-soft: rgba(244, 9, 76, 0.05);
 }
 
 [data-theme="dark"] {
   /* Dark Theme */
-  --bg-sidebar: #11151f;
-  --bg-topbar: #181e2b;
-  --bg-sidebar-active: rgba(255, 77, 128, 0.18);
-  --bg-sidebar-hover: rgba(255, 77, 128, 0.07);
+  --bg-sidebar: #0a0e14;
+  --bg-topbar: #0a0e14;
+  --bg-sidebar-hover-surface: rgba(255, 255, 255, 0.05);
+  --bg-sidebar-active-surface: rgba(255, 255, 255, 0.08);
   --color-accent: #f4094c;
   --color-accent-hover: #ff4d80;
   --color-accent-subtle: rgba(244, 9, 76, 0.18);
-  --bg-main: #0b0d14;
-  --bg-surface: #1f2937;
-  --border-color: #374151;
-  --border-sidebar: #1f2330;
+  --bg-main: #0a0e14;
+  --bg-surface: #11151d;
+  --border-color: #1f2430;
+  --border-sidebar: #1a1f29;
   --text-primary: #F8FAFC;
   --text-secondary: #9ca3af;
   --text-sidebar: #94A3B8;
   --text-sidebar-active: #FFFFFF;
-  --status-offline: #FB923C;
+  --status-offline: #F87171;
   --status-warning: #FBBF24;
   --status-warning-bg: rgba(251, 191, 36, 0.16);
-  --status-fallback: #A78BFA;
-  --status-fallback-bg: rgba(167, 139, 250, 0.16);
+  --status-fallback: #F472B6;
+  --status-fallback-bg: rgba(244, 114, 182, 0.16);
   --status-success-bg: rgba(16, 185, 129, 0.16);
-  --status-danger-bg: rgba(251, 146, 60, 0.16);
+  --status-danger-bg: rgba(248, 113, 113, 0.16);
   --status-neutral: #94A3B8;
   --status-neutral-bg: rgba(148, 163, 184, 0.16);
   --text-inverted: #ffffff;
   --env-badge-bg: rgba(244, 9, 76, 0.18);
   --env-badge-border: rgba(244, 9, 76, 0.35);
   --indicator-bg: rgba(255, 255, 255, 0.04);
+
+  /* Tinted Surface Shadow (dark) */
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 32px -16px rgba(0, 0, 0, 0.55);
+
+  /* Glass Depth surfaces (dark) */
+  --glass-bg: rgba(17, 21, 29, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+  --glass-blur: 18px;
+  --glow-accent: rgba(244, 9, 76, 0.2);
+  --shadow-glass-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 28px 44px -20px rgba(0, 0, 0, 0.7), 0 14px 36px -18px rgba(244, 9, 76, 0.3);
+
+  /* Ambient backdrop wash (dark) — more contrast room, so a touch more vivid. */
+  --ambient-accent: rgba(244, 9, 76, 0.15);
+  --ambient-cool: rgba(99, 102, 241, 0.15);
+  --ambient-accent-soft: rgba(244, 9, 76, 0.08);
 }
 
 *,
@@ -89,4 +133,67 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glass Depth surface — layered on top of the card/panel base styles above.
+   Tilt/glow custom properties are driven by GlassTiltDirective; without it
+   (touch, reduced motion, or no directive) they rest at neutral defaults and
+   the card falls back to the plain hover lift. The lift uses the standalone
+   `translate` property so it transitions independently of the spring-driven
+   `transform` tilt. */
+.glass-card {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-surface);
+  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  translate: 0 0;
+  transition:
+    translate var(--transition-base),
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+
+  /* Cursor-following glow overlay. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--glow-x, 50%) var(--glow-y, 50%),
+      var(--glow-accent),
+      transparent 60%
+    );
+    opacity: var(--glow-opacity, 0);
+  }
+
+  &:hover {
+    translate: 0 -2px;
+    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-glass-hover);
+  }
+
+  /* Directive is live: the spring owns `transform`, so CSS must not re-ease it. */
+  &.glass-tilt-active {
+    transition:
+      translate var(--transition-base),
+      box-shadow var(--transition-base),
+      border-color var(--transition-base);
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card {
+    transform: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
 }

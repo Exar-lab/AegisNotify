@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "project": {
+    "name": "AegisNotify",
+    "productType": "admin/ops dashboard (aegis-admin-frontend, Angular 22)",
+    "stack": ["Angular 22", "Tailwind 4 (devDependency, not yet adopted in templates)", "Chart.js", "SCSS with CSS custom properties"]
+  },
+  "sources": {
+    "tokens": ["aegis-admin-frontend/src/styles.scss"],
+    "components": [
+      "aegis-admin-frontend/src/app/features/dashboard/dashboard.component.scss",
+      "aegis-admin-frontend/src/app/layouts/sidebar/sidebar.component.scss"
+    ],
+    "assets": [],
+    "instructions": [
+      "AGENTS.md",
+      "CLAUDE.md"
+    ]
+  },
+  "design": {
+    "colorMode": "dark-first with light theme via [data-theme=\"dark\"] override",
+    "colors": {
+      "accent": "#f4094c",
+      "bgMainDark": "#0a0e14",
+      "bgSurfaceDark": "#11151d",
+      "bgMainLight": "#f1f5f9",
+      "bgSurfaceLight": "#ffffff"
+    },
+    "typography": {
+      "base": "Inter",
+      "display": "Outfit",
+      "mono": "JetBrains Mono"
+    },
+    "spacing": { "scale": "8px grid (--space-8/16/24)" },
+    "radius": { "sm": "8px", "md": "14px", "lg": "20px" },
+    "shadows": { "surface": "tinted dual-layer shadow (--shadow-surface)" },
+    "motion": { "installed": "none (no Framer Motion / motion package yet)", "existing": "CSS transitions only (--transition-fast/base), shimmer keyframe" },
+    "density": "high (KPI grids, dense tables, resilience panels)"
+  },
+  "components": {
+    "installed": [],
+    "preferredPrimitives": [],
+    "patterns": ["kpi-card", "hero-card", "panel", "badge/state-* tint system", "resilience-card flow-node"]
+  },
+  "constraints": {
+    "must": ["keep existing CSS variable tokens as source of truth", "keep sidebar/topbar navigation model", "keep 8px grid and radius scale"],
+    "avoid": ["3D tilt on dense table rows (perf)", "breaking state-* tint semantics used for circuit breaker states"]
+  },
+  "decisions": [
+    {
+      "date": "2026-10-19",
+      "decision": "Full redesign direction: 'Glass Depth' — glassmorphism + cursor-tilt 3D on card surfaces (KPI/hero/panel/resilience cards), glow-on-hover, layered tinted shadows. Sidebar, grid, navigation model, and density stay as-is. Tilt interaction excluded from dense table rows (Notifications list) for perf.",
+      "scope": "all aegis-admin-frontend screens: dashboard, providers, notifications list, notification detail, login, sidebar/topbar",
+      "refs": ["21st: Interactive 3D Analytics Dashboard Card (#7832)", "21st: Glare Cards (#10904)"]
+    }
+  ],
+  "evidence": [
+    {
+      "fact": "project.instructions",
+      "source": "AGENTS.md"
+    },
+    {
+      "fact": "project.instructions",
+      "source": "CLAUDE.md"
+    }
+  ],
+  "generatedAt": "2026-10-19T04:47:32.133Z"
+}
