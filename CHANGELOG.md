@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.16.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.15.0...aegisnotify-v0.16.0) (2026-10-21)
+
+
+### Features
+
+* build Metrics and Settings screens with real backend data ([e92c83d](https://github.com/Exar-lab/AegisNotify/commit/e92c83d1cda353f3660a4032bbcfa978cbeb5633))
+* complete notification detail screen and delivery attempt tracking ([8d2c187](https://github.com/Exar-lab/AegisNotify/commit/8d2c18779e52923cd8152c6f9fd00b286ec8c78e))
+* **frontend:** admin dashboard live data + full screen rollout + 3D brand redesign ([6c48e9e](https://github.com/Exar-lab/AegisNotify/commit/6c48e9e50024004004127ab40ca0ea61e14ca674))
+* **frontend:** apply Glass Depth visual redesign to dashboard ([996c94a](https://github.com/Exar-lab/AegisNotify/commit/996c94ae084591340efd36732d5f7511a8f9c168))
+* **frontend:** extend Glass Depth to Notifications, Detail and Providers ([daf5060](https://github.com/Exar-lab/AegisNotify/commit/daf5060c2ca6e21c8d8c83928e05a97368f6bd45))
+* **frontend:** rebrand to network-node icon, add per-screen 3D hero pieces ([de9a8d2](https://github.com/Exar-lab/AegisNotify/commit/de9a8d2337a20b73e08a1d8ee7cd3a5f41c1c1c0))
+* **frontend:** rebuild design system as light/minimal, add branded Shield hero ([9148f60](https://github.com/Exar-lab/AegisNotify/commit/9148f602408633b20c70b0d256a7eaf44fd4452a))
+* implement initial notification detail screen ([708360f](https://github.com/Exar-lab/AegisNotify/commit/708360f55f82d38510843cecff99262c72c6ea4f))
+* implementar detalle de notificaciones y seguimiento de intentos de entrega ([e7e85a2](https://github.com/Exar-lab/AegisNotify/commit/e7e85a21ea9cfa5411e4718a34b560874bf2ca6d))
+* **notifications:** implement filterable paginated notification list ([2a13135](https://github.com/Exar-lab/AegisNotify/commit/2a13135ec111102c8d75c95c2a1cbfab5623fe36))
+* **providers:** implementar pantalla de salud y circuit breakers ([79973d3](https://github.com/Exar-lab/AegisNotify/commit/79973d382abc25df95cbcdb223125c2cea20a330))
+
+
+### Bug Fixes
+
+* **notification-service:** mock DeliveryAttemptRepositoryAdapter in Kafka ITs ([4b0bfa8](https://github.com/Exar-lab/AegisNotify/commit/4b0bfa853ab5d15f8ca055f312644829294df17f))
+* **notification-service:** mock ProviderCallMetricsAdapter in context smoke test ([d48407b](https://github.com/Exar-lab/AegisNotify/commit/d48407ba6a89c44fd80eeab359f307da1c2c02ae))
+
+
+### Tests
+
+* **notification:** mock ProviderCallMetricsAdapter in Kafka ITs ([03d2724](https://github.com/Exar-lab/AegisNotify/commit/03d2724bd085630ecabe53c943c523f692180f02))
+
+
+### CI/CD
+
+* pin Docker API version for Testcontainers on new runner image ([02d20c7](https://github.com/Exar-lab/AegisNotify/commit/02d20c77ab719ecf1432636537114b5faec12079))
+
 ## [0.15.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.14.0...aegisnotify-v0.15.0) (2026-10-14)
 
 
