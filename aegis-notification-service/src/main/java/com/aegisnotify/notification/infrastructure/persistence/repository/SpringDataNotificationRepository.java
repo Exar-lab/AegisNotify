@@ -6,12 +6,15 @@ import com.aegisnotify.notification.infrastructure.persistence.entity.Notificati
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SpringDataNotificationRepository
-    extends JpaRepository<NotificationJpaEntity, UUID> {
+    extends JpaRepository<NotificationJpaEntity, UUID>,
+    JpaSpecificationExecutor<NotificationJpaEntity> {
 
   List<NotificationJpaEntity> findByStatus(NotificationStatus status);
 
@@ -26,6 +29,42 @@ public interface SpringDataNotificationRepository
   List<NotificationJpaEntity> search(@Param("channel") Channel channel,
       @Param("status") NotificationStatus status);
 
+  @Query("SELECT n FROM NotificationJpaEntity n WHERE "
+      + "(:channel IS NULL OR n.channel = :channel) AND "
+      + "(:status IS NULL OR n.status = :status) "
+      + "ORDER BY n.createdAt DESC")
+  List<NotificationJpaEntity> search(
+      @Param("channel") Channel channel,
+      @Param("status") NotificationStatus status,
+      Pageable pageable);
+
+  @Query("SELECT COUNT(n) AS totalCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.SENT "
+      + "    THEN 1L ELSE 0L END), 0L) AS sentCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.SENT_VIA_FALLBACK "
+      + "    THEN 1L ELSE 0L END), 0L) AS sentViaFallbackCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED "
+      + "    THEN 1L ELSE 0L END), 0L) AS failedCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED_CRITICAL "
+      + "    THEN 1L ELSE 0L END), 0L) AS failedCriticalCount "
+      + "FROM NotificationJpaEntity n WHERE n.createdAt >= :start AND n.createdAt < :end")
+  NotificationDashboardCountsProjection countByStatusBetween(
+      @Param("start") Instant start,
+      @Param("end") Instant end);
+
+  @Query(value = "SELECT COALESCE(AVG("
+      + "EXTRACT(EPOCH FROM (n.updated_at - n.created_at)) * 1000.0), 0.0) "
+      + "FROM notifications n "
+      + "WHERE n.created_at >= :start AND n.created_at < :end "
+      + "AND n.status IN ('SENT', 'SENT_VIA_FALLBACK')", nativeQuery = true)
+  Double findAvgTerminalLatencyBetween(
+      @Param("start") Instant start,
+      @Param("end") Instant end);
+
   @Query("SELECT COUNT(n) AS totalCount, "
       // SQL SUM() over zero matching rows is NULL, not 0 — COALESCE guards
       // against that (an empty/quiet window), since the projection
@@ -36,6 +75,9 @@ public interface SpringDataNotificationRepository
       + "COALESCE(SUM(CASE WHEN n.status = "
       + "    com.aegisnotify.notification.domain.enums.NotificationStatus.SENT_VIA_FALLBACK "
       + "    THEN 1L ELSE 0L END), 0L) AS sentViaFallbackCount, "
+      + "COALESCE(SUM(CASE WHEN n.status = "
+      + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED "
+      + "    THEN 1L ELSE 0L END), 0L) AS failedCount, "
       + "COALESCE(SUM(CASE WHEN n.status = "
       + "    com.aegisnotify.notification.domain.enums.NotificationStatus.FAILED_CRITICAL "
       + "    THEN 1L ELSE 0L END), 0L) AS failedCriticalCount "

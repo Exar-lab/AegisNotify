@@ -11,7 +11,7 @@
 
     <groupId>com.aegisnotify</groupId>
     <artifactId>aegis-parent</artifactId>
-    <version>0.11.0</version>
+    <version>0.15.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>AegisNotify Parent</name>
     <description>Resilient and Smart Notification Orchestrator</description>
@@ -52,6 +52,21 @@
                         <violationSeverity>warning</violationSeverity>
                         <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

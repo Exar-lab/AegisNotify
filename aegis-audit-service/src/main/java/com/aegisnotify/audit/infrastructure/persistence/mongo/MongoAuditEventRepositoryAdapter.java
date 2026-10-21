@@ -109,14 +109,17 @@ public class MongoAuditEventRepositoryAdapter implements AuditEventRepository {
               .is(searchQuery.channel().name()));
     }
 
-    if (searchQuery.from() != null) {
-      query.addCriteria(
-          Criteria.where("createdAt").gte(searchQuery.from()));
-    }
-
-    if (searchQuery.to() != null) {
-      query.addCriteria(
-          Criteria.where("createdAt").lte(searchQuery.to()));
+    if (searchQuery.from() != null || searchQuery.to() != null) {
+      // A single criteria on createdAt: Mongo rejects two separate
+      // criteria for the same key.
+      Criteria createdAt = Criteria.where("createdAt");
+      if (searchQuery.from() != null) {
+        createdAt = createdAt.gte(searchQuery.from());
+      }
+      if (searchQuery.to() != null) {
+        createdAt = createdAt.lte(searchQuery.to());
+      }
+      query.addCriteria(createdAt);
     }
 
     return query;

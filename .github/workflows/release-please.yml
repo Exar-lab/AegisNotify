@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # RELEASE_PLEASE_TOKEN (fine-grained PAT) lets release PRs trigger the required build and
+      # claude-review checks; PRs created with GITHUB_TOKEN never trigger other workflows.
       - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

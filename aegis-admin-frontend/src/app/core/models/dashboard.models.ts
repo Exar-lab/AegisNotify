@@ -1,11 +1,15 @@
-/**
- * Mirrors com.aegisnotify.notification.application.dto.DashboardSummaryResponse.
- */
+export interface MetricDelta {
+  currentValue: number;
+  previousValue: number;
+  deltaPercent?: number | null;
+  deltaPoints?: number | null;
+}
+
 export interface DashboardSummary {
-  totalRequests: number;
-  successRatePercent: number;
-  fallbackActivations: number;
-  avgDeliveryLatencyMillis: number;
+  totalRequests: MetricDelta;
+  successRate: MetricDelta;
+  fallbackActivations: MetricDelta;
+  avgDeliveryLatency: MetricDelta;
 }
 
 export type Channel = 'EMAIL' | 'SMS' | 'WHATSAPP' | 'PUSH';
@@ -20,9 +24,6 @@ export type NotificationStatus =
   | 'FAILED_CRITICAL'
   | 'CANCELLED';
 
-/**
- * Mirrors com.aegisnotify.notification.application.dto.NotificationSummary.
- */
 export interface NotificationSummary {
   id: string;
   channel: Channel;
@@ -39,22 +40,21 @@ export type CircuitBreakerState =
   | 'HALF_OPEN'
   | 'DISABLED'
   | 'FORCED_OPEN'
-  | 'METRICS_ONLY';
+  | 'METRICS_ONLY'
+  | 'NOT_PROTECTED'
+  | 'UNKNOWN';
 
-/**
- * Mirrors Resilience4j's CircuitBreakerDetails, as returned by
- * GET /actuator/circuitbreakers.
- */
-export interface CircuitBreakerDetails {
-  failureRate: string;
-  slowCallRate: string;
-  bufferedCalls: number;
-  failedCalls: number;
-  slowCalls: number;
-  notPermittedCalls: number;
+export interface ProviderCircuitBreakerStatus {
+  key: string;
+  name: string;
+  channel: Channel;
+  role: string;
+  fallbackProvider: string | null;
   state: CircuitBreakerState;
-}
-
-export interface CircuitBreakersResponse {
-  circuitBreakers: Record<string, CircuitBreakerDetails>;
+  failureRate?: number | null;
+  slowCallRate?: number | null;
+  lastStateChange?: string | null;
+  calls24h?: number | null;
+  callsToday?: number | null;
+  successRate?: number | null;
 }

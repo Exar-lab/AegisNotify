@@ -13,6 +13,11 @@ public record NotificationSummary(
     String templateName,
     NotificationStatus status,
     Priority priority,
-    Instant createdAt
+    Instant createdAt,
+    String providerUsed
 ) {
+  public NotificationSummary(UUID id, Channel channel, String recipient, String templateName,
+      NotificationStatus status, Priority priority, Instant createdAt) {
+    this(id, channel, recipient, templateName, status, priority, createdAt, null);
+  }
 }

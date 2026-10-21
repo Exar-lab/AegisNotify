@@ -38,8 +38,8 @@ import org.testcontainers.utility.DockerImageName;
  * 1, task 1.24 — was Docker-blocked in the original apply session).
  *
  * <p>Docker is unreachable in some sandboxes, same pre-existing limitation
- * documented for {@code KafkaMessageBrokerAdapterIntegrationTest}/{@code
- * OutboxWorkerSchedulerIntegrationTest} — this follows the identical
+ * documented for {@code KafkaMessageBrokerAdapterIT}/{@code
+ * OutboxWorkerSchedulerIT} — this follows the identical
  * Testcontainers-Postgres pattern and is expected to pass wherever a real
  * Docker daemon is available.</p>
  *
@@ -54,14 +54,15 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest(classes = NotificationServiceApplication.class)
 @Testcontainers
 @Transactional
-class AggregationBufferRepositoryAdapterIntegrationTest {
+class AggregationBufferRepositoryAdapterIT {
 
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
       DockerImageName.parse("postgres:16-alpine"))
       .withDatabaseName("aegisnotify")
       .withUsername("aegis")
-      .withPassword("aegis");
+      .withPassword("aegis")
+      .withReuse(true);
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {

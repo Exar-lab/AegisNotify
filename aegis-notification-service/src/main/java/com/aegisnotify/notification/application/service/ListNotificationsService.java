@@ -1,5 +1,7 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.application.dto.NotificationSummary;
 import com.aegisnotify.notification.application.port.in.ListNotificationsUseCase;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
@@ -19,8 +21,18 @@ public class ListNotificationsService implements ListNotificationsUseCase {
   }
 
   @Override
-  public List<NotificationSummary> list(Channel channel, NotificationStatus status) {
-    return notificationRepository.search(channel, status).stream()
+  public NotificationPage<NotificationSummary> listPage(
+      NotificationListQuery query) {
+    var result = notificationRepository.searchPage(query);
+    return new NotificationPage<>(
+        result.content().stream().map(this::toSummary).toList(),
+        result.totalElements(), result.page(), result.size());
+  }
+
+  @Override
+  public List<NotificationSummary> list(
+      Channel channel, NotificationStatus status, Integer limit) {
+    return notificationRepository.search(channel, status, limit).stream()
         .map(this::toSummary)
         .toList();
   }
@@ -33,7 +45,8 @@ public class ListNotificationsService implements ListNotificationsUseCase {
         notification.getTemplateName(),
         notification.getStatus(),
         notification.getPriority(),
-        notification.getCreatedAt()
+        notification.getCreatedAt(),
+        notification.getProviderUsed()
     );
   }
 }

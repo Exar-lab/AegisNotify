@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.provider-card {
+  height: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+.provider-card.open {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px #ef44441a;
+}
+.provider-card.degraded {
+  border-color: var(--status-warning);
+  box-shadow: 0 0 16px #f59e0b1a;
+}
+header,
+footer,
+.success-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+header {
+  align-items: flex-start;
+}
+h3 {
+  font-size: 0.9375rem;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.role,
+.state {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: 5px;
+  padding: 4px 7px;
+  background: var(--status-neutral-bg);
+  color: var(--text-secondary);
+}
+.role.fallback {
+  background: var(--status-fallback-bg);
+  color: var(--status-fallback);
+}
+.state {
+  white-space: nowrap;
+}
+.healthy .state {
+  color: var(--status-online);
+  background: var(--status-success-bg);
+}
+.degraded .state {
+  color: var(--status-warning);
+  background: var(--status-warning-bg);
+}
+.open .state {
+  color: #ef4444;
+  background: #ef44441a;
+}
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 24px 0;
+}
+dt,
+.success-label,
+footer {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+dd {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 7px;
+}
+.success-label strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.track {
+  height: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--indicator-bg);
+  margin-top: 10px;
+}
+.track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.track .healthy {
+  background: var(--status-online);
+}
+.track .degraded {
+  background: var(--status-warning);
+}
+.track .open {
+  background: #ef4444;
+}
+footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  margin-top: 20px;
+  align-items: flex-start;
+}
+footer p {
+  line-height: 1.5;
+}
+a {
+  white-space: nowrap;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}

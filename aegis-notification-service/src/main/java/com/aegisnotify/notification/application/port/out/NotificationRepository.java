@@ -1,6 +1,8 @@
 package com.aegisnotify.notification.application.port.out;
 
 import com.aegisnotify.notification.application.dto.DashboardAggregate;
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.model.Notification;
@@ -10,6 +12,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface NotificationRepository {
+
+  NotificationPage<Notification> searchPage(
+      NotificationListQuery query);
 
   Notification save(Notification notification);
 
@@ -43,6 +48,8 @@ public interface NotificationRepository {
    */
   List<Notification> search(Channel channel, NotificationStatus status);
 
+  List<Notification> search(Channel channel, NotificationStatus status, Integer limit);
+
   /**
    * Aggregates every notification created at or after {@code since} into
    * dashboard KPI counts — total volume, terminal outcomes, and average
@@ -55,4 +62,6 @@ public interface NotificationRepository {
    * @return the aggregated counts for the window
    */
   DashboardAggregate aggregateSince(Instant since);
+
+  DashboardAggregate aggregateBetween(Instant start, Instant end);
 }

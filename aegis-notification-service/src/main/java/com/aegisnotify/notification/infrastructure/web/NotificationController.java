@@ -1,8 +1,8 @@
 package com.aegisnotify.notification.infrastructure.web;
 
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
 import com.aegisnotify.notification.application.dto.NotificationResponse;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
-import com.aegisnotify.notification.application.dto.NotificationSummary;
 import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
@@ -10,11 +10,12 @@ import com.aegisnotify.notification.application.port.in.ListNotificationsUseCase
 import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
+import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.infrastructure.web.dto.CreateNotificationRequest;
 import com.aegisnotify.notification.infrastructure.web.mapper.NotificationWebMapper;
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -89,10 +90,27 @@ public class NotificationController {
   }
 
   @GetMapping
-  public ResponseEntity<List<NotificationSummary>> list(
+  public ResponseEntity<?> listPage(
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String recipient,
       @RequestParam(required = false) Channel channel,
-      @RequestParam(required = false) NotificationStatus status) {
-    var response = listNotificationsUseCase.list(channel, status);
-    return ResponseEntity.ok(response);
+      @RequestParam(required = false) Priority priority,
+      @RequestParam(required = false) NotificationStatus status,
+      @RequestParam(required = false) Instant from,
+      @RequestParam(required = false) Instant to,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "20") Integer limit) {
+    if (page == null && search == null && recipient == null && priority == null
+        && from == null && to == null) {
+      if (limit < 1 || limit > 100) {
+        throw new IllegalArgumentException("Limit must be between 1 and 100");
+      }
+      return ResponseEntity.ok(listNotificationsUseCase.list(channel, status, limit));
+    }
+    var query = new NotificationListQuery(
+        search, recipient, channel, priority, status, from, to, page == null ? 0 : page, size);
+    return ResponseEntity.ok(listNotificationsUseCase.listPage(query));
   }
+
 }

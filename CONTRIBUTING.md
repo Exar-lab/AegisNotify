@@ -180,7 +180,7 @@ Useful narrower commands while iterating:
 ```
 
 Testcontainers-based integration tests require Docker to be running; without it, tests like
-`KafkaNotificationConsumerIntegrationTest` fail with `Could not find a valid Docker environment`
+`KafkaNotificationConsumerIT` fail with `Could not find a valid Docker environment`
 rather than being skipped — start Docker before running the full suite.
 
 ## Pull request checklist

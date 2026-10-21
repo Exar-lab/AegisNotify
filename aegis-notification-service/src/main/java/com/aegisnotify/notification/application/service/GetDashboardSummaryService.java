@@ -2,6 +2,7 @@ package com.aegisnotify.notification.application.service;
 
 import com.aegisnotify.notification.application.dto.DashboardAggregate;
 import com.aegisnotify.notification.application.dto.DashboardSummaryResponse;
+import com.aegisnotify.notification.application.dto.MetricDelta;
 import com.aegisnotify.notification.application.port.in.GetDashboardSummaryUseCase;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import java.time.Clock;
@@ -22,23 +23,78 @@ public class GetDashboardSummaryService implements GetDashboardSummaryUseCase {
 
   @Override
   public DashboardSummaryResponse getSummary(Duration window) {
-    Instant since = clock.instant().minus(window);
-    DashboardAggregate aggregate = notificationRepository.aggregateSince(since);
+    Instant now = clock.instant();
+    Instant currentStart = now.minus(window);
+    Instant previousStart = currentStart.minus(window);
 
-    long successCount = aggregate.sentCount() + aggregate.sentViaFallbackCount();
-    double successRatePercent = aggregate.totalCount() == 0
-        ? 0.0
-        : successCount * 100.0 / aggregate.totalCount();
+    DashboardAggregate current = notificationRepository.aggregateBetween(currentStart, now);
+    DashboardAggregate previous =
+        notificationRepository.aggregateBetween(previousStart, currentStart);
 
-    long avgDeliveryLatencyMillis = aggregate.avgTerminalLatencyMillis() == null
-        ? 0L
-        : Math.round(aggregate.avgTerminalLatencyMillis());
+    double currentTotal = current.totalCount();
+    double previousTotal = previous.totalCount();
+    MetricDelta totalRequests = new MetricDelta(
+        currentTotal,
+        previousTotal,
+        calculateDeltaPercent(currentTotal, previousTotal),
+        null
+    );
+
+    double currentSuccessRate = calculateSuccessRate(current);
+    double previousSuccessRate = calculateSuccessRate(previous);
+    MetricDelta successRate = new MetricDelta(
+        currentSuccessRate,
+        previousSuccessRate,
+        null,
+        currentSuccessRate - previousSuccessRate
+    );
+
+    double currentFallback = current.sentViaFallbackCount();
+    double previousFallback = previous.sentViaFallbackCount();
+    MetricDelta fallbackActivations = new MetricDelta(
+        currentFallback,
+        previousFallback,
+        calculateDeltaPercent(currentFallback, previousFallback),
+        null
+    );
+
+    double currentLatency = current.avgTerminalLatencyMillis() != null
+        ? current.avgTerminalLatencyMillis() : 0.0;
+    double previousLatency = previous.avgTerminalLatencyMillis() != null
+        ? previous.avgTerminalLatencyMillis() : 0.0;
+    MetricDelta avgDeliveryLatency = new MetricDelta(
+        currentLatency,
+        previousLatency,
+        calculateDeltaPercent(currentLatency, previousLatency),
+        null
+    );
 
     return new DashboardSummaryResponse(
-        aggregate.totalCount(),
-        successRatePercent,
-        aggregate.sentViaFallbackCount(),
-        avgDeliveryLatencyMillis
+        totalRequests,
+        successRate,
+        fallbackActivations,
+        avgDeliveryLatency
     );
+  }
+
+  private double calculateSuccessRate(DashboardAggregate aggregate) {
+    long terminalCount = aggregate.sentCount()
+        + aggregate.sentViaFallbackCount()
+        + aggregate.failedCount()
+        + aggregate.failedCriticalCount();
+
+    if (terminalCount == 0) {
+      return 0.0;
+    }
+
+    long successCount = aggregate.sentCount() + aggregate.sentViaFallbackCount();
+    return successCount * 100.0 / terminalCount;
+  }
+
+  private Double calculateDeltaPercent(double current, double previous) {
+    if (previous == 0.0) {
+      return null;
+    }
+    return ((current - previous) / previous) * 100.0;
   }
 }

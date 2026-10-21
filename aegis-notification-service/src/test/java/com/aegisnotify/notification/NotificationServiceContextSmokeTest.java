@@ -4,9 +4,11 @@ import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.AggregationBufferRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.DeliveryAttemptRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.ProviderCallMetricsAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.TemplateRepositoryAdapter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,10 +33,16 @@ class NotificationServiceContextSmokeTest {
   private NotificationLogRepositoryAdapter notificationLogRepositoryAdapter;
 
   @MockitoBean
+  private DeliveryAttemptRepositoryAdapter deliveryAttemptRepositoryAdapter;
+
+  @MockitoBean
   private OutboxEventRepositoryAdapter outboxEventRepositoryAdapter;
 
   @MockitoBean
   private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
+
+  @MockitoBean
+  private ProviderCallMetricsAdapter providerCallMetricsAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;

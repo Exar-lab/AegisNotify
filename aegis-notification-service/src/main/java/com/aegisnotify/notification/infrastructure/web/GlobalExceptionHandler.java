@@ -105,6 +105,12 @@ public class GlobalExceptionHandler {
             "Invalid value for parameter: " + ex.getName()));
   }
 
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ApiErrorResponse> handleInvalidQuery(IllegalArgumentException ex) {
+    return ResponseEntity.badRequest().body(ApiErrorResponse.of(
+        HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage()));
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
     log.error("Unexpected error", ex);

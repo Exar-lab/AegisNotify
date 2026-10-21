@@ -1,6 +1,8 @@
 package com.aegisnotify.notification.infrastructure.persistence.adapter;
 
 import com.aegisnotify.notification.application.dto.DashboardAggregate;
+import com.aegisnotify.notification.application.dto.NotificationListQuery;
+import com.aegisnotify.notification.application.dto.NotificationPage;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
@@ -8,12 +10,15 @@ import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.infrastructure.persistence.mapper.NotificationPersistenceMapper;
 import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationDashboardCountsProjection;
 import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationLatencyProjection;
+import com.aegisnotify.notification.infrastructure.persistence.repository.NotificationSpecifications;
 import com.aegisnotify.notification.infrastructure.persistence.repository.SpringDataNotificationRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,6 +32,19 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
       NotificationPersistenceMapper mapper) {
     this.springDataRepository = springDataRepository;
     this.mapper = mapper;
+  }
+
+  @Override
+  public NotificationPage<Notification> searchPage(
+      NotificationListQuery query) {
+    var sort = Sort.by(
+        Sort.Direction.DESC, "createdAt", "id");
+    var result = springDataRepository.findAll(
+        NotificationSpecifications.matching(query),
+        PageRequest.of(query.page(), query.size(), sort));
+    return new NotificationPage<>(
+        result.getContent().stream().map(mapper::toDomain).toList(),
+        result.getTotalElements(), query.page(), query.size());
   }
 
   @Override
@@ -74,7 +92,13 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
 
   @Override
   public List<Notification> search(Channel channel, NotificationStatus status) {
-    return springDataRepository.search(channel, status).stream()
+    return search(channel, status, 20);
+  }
+
+  @Override
+  public List<Notification> search(Channel channel, NotificationStatus status, Integer limit) {
+    return springDataRepository.search(
+        channel, status, PageRequest.of(0, limit != null ? limit : 20)).stream()
         .map(mapper::toDomain)
         .toList();
   }
@@ -96,6 +120,24 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         counts.getTotalCount(),
         counts.getSentCount(),
         counts.getSentViaFallbackCount(),
+        counts.getFailedCount(),
+        counts.getFailedCriticalCount(),
+        avgTerminalLatencyMillis
+    );
+  }
+
+  @Override
+  public DashboardAggregate aggregateBetween(Instant start, Instant end) {
+    NotificationDashboardCountsProjection counts =
+        springDataRepository.countByStatusBetween(start, end);
+    Double avgTerminalLatencyMillis =
+        springDataRepository.findAvgTerminalLatencyBetween(start, end);
+
+    return new DashboardAggregate(
+        counts.getTotalCount(),
+        counts.getSentCount(),
+        counts.getSentViaFallbackCount(),
+        counts.getFailedCount(),
         counts.getFailedCriticalCount(),
         avgTerminalLatencyMillis
     );
