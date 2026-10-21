@@ -52,9 +52,7 @@ button:focus-visible {
   display: grid;
   gap: 8px;
   padding: 20px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 .stat span {
   color: var(--text-secondary);

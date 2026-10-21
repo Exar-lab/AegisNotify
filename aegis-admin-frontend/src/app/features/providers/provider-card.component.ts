@@ -2,11 +2,12 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProviderCircuitBreakerStatus } from '../../core/models/dashboard.models';
+import { GlassTiltDirective } from '../../shared/directives/glass-tilt.directive';
 
 @Component({
   selector: 'app-provider-card',
   standalone: true,
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, GlassTiltDirective],
   templateUrl: './provider-card.component.html',
   styleUrl: './provider-card.component.scss',
 })

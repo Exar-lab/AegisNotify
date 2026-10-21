@@ -2,20 +2,27 @@
   display: block;
   min-width: 0;
 }
+/* Fill, border, blur and lift come from the global .glass-card rule. Health
+   tint is layered as a background-image ON TOP of the translucent glass fill
+   (never replacing it), so abnormal circuits stay loud while CLOSED stays quiet. */
 .provider-card {
   height: 100%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 20px;
 }
 .provider-card.open {
-  border-color: #ef4444;
-  box-shadow: 0 0 16px #ef44441a;
+  border-color: var(--status-offline);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--status-offline) 18%, transparent),
+    color-mix(in srgb, var(--status-offline) 18%, transparent)
+  );
 }
 .provider-card.degraded {
   border-color: var(--status-warning);
-  box-shadow: 0 0 16px #f59e0b1a;
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--status-warning) 16%, transparent),
+    color-mix(in srgb, var(--status-warning) 16%, transparent)
+  );
 }
 header,
 footer,
@@ -60,8 +67,8 @@ h3 {
   background: var(--status-warning-bg);
 }
 .open .state {
-  color: #ef4444;
-  background: #ef44441a;
+  color: var(--status-offline);
+  background: var(--status-danger-bg);
 }
 dl {
   display: grid;
@@ -104,7 +111,7 @@ dd {
   background: var(--status-warning);
 }
 .track .open {
-  background: #ef4444;
+  background: var(--status-offline);
 }
 footer {
   border-top: 1px solid var(--border-color);

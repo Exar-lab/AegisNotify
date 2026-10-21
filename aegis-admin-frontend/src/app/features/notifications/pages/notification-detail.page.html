@@ -31,7 +31,7 @@
     </header>
 
     <div class="detail-grid">
-      <section class="panel" aria-labelledby="details-title">
+      <section class="panel glass-card" appGlassTilt="3" aria-labelledby="details-title">
         <h2 id="details-title">Notification Details</h2>
         <dl>
           <div>
@@ -71,7 +71,7 @@
         </dl>
       </section>
 
-      <section class="panel" aria-labelledby="timeline-title">
+      <section class="panel glass-card" appGlassTilt="1.5" aria-labelledby="timeline-title">
         <h2 id="timeline-title">
           Delivery Timeline <span class="count">{{ timeline().length }} events</span>
         </h2>
@@ -101,7 +101,7 @@
       </section>
     </div>
 
-    <section class="panel" aria-labelledby="attempts-title">
+    <section class="panel glass-card" aria-labelledby="attempts-title">
       <h2 id="attempts-title">Provider Attempts</h2>
       <p class="hint">
         Each recorded invocation is shown, including primary retries and fallback delivery.

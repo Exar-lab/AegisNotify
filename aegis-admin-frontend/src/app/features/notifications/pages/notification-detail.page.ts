@@ -10,6 +10,7 @@ import {
   NotificationDetail,
 } from '../../../core/models/notification-detail.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
+import { GlassTiltDirective } from '../../../shared/directives/glass-tilt.directive';
 
 type DetailState =
   | { kind: 'loading' }
@@ -19,7 +20,7 @@ type DetailState =
 @Component({
   selector: 'app-notification-detail-page',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, GlassTiltDirective],
   templateUrl: './notification-detail.page.html',
   styleUrl: './notification-detail.page.scss',
 })

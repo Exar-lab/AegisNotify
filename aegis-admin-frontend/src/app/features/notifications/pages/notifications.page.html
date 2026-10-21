@@ -3,7 +3,7 @@
     <h1>Notifications</h1>
     <p>Search, filter, and audit every notification sent</p>
   </header>
-  <form class="filters" (ngSubmit)="apply()">
+  <form class="filters glass-card" (ngSubmit)="apply()">
     <label class="search"
       >Search<input
         name="search"
@@ -43,19 +43,24 @@
   @if (dateError()) {
     <p role="alert">The start date must be on or before the end date.</p>
   }
-  <section class="panel" aria-label="Notifications" [attr.aria-busy]="state().kind === 'loading'">
-    @switch (state().kind) {
-      @case ('loading') {
+  @switch (state().kind) {
+    @case ('loading') {
+      <!-- Plain surface: a glass fill would hide the loading state (same as Dashboard skeleton). -->
+      <section class="panel" aria-label="Notifications" aria-busy="true">
         <div class="message" role="status">Loading notifications…</div>
-      }
-      @case ('error') {
+      </section>
+    }
+    @case ('error') {
+      <section class="panel glass-card" appGlassTilt="2.5" aria-label="Notifications">
         <div class="message" role="alert">
           <h2>Couldn't load notifications</h2>
           <p>Please try again.</p>
           <button (click)="load()">Retry</button>
         </div>
-      }
-      @case ('ready') {
+      </section>
+    }
+    @case ('ready') {
+      <section class="panel glass-card" aria-label="Notifications">
         @if (result(); as data) {
           <div class="table-header">
             <h2>All notifications</h2>
@@ -152,7 +157,7 @@
             </nav>
           </footer>
         }
-      }
+      </section>
     }
-  </section>
+  }
 </div>

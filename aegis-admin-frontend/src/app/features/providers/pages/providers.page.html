@@ -37,19 +37,19 @@
   }
   @if (state().providers !== null) {
     <div class="summary" aria-label="Provider health summary">
-      <article class="stat healthy">
+      <article class="stat glass-card healthy">
         <span>Healthy circuits</span><strong>{{ summary().healthy }}</strong
         ><small>CLOSED</small>
       </article>
-      <article class="stat degraded">
+      <article class="stat glass-card degraded">
         <span>Degraded circuits</span><strong>{{ summary().degraded }}</strong
         ><small>HALF_OPEN</small>
       </article>
-      <article class="stat open">
+      <article class="stat glass-card open">
         <span>Open circuits</span><strong>{{ summary().open }}</strong
         ><small>OPEN / FORCED_OPEN</small>
       </article>
-      <article class="stat">
+      <article class="stat glass-card">
         <span>Total calls today</span><strong>{{ summary().calls | number }}</strong
         ><small>Since 00:00 UTC · includes retries</small>
       </article>

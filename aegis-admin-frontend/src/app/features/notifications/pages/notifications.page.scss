@@ -19,6 +19,8 @@ header p {
   flex-wrap: wrap;
   gap: 12px;
   align-items: end;
+  padding: var(--space-16, 16px) var(--space-24, 24px);
+  border-radius: var(--radius-lg, 12px);
 }
 label {
   display: grid;
@@ -74,10 +76,14 @@ a:focus-visible {
 }
 .panel {
   min-width: 0;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--bg-surface);
+  border-radius: var(--radius-lg, 12px);
   overflow: hidden;
+
+  /* Glass panels get fill/border from the global .glass-card rule. */
+  &:not(.glass-card) {
+    border: 1px solid var(--border-color);
+    background: var(--bg-surface);
+  }
 }
 .table-header,
 footer {
