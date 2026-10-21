@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { NotificationPage } from '../../../core/models/notification-list.models';
-import { GlassTiltDirective } from '../../../shared/directives/glass-tilt.directive';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
 
 type ListState = { kind: 'loading' | 'error' } | { kind: 'ready'; data: NotificationPage };
@@ -23,7 +22,7 @@ const defaults = {
 @Component({
   selector: 'app-notifications-page',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, GlassTiltDirective],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink],
   templateUrl: './notifications.page.html',
   styleUrl: './notifications.page.scss',
 })

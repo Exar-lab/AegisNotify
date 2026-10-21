@@ -2,37 +2,28 @@
   display: block;
 }
 .settings-page {
-  padding: 24px;
   display: grid;
-  gap: 24px;
+  gap: 32px;
 }
 header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 24px;
   flex-wrap: wrap;
-}
-h1 {
-  font-size: 1.75rem;
-}
-header p {
-  margin-top: 8px;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
 }
 .create {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   align-items: end;
-  padding: var(--space-16, 16px) var(--space-24, 24px);
-  border-radius: var(--radius-lg, 12px);
+  padding: 24px 28px;
 }
 label {
   display: grid;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: var(--text-secondary);
   flex: 1;
   min-width: 160px;
@@ -40,7 +31,7 @@ label {
 input,
 button {
   font: inherit;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   border: 1px solid var(--border-color);
 }
@@ -48,16 +39,36 @@ input {
   background: var(--bg-surface);
   color: var(--text-primary);
   min-width: 0;
+  font-size: 0.875rem;
+  transition: border-color var(--transition-fast);
+}
+input:hover {
+  border-color: var(--text-secondary);
 }
 button {
   background: var(--color-accent);
+  border-color: var(--color-accent);
   color: var(--text-inverted);
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+button:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
 }
 button.secondary {
   background: var(--bg-surface);
+  border-color: var(--border-color);
   color: var(--text-primary);
+  font-weight: 500;
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--bg-surface);
+  border-color: var(--text-secondary);
 }
 button:disabled {
   opacity: 0.45;
@@ -72,21 +83,15 @@ button:focus-visible {
   flex-basis: 100%;
   margin: 0;
   color: var(--status-offline);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 .panel {
   min-width: 0;
-  border-radius: var(--radius-lg, 12px);
   overflow: hidden;
-
-  &:not(.glass-card) {
-    border: 1px solid var(--border-color);
-    background: var(--bg-surface);
-  }
 }
 .table-header,
 footer {
-  padding: 20px;
+  padding: 24px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -94,12 +99,17 @@ footer {
   flex-wrap: wrap;
 }
 h2 {
-  font-size: 1rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 .table-header span,
 footer {
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+}
+footer {
+  border-top: 1px solid var(--border-color);
 }
 .table-scroll {
   overflow-x: auto;
@@ -108,25 +118,33 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 th,
 td {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+}
+th:first-child,
+td:first-child {
+  padding-left: 28px;
+}
+th:last-child,
+td:last-child {
+  padding-right: 28px;
 }
 th {
   color: var(--text-secondary);
-  text-transform: uppercase;
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
+  font-size: 0.8125rem;
+  font-weight: 500;
   white-space: nowrap;
 }
 td {
   vertical-align: middle;
 }
 .identifier {
-  font-family: monospace;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
 }
 .wrap {
   max-width: 260px;
@@ -144,9 +162,9 @@ time {
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -164,7 +182,7 @@ nav {
   gap: 12px;
 }
 .message {
-  padding: 64px 24px;
+  padding: 72px 24px;
   display: grid;
   justify-items: center;
   gap: 16px;
@@ -178,8 +196,8 @@ nav {
   clip-path: inset(50%);
 }
 @media (max-width: 600px) {
-  .settings-page {
-    padding: 16px;
+  .create {
+    padding: 20px 16px;
   }
   footer,
   nav {

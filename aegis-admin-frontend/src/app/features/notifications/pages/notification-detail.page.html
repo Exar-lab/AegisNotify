@@ -1,4 +1,4 @@
-<main class="detail-page" [attr.aria-busy]="state().kind === 'loading'">
+<main class="detail-page page" [attr.aria-busy]="state().kind === 'loading'">
   <nav aria-label="Breadcrumb" class="breadcrumb">
     <a routerLink="/notifications" aria-label="Back to Notifications">Notifications</a>
     <span aria-hidden="true">/</span>
@@ -20,19 +20,46 @@
       <button type="button" (click)="retry()">Try again</button>
     </section>
   } @else if (notification(); as item) {
-    <header class="page-header">
-      <div>
-        <h1>Notification Detail</h1>
-        <p>Delivery status and audit trail</p>
+    <section class="hero" data-shield-anchor aria-labelledby="hero-title">
+      <div class="hero-art">
+        <app-channel-shield
+          [channel]="item.channel"
+          [priority]="item.priority"
+          [stage]="shieldStage()"
+        />
       </div>
-      <span class="badge large" [attr.data-tone]="tone(item.status)">
-        <span aria-hidden="true">{{ icon(item.status) }}</span> {{ label(item.status) }}
-      </span>
-    </header>
+      <div class="hero-copy">
+        <header class="page-header">
+          <h1 id="hero-title" class="page-title">Notification detail</h1>
+          <p class="page-lede">Delivery status and audit trail.</p>
+        </header>
+        <div class="readout" aria-live="polite">
+          <span class="readout-context">{{ activeEntry() ? 'Inspecting step' : 'Current status' }}</span>
+          <span class="badge large" [attr.data-tone]="tone(shieldStage())">
+            <span aria-hidden="true">{{ icon(shieldStage()) }}</span> {{ label(shieldStage()) }}
+          </span>
+          @if (activeEntry(); as entry) {
+            <time [attr.datetime]="entry.timestamp">{{ entry.timestamp | date: 'medium' }}</time>
+            @if (entry.details) {
+              <p class="readout-copy">{{ entry.details }}</p>
+            }
+          } @else {
+            <p class="readout-copy">
+              Hover or select a step in the delivery timeline to move the shield to that stage.
+            </p>
+          }
+          <dl class="mini">
+            <div><dt>Channel</dt><dd>{{ item.channel }}</dd></div>
+            <div><dt>Priority</dt><dd>{{ item.priority }}</dd></div>
+            <div><dt>Attempts</dt><dd>{{ attempts().length }}</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
 
     <div class="detail-grid">
-      <section class="panel glass-card" appGlassTilt="3" aria-labelledby="details-title">
-        <h2 id="details-title">Notification Details</h2>
+      <section class="panel" aria-labelledby="details-title">
+        <h2 id="details-title">Notification details</h2>
         <dl>
           <div>
             <dt>Recipient</dt>
@@ -71,13 +98,26 @@
         </dl>
       </section>
 
-      <section class="panel glass-card" appGlassTilt="1.5" aria-labelledby="timeline-title">
+      <section class="panel" aria-labelledby="timeline-title">
         <h2 id="timeline-title">
-          Delivery Timeline <span class="count">{{ timeline().length }} events</span>
+          Delivery timeline <span class="count">{{ timeline().length }} events</span>
         </h2>
         <ol class="timeline">
           @for (entry of timeline(); track $index) {
-            <li>
+            <li
+              class="inspectable"
+              tabindex="0"
+              role="button"
+              [attr.aria-pressed]="pinnedIndex() === $index"
+              [class.is-active]="activeIndex() === $index"
+              (mouseenter)="inspect($index)"
+              (mouseleave)="inspect(null)"
+              (focus)="inspect($index)"
+              (blur)="inspect(null)"
+              (click)="togglePin($index)"
+              (keydown.enter)="togglePin($index)"
+              (keydown.space)="togglePin($index); $event.preventDefault()"
+            >
               <span
                 class="step-icon badge"
                 [attr.data-tone]="tone(entry.status)"
@@ -101,8 +141,8 @@
       </section>
     </div>
 
-    <section class="panel glass-card" aria-labelledby="attempts-title">
-      <h2 id="attempts-title">Provider Attempts</h2>
+    <section class="panel" aria-labelledby="attempts-title">
+      <h2 id="attempts-title">Provider attempts</h2>
       <p class="hint">
         Each recorded invocation is shown, including primary retries and fallback delivery.
         CIRCUIT_OPEN means the provider call was blocked before an HTTP request was sent.

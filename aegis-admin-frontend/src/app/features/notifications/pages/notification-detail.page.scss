@@ -1,20 +1,23 @@
 :host {
   display: block;
+  /* Lets the hero's art break out to the full content width (cqw) without touching the shell. */
+  container-type: inline-size;
+  overflow-x: clip;
 }
 .result-code {
   margin-left: 8px;
-  font-family: monospace;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
 }
 .detail-page {
-  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 }
 .breadcrumb {
   display: flex;
   gap: 12px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
 }
 .breadcrumb a,
@@ -25,34 +28,20 @@
 .breadcrumb [aria-current='page'] {
   min-width: 0;
   overflow-wrap: anywhere;
+  color: var(--text-primary);
 }
 a {
-  color: var(--color-accent);
+  color: var(--color-accent-ink);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 4px;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-.page-header p {
-  margin-top: 8px;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
 }
 .detail-grid {
   display: grid;
@@ -61,25 +50,21 @@ h1 {
 }
 .panel {
   min-width: 0;
-  padding: var(--space-24, 24px);
-  border-radius: var(--radius-md, 12px);
-
-  /* Plain surfaces (loading/error/empty). Glass panels get fill/border from the
-     global .glass-card rule in styles.scss. */
-  &:not(.glass-card) {
-    border: 1px solid var(--border-color);
-    background: var(--bg-surface);
-  }
+  padding: 28px;
 }
 h2 {
-  font-size: 1rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   margin-bottom: 24px;
 }
 .count {
   margin-left: 8px;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-family: var(--font-family-base);
+  font-size: 0.8125rem;
   font-weight: 400;
+  letter-spacing: 0;
 }
 dl {
   display: grid;
@@ -89,7 +74,7 @@ dl > div {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
   gap: 16px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 dt,
 .hint,
@@ -101,10 +86,11 @@ dd,
   overflow-wrap: anywhere;
 }
 .identifier {
-  font-family: monospace;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
 }
 .hint {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.6;
 }
 dl + .hint {
@@ -115,12 +101,12 @@ dl + .hint {
   align-items: center;
   gap: 8px;
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.6875rem;
+  padding: 3px 10px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 .large {
-  padding: 10px 16px;
+  padding: 8px 16px;
   font-size: 0.875rem;
 }
 [data-tone='success'] {
@@ -161,7 +147,7 @@ dl + .hint {
   left: 15px;
   top: 32px;
   bottom: 0;
-  width: 2px;
+  width: 1px;
   background: var(--border-color);
 }
 .step-icon {
@@ -177,15 +163,17 @@ dl + .hint {
   padding-top: 2px;
 }
 h3 {
-  font-size: 0.8125rem;
-  margin-bottom: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
 }
 time {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 .step-content p {
   margin-top: 8px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -197,13 +185,12 @@ table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 th {
   color: var(--text-secondary);
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 th,
 td {
@@ -214,6 +201,9 @@ td {
 th:first-child,
 td:first-child {
   padding-left: 0;
+}
+tbody tr:last-child td {
+  border-bottom: 0;
 }
 td {
   min-width: 90px;
@@ -226,7 +216,7 @@ td {
 .dlq-notice {
   margin-top: 20px;
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--status-danger-bg);
   color: var(--status-offline);
   font-size: 0.875rem;
@@ -236,6 +226,11 @@ td {
   justify-items: start;
   gap: 16px;
 }
+.empty-state h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
 .empty-state p {
   color: var(--text-secondary);
 }
@@ -243,10 +238,15 @@ button {
   background: var(--color-accent);
   color: var(--text-inverted);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 16px;
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+button:hover {
+  background: var(--color-accent-hover);
 }
 .sr-only {
   position: absolute;
@@ -255,18 +255,136 @@ button {
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+/* Hero: the shield is painted straight onto the page (transparent WebGL canvas that bleeds past the page
+   frame), with the editorial copy in the remaining space. No panel, no border, no tint. */
+.detail-page {
+  --bleed: clamp(16px, 4vw, 56px);
+}
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  min-height: clamp(500px, calc(100vh - 380px), 800px);
+  /* Wider than the 1280px page frame on large screens, so the shield has room to dominate. */
+  align-self: center;
+  margin-bottom: 20px;
+  width: min(calc(100cqw - 2 * var(--bleed)), 1560px);
+}
+.hero-art {
+  --shield-x: 0.27;
+  position: absolute;
+  top: -24px;
+  right: calc(50% - 50cqw);
+  bottom: -56px;
+  left: calc(50% - 50cqw);
+  pointer-events: none;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  display: grid;
+  gap: clamp(28px, 5vh, 56px);
+  min-width: 0;
+}
+.readout {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  min-width: 0;
+  max-width: 44ch;
+}
+.readout-context {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.readout .large {
+  padding: 10px 18px;
+  font-size: 1.0625rem;
+}
+.readout-copy {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+dl.mini {
+  grid-auto-flow: column;
+  gap: 40px;
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+  width: 100%;
+}
+dl.mini > div {
+  display: block;
+}
+dl.mini dd {
+  margin-top: 6px;
+  font-family: var(--font-family-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.timeline li.inspectable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 -8px;
+  padding: 4px 8px 28px;
+  transition: background-color var(--transition-fast);
+  &:last-child {
+    padding-bottom: 4px;
+  }
+  &:hover,
+  &.is-active {
+    background: var(--indicator-bg);
+  }
+  &.is-active {
+    box-shadow: inset 2px 0 0 var(--color-accent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  &:not(:last-child)::before {
+    left: 23px;
+    top: 38px;
+  }
+}
 @media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    gap: 8px;
+  }
+  .hero-art {
+    --shield-x: 0.5;
+    position: relative;
+    inset: auto;
+    height: clamp(380px, 62vw, 520px);
+    margin-inline: calc(-1 * var(--bleed));
+  }
+  .hero-copy {
+    grid-column: 1;
+  }
+  .readout {
+    max-width: none;
+  }
   .detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 480px) {
-  .detail-page,
   .panel {
-    padding: 16px;
+    padding: 20px 16px;
   }
   dl > div {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+  dl.mini {
+    gap: 24px;
   }
 }

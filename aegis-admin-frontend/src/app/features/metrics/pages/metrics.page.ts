@@ -3,7 +3,6 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MetricsChannel, MetricsSummary } from '../../../core/models/metrics.models';
 import { MetricsApiService } from '../../../core/services/metrics-api.service';
-import { GlassTiltDirective } from '../../../shared/directives/glass-tilt.directive';
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
 
@@ -28,7 +27,7 @@ export function formatSeconds(seconds: number): string {
 @Component({
   selector: 'app-metrics-page',
   standalone: true,
-  imports: [DecimalPipe, GlassTiltDirective],
+  imports: [DecimalPipe],
   templateUrl: './metrics.page.html',
   styleUrl: './metrics.page.scss',
 })

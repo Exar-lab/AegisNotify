@@ -1,35 +1,45 @@
-/* Design Tokens & CSS Variables */
+/* Design Tokens & CSS Variables
+   One light-first system. The dark block below is derived from it, not designed separately. */
 :root {
-  /* Light Theme (Default) */
-  --bg-sidebar: #f8fafc;
-  --bg-topbar: #ffffff;
-  --bg-sidebar-hover-surface: rgba(15, 23, 42, 0.04);
-  --bg-sidebar-active-surface: rgba(15, 23, 42, 0.07);
+  /* Surfaces: near-white page, one step off-white for sidebar/topbar, separated by hairlines. */
+  --bg-main: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #fafaf9;
+  --bg-topbar: #fafaf9;
+  --bg-sidebar-hover-surface: rgba(21, 22, 26, 0.04);
+  --bg-sidebar-active-surface: rgba(244, 9, 76, 0.06);
+
+  /* Single accent. `-ink` is the same hue darkened so small accent text clears 4.5:1 on white. */
   --color-accent: #f4094c;
   --color-accent-hover: #d1073f;
-  --color-accent-subtle: rgba(244, 9, 76, 0.12);
-  --bg-main: #f1f5f9;
-  --bg-surface: #ffffff;
-  --border-color: #e2e8f0;
-  --border-sidebar: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-sidebar: #475569;
-  --text-sidebar-active: #0f172a;
-  --status-online: #10B981;
-  --status-offline: #DC2626;
-  --status-warning: #D97706;
-  --status-warning-bg: rgba(217, 119, 6, 0.12);
-  --status-fallback: #DB2777;
-  --status-fallback-bg: rgba(219, 39, 119, 0.12);
-  --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-danger-bg: rgba(220, 38, 38, 0.12);
-  --status-neutral: #94a3b8;
-  --status-neutral-bg: rgba(100, 116, 139, 0.12);
+  --color-accent-ink: #d1073f;
+  --color-accent-subtle: rgba(244, 9, 76, 0.07);
+
+  --border-color: #e8e6e2;
+  --border-sidebar: var(--border-color);
+
+  --text-primary: #15161a;
+  --text-secondary: #6b7076;
+  --text-sidebar: #6b7076;
+  --text-sidebar-active: #15161a;
   --text-inverted: #ffffff;
-  --env-badge-bg: rgba(244, 9, 76, 0.12);
-  --env-badge-border: rgba(244, 9, 76, 0.3);
-  --indicator-bg: rgba(0, 0, 0, 0.04);
+
+  /* Status hues tuned for white: each text colour is >= 4.5:1 on white and on its own 10% tint. */
+  --status-online: #047857;
+  --status-online-bg: rgba(4, 120, 87, 0.1);
+  --status-success-bg: var(--status-online-bg);
+  --status-offline: #b42318;
+  --status-danger-bg: rgba(180, 35, 24, 0.1);
+  --status-warning: #a04d06;
+  --status-warning-bg: rgba(160, 77, 6, 0.1);
+  --status-fallback: #be185d;
+  --status-fallback-bg: rgba(190, 24, 93, 0.1);
+  --status-neutral: #5b6168;
+  --status-neutral-bg: rgba(91, 97, 104, 0.1);
+
+  --env-badge-bg: rgba(244, 9, 76, 0.06);
+  --env-badge-border: rgba(244, 9, 76, 0.2);
+  --indicator-bg: rgba(21, 22, 26, 0.04);
 
   /* 8px Grid Spacing Scale */
   --space-8: 8px;
@@ -37,83 +47,60 @@
   --space-24: 24px;
 
   /* Typography */
-  --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  --font-family-display: 'Outfit', var(--font-family-base);
-  --font-family-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  --font-family-base: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-family-display: 'Outfit Variable', 'Outfit', var(--font-family-base);
+  --font-family-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 
   /* Radius Scale */
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
 
-  /* Tinted Surface Shadow */
-  --shadow-surface: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 24px -16px rgba(15, 23, 42, 0.18);
+  /* One barely-there elevation, plus its marginally deeper hover state. */
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.08);
+  --shadow-surface-hover: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 28px -16px rgba(0, 0, 0, 0.14);
 
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 220ms ease;
-
-  /* Glass Depth surfaces (light) */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(226, 232, 240, 0.9);
-  --glass-highlight: rgba(255, 255, 255, 0.85);
-  --glass-blur: 18px;
-  --glow-accent: rgba(244, 9, 76, 0.14);
-  --shadow-glass-hover: 0 2px 4px rgba(15, 23, 42, 0.06), 0 24px 40px -20px rgba(15, 23, 42, 0.28), 0 12px 32px -18px rgba(244, 9, 76, 0.22);
-
-  /* Ambient backdrop wash (light) — kept faint so light surfaces stay clean.
-     Cool tone is indigo: distinct from status green/amber/red/pink. */
-  --ambient-accent: rgba(244, 9, 76, 0.09);
-  --ambient-cool: rgba(99, 102, 241, 0.09);
-  --ambient-accent-soft: rgba(244, 9, 76, 0.05);
 }
 
-[data-theme="dark"] {
-  /* Dark Theme */
-  --bg-sidebar: #0a0e14;
-  --bg-topbar: #0a0e14;
+[data-theme='dark'] {
+  --bg-main: #0e0f12;
+  --bg-surface: #15161a;
+  --bg-sidebar: #0e0f12;
+  --bg-topbar: #0e0f12;
   --bg-sidebar-hover-surface: rgba(255, 255, 255, 0.05);
-  --bg-sidebar-active-surface: rgba(255, 255, 255, 0.08);
-  --color-accent: #f4094c;
+  --bg-sidebar-active-surface: rgba(244, 9, 76, 0.14);
+
   --color-accent-hover: #ff4d80;
-  --color-accent-subtle: rgba(244, 9, 76, 0.18);
-  --bg-main: #0a0e14;
-  --bg-surface: #11151d;
-  --border-color: #1f2430;
-  --border-sidebar: #1a1f29;
-  --text-primary: #F8FAFC;
-  --text-secondary: #9ca3af;
-  --text-sidebar: #94A3B8;
-  --text-sidebar-active: #FFFFFF;
-  --status-offline: #F87171;
-  --status-warning: #FBBF24;
-  --status-warning-bg: rgba(251, 191, 36, 0.16);
-  --status-fallback: #F472B6;
-  --status-fallback-bg: rgba(244, 114, 182, 0.16);
-  --status-success-bg: rgba(16, 185, 129, 0.16);
-  --status-danger-bg: rgba(248, 113, 113, 0.16);
-  --status-neutral: #94A3B8;
-  --status-neutral-bg: rgba(148, 163, 184, 0.16);
-  --text-inverted: #ffffff;
-  --env-badge-bg: rgba(244, 9, 76, 0.18);
+  --color-accent-ink: #ff5c8a;
+  --color-accent-subtle: rgba(244, 9, 76, 0.16);
+
+  --border-color: #26282e;
+
+  --text-primary: #f2f2f0;
+  --text-secondary: #9a9ea5;
+  --text-sidebar: #9a9ea5;
+  --text-sidebar-active: #f2f2f0;
+
+  --status-online: #34d399;
+  --status-online-bg: rgba(52, 211, 153, 0.14);
+  --status-offline: #f87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.14);
+  --status-warning: #fbbf24;
+  --status-warning-bg: rgba(251, 191, 36, 0.14);
+  --status-fallback: #f472b6;
+  --status-fallback-bg: rgba(244, 114, 182, 0.14);
+  --status-neutral: #9a9ea5;
+  --status-neutral-bg: rgba(154, 158, 165, 0.14);
+
+  --env-badge-bg: rgba(244, 9, 76, 0.14);
   --env-badge-border: rgba(244, 9, 76, 0.35);
-  --indicator-bg: rgba(255, 255, 255, 0.04);
+  --indicator-bg: rgba(255, 255, 255, 0.05);
 
-  /* Tinted Surface Shadow (dark) */
-  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 32px -16px rgba(0, 0, 0, 0.55);
-
-  /* Glass Depth surfaces (dark) */
-  --glass-bg: rgba(17, 21, 29, 0.68);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.06);
-  --glass-blur: 18px;
-  --glow-accent: rgba(244, 9, 76, 0.2);
-  --shadow-glass-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 28px 44px -20px rgba(0, 0, 0, 0.7), 0 14px 36px -18px rgba(244, 9, 76, 0.3);
-
-  /* Ambient backdrop wash (dark) — more contrast room, so a touch more vivid. */
-  --ambient-accent: rgba(244, 9, 76, 0.15);
-  --ambient-cool: rgba(99, 102, 241, 0.15);
-  --ambient-accent-soft: rgba(244, 9, 76, 0.08);
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -16px rgba(0, 0, 0, 0.5);
+  --shadow-surface-hover: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px -16px rgba(0, 0, 0, 0.65);
 }
 
 *,
@@ -135,65 +122,106 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glass Depth surface — layered on top of the card/panel base styles above.
-   Tilt/glow custom properties are driven by GlassTiltDirective; without it
-   (touch, reduced motion, or no directive) they rest at neutral defaults and
-   the card falls back to the plain hover lift. The lift uses the standalone
-   `translate` property so it transitions independently of the spring-driven
-   `transform` tilt. */
-.glass-card {
-  position: relative;
-  isolation: isolate;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
-  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-surface);
-  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+h1,
+h2,
+h3 {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.02em;
+}
+
+/* Page frame: shared padding and measure for every routed screen. */
+.page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 56px) clamp(16px, 4vw, 56px) clamp(40px, 6vw, 88px);
+}
+
+/* Page title: the large, tight display wordmark each screen opens with. */
+.page-title {
+  font-family: var(--font-family-display);
+  font-size: clamp(2.5rem, 5.4vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  color: var(--text-primary);
+}
+
+.page-lede {
+  margin-top: 16px;
+  max-width: 52ch;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* Flat surface: hairline border, one soft shadow, no blur, no translucency.
+   `panel--lift` adds the understated hover lift for small, glanceable cards. */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-surface);
+}
+
+.panel--lift {
   translate: 0 0;
   transition:
     translate var(--transition-base),
-    transform var(--transition-base),
     box-shadow var(--transition-base),
     border-color var(--transition-base);
 
-  /* Cursor-following glow overlay. */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: radial-gradient(
-      circle at var(--glow-x, 50%) var(--glow-y, 50%),
-      var(--glow-accent),
-      transparent 60%
-    );
-    opacity: var(--glow-opacity, 0);
-  }
-
   &:hover {
-    translate: 0 -2px;
-    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-    box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-glass-hover);
-  }
-
-  /* Directive is live: the spring owns `transform`, so CSS must not re-ease it. */
-  &.glass-tilt-active {
-    transition:
-      translate var(--transition-base),
-      box-shadow var(--transition-base),
-      border-color var(--transition-base);
-    will-change: transform;
+    translate: 0 -1px;
+    box-shadow: var(--shadow-surface-hover);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .glass-card {
-    transform: none;
+  .panel--lift {
+    transition: none;
 
     &:hover {
-      transform: none;
+      translate: 0 0;
+    }
+  }
+}
+
+/* Stat strip: a row of figures sharing one surface, divided by hairlines (used with `.panel`). */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+
+  > * {
+    border-left: 1px solid var(--border-color);
+  }
+
+  > :first-child {
+    border-left: 0;
+  }
+
+  @media (max-width: 1000px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :nth-child(odd) {
+      border-left: 0;
+    }
+
+    > :nth-child(n + 3) {
+      border-top: 1px solid var(--border-color);
+    }
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+
+    > * {
+      border-left: 0;
+    }
+
+    > :nth-child(n + 2) {
+      border-top: 1px solid var(--border-color);
     }
   }
 }

@@ -11,7 +11,6 @@ import {
 } from '../../core/models/dashboard.models';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { notificationTone } from '../../core/models/notification-presentation';
-import { GlassTiltDirective } from '../../shared/directives/glass-tilt.directive';
 
 export type LoadState<T> =
   | { status: 'loading' }
@@ -33,7 +32,7 @@ export interface KpiTile {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink, GlassTiltDirective],
+  imports: [RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })

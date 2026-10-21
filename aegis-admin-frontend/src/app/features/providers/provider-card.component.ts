@@ -2,12 +2,11 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProviderCircuitBreakerStatus } from '../../core/models/dashboard.models';
-import { GlassTiltDirective } from '../../shared/directives/glass-tilt.directive';
 
 @Component({
   selector: 'app-provider-card',
   standalone: true,
-  imports: [DecimalPipe, RouterLink, GlassTiltDirective],
+  imports: [DecimalPipe, RouterLink],
   templateUrl: './provider-card.component.html',
   styleUrl: './provider-card.component.scss',
 })
@@ -38,19 +37,19 @@ export class ProviderCardComponent {
   readonly message = computed(() => {
     switch (this.provider().state) {
       case 'OPEN':
-        return 'Circuit open — primary calls are routed to fallback.';
+        return 'Circuit open, primary calls are routed to fallback.';
       case 'FORCED_OPEN':
-        return 'Circuit forced open — calls are blocked.';
+        return 'Circuit forced open. Calls are blocked.';
       case 'HALF_OPEN':
-        return 'Recovery in progress — testing provider availability.';
+        return 'Recovery in progress. Testing provider availability.';
       case 'NOT_PROTECTED':
-        return 'Direct fallback · no circuit breaker configured.';
+        return 'Direct fallback, no circuit breaker configured.';
       case 'UNKNOWN':
         return 'Circuit state unavailable.';
       case 'DISABLED':
         return 'Circuit breaker disabled.';
       case 'METRICS_ONLY':
-        return 'Monitoring only — calls are not blocked.';
+        return 'Monitoring only. Calls are not blocked.';
       default: {
         const changed = this.provider().lastStateChange;
         if (!changed) return 'No state change observed since service startup.';

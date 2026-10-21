@@ -1,9 +1,9 @@
-<div class="notifications-page">
+<div class="notifications-page page">
   <header>
-    <h1>Notifications</h1>
-    <p>Search, filter, and audit every notification sent</p>
+    <h1 class="page-title">Notifications</h1>
+    <p class="page-lede">Search, filter, and audit every notification sent.</p>
   </header>
-  <form class="filters glass-card" (ngSubmit)="apply()">
+  <form class="filters panel" (ngSubmit)="apply()">
     <label class="search"
       >Search<input
         name="search"
@@ -45,13 +45,12 @@
   }
   @switch (state().kind) {
     @case ('loading') {
-      <!-- Plain surface: a glass fill would hide the loading state (same as Dashboard skeleton). -->
       <section class="panel" aria-label="Notifications" aria-busy="true">
         <div class="message" role="status">Loading notifications…</div>
       </section>
     }
     @case ('error') {
-      <section class="panel glass-card" appGlassTilt="2.5" aria-label="Notifications">
+      <section class="panel" aria-label="Notifications">
         <div class="message" role="alert">
           <h2>Couldn't load notifications</h2>
           <p>Please try again.</p>
@@ -60,7 +59,7 @@
       </section>
     }
     @case ('ready') {
-      <section class="panel glass-card" aria-label="Notifications">
+      <section class="panel" aria-label="Notifications">
         @if (result(); as data) {
           <div class="table-header">
             <h2>All notifications</h2>
@@ -96,7 +95,8 @@
                         <a class="identifier" [routerLink]="['/notifications', notification.id]">{{
                           notification.id
                         }}</a
-                        ><small>{{ notification.channel }} · {{ notification.templateName }}</small>
+                        ><small>{{ notification.channel }}</small
+                        ><small>{{ notification.templateName }}</small>
                       </td>
                       <td class="recipient">{{ notification.recipient }}</td>
                       <td>
@@ -120,7 +120,7 @@
                         <a
                           [routerLink]="['/notifications', notification.id]"
                           [attr.aria-label]="'View notification ' + notification.id"
-                          >View →</a
+                          >View</a
                         >
                       </td>
                     </tr>

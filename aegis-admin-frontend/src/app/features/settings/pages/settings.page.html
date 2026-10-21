@@ -1,8 +1,8 @@
-<div class="settings-page">
+<div class="settings-page page">
   <header>
     <div>
-      <h1>Settings</h1>
-      <p>Manage administrator accounts</p>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-lede">Manage administrator accounts.</p>
     </div>
     <button type="button" (click)="toggleCreate()" [attr.aria-expanded]="creating()">
       {{ creating() ? 'Cancel' : 'Create user' }}
@@ -10,7 +10,7 @@
   </header>
 
   @if (creating()) {
-    <form class="create glass-card" [formGroup]="form" (ngSubmit)="submit()" aria-label="Create user">
+    <form class="create panel" [formGroup]="form" (ngSubmit)="submit()" aria-label="Create user">
       <label
         >Username<input formControlName="username" autocomplete="off" maxlength="255"
       /></label>
@@ -35,13 +35,12 @@
 
   @switch (state().kind) {
     @case ('loading') {
-      <!-- Plain surface: a glass fill would hide the loading state. -->
       <section class="panel" aria-label="Users" aria-busy="true">
         <div class="message" role="status">Loading users…</div>
       </section>
     }
     @case ('error') {
-      <section class="panel glass-card" aria-label="Users">
+      <section class="panel" aria-label="Users">
         <div class="message" role="alert">
           <h2>Couldn't load users</h2>
           <p>Please try again.</p>
@@ -50,7 +49,7 @@
       </section>
     }
     @case ('ready') {
-      <section class="panel glass-card" aria-label="Users">
+      <section class="panel" aria-label="Users">
         @if (result(); as data) {
           <div class="table-header">
             <h2>Administrators</h2>

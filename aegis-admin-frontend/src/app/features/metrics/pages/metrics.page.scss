@@ -2,9 +2,8 @@
   display: block;
 }
 .metrics-page {
-  padding: 24px;
   display: grid;
-  gap: 24px;
+  gap: 32px;
 }
 header,
 button {
@@ -14,119 +13,100 @@ button {
 }
 header {
   justify-content: space-between;
-}
-h1 {
-  font-size: 1.5rem;
-  margin-bottom: 6px;
+  align-items: flex-end;
+  gap: 24px;
 }
 h2 {
-  font-size: 1rem;
-  margin-bottom: 14px;
-}
-p {
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
 }
 button {
   background: var(--bg-surface);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
   cursor: pointer;
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
 }
 button:hover {
-  border-color: var(--color-accent);
+  border-color: var(--text-secondary);
 }
 button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-/* Glass surfaces get fill/border/lift from the global .glass-card rule;
-   plain surfaces (loading skeletons) stay un-glassed. */
-.stat,
-.panel {
-  &:not(.glass-card) {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-  }
-}
+/* Surfaces come from the global .panel / .panel--lift rules. */
 .stat {
   display: grid;
   gap: 8px;
-  padding: 20px;
-  border-radius: var(--radius-md);
+  padding: 28px;
   &--loading {
-    min-height: 96px;
+    min-height: 112px;
     align-content: space-between;
   }
 }
 .panel {
-  padding: 20px;
-  border-radius: var(--radius-lg);
+  padding: 28px;
 }
 .label {
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .value {
-  font-size: 1.875rem;
-  line-height: 1.2;
+  font-family: var(--font-family-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
 
 .metric-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px 16px;
   margin: 0;
   dt {
     color: var(--text-secondary);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 4px;
+    font-size: 0.8125rem;
+    margin-bottom: 6px;
   }
   dd {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-family: var(--font-family-display);
+    font-size: 1.875rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Health tint is layered over the glass fill, same scheme as provider cards. */
+/* Health tint sits over the white fill, same scheme as provider cards. */
 .kafka.tone-warning {
   border-color: var(--status-warning);
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--status-warning) 16%, transparent),
-    color-mix(in srgb, var(--status-warning) 16%, transparent)
-  );
+  background-color: color-mix(in srgb, var(--status-warning) 5%, var(--bg-surface));
   .m-failure dd {
     color: var(--status-warning);
   }
 }
 .kafka.tone-danger {
   border-color: var(--status-offline);
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--status-offline) 18%, transparent),
-    color-mix(in srgb, var(--status-offline) 18%, transparent)
-  );
+  background-color: color-mix(in srgb, var(--status-offline) 5%, var(--bg-surface));
   .m-dlq dd {
     color: var(--status-offline);
   }
@@ -135,18 +115,16 @@ button:focus-visible {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   th {
     text-align: left;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--text-secondary);
-    padding: 0 12px 10px 0;
+    padding: 0 12px 12px 0;
   }
   td {
-    padding: 10px 12px 10px 0;
+    padding: 14px 12px 14px 0;
     border-top: 1px solid var(--border-color);
   }
   .num {
@@ -157,11 +135,13 @@ table {
 }
 .empty {
   margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
 }
 
 .notice {
-  padding: 20px;
-  border-radius: 12px;
+  padding: 24px;
+  font-size: 0.9375rem;
 }
 .error {
   display: flex;
@@ -181,9 +161,9 @@ table {
 }
 .skeleton-line,
 .skeleton-row {
-  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--indicator-bg) 50%, var(--bg-surface) 75%);
+  background: linear-gradient(90deg, var(--indicator-bg) 25%, var(--border-color) 50%, var(--indicator-bg) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  animation: shimmer 1.6s ease-in-out infinite;
   border-radius: 6px;
 }
 .skeleton-line--sm {
@@ -191,33 +171,32 @@ table {
   width: 45%;
 }
 .skeleton-line--lg {
-  height: 28px;
+  height: 32px;
   width: 75%;
 }
 .skeleton-row {
-  height: 38px;
+  height: 44px;
 }
 .panel--loading {
   display: grid;
   gap: 8px;
 }
 
-@media (max-width: 1000px) {
-  .stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line,
+  .skeleton-row {
+    animation: none;
   }
+}
+
+@media (max-width: 1000px) {
   .panel-grid {
     grid-template-columns: 1fr;
   }
 }
 @media (max-width: 640px) {
-  .metrics-page {
-    padding: 16px;
-  }
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
   header {
     align-items: flex-start;
+    flex-direction: column;
   }
 }

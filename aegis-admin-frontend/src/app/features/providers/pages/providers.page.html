@@ -1,8 +1,8 @@
-<div class="providers-page">
+<div class="providers-page page">
   <header>
     <div>
-      <h1>Providers</h1>
-      <p>Monitor provider health and circuit breakers across every channel</p>
+      <h1 class="page-title">Providers</h1>
+      <p class="page-lede">Monitor provider health and circuit breakers across every channel.</p>
     </div>
     <button type="button" (click)="refresh()">
       <svg
@@ -36,28 +36,29 @@
     </div>
   }
   @if (state().providers !== null) {
-    <div class="summary" aria-label="Provider health summary">
-      <article class="stat glass-card healthy">
+    <div class="summary stat-strip panel" aria-label="Provider health summary">
+      <article class="stat healthy">
         <span>Healthy circuits</span><strong>{{ summary().healthy }}</strong
         ><small>CLOSED</small>
       </article>
-      <article class="stat glass-card degraded">
+      <article class="stat degraded">
         <span>Degraded circuits</span><strong>{{ summary().degraded }}</strong
         ><small>HALF_OPEN</small>
       </article>
-      <article class="stat glass-card open">
+      <article class="stat open">
         <span>Open circuits</span><strong>{{ summary().open }}</strong
         ><small>OPEN / FORCED_OPEN</small>
       </article>
-      <article class="stat glass-card">
+      <article class="stat">
         <span>Total calls today</span><strong>{{ summary().calls | number }}</strong
-        ><small>Since 00:00 UTC · includes retries</small>
+        ><small>Since 00:00 UTC, includes retries</small>
       </article>
     </div>
-    <p class="caption">
-      Auto-refresh every 15 seconds · Call history: last 24 hours · Circuit rates: Resilience4j
-      sliding window
-    </p>
+    <ul class="caption">
+      <li>Auto-refresh every 15 seconds</li>
+      <li>Call history covers the last 24 hours</li>
+      <li>Circuit rates use the Resilience4j sliding window</li>
+    </ul>
     @if (state().providers?.length === 0) {
       <div class="notice" role="status">No providers available.</div>
     } @else {

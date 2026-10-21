@@ -2,27 +2,20 @@
   display: block;
   min-width: 0;
 }
-/* Fill, border, blur and lift come from the global .glass-card rule. Health
-   tint is layered as a background-image ON TOP of the translucent glass fill
-   (never replacing it), so abnormal circuits stay loud while CLOSED stays quiet. */
+/* Surface (fill, hairline, shadow, lift) comes from the global .panel / .panel--lift rules.
+   Abnormal circuits are marked by border colour and a soft tint over the white fill;
+   CLOSED stays plain so problems are the only thing that draws the eye. */
 .provider-card {
   height: 100%;
-  border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 24px;
 }
 .provider-card.open {
   border-color: var(--status-offline);
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--status-offline) 18%, transparent),
-    color-mix(in srgb, var(--status-offline) 18%, transparent)
-  );
+  background-color: color-mix(in srgb, var(--status-offline) 5%, var(--bg-surface));
 }
 .provider-card.degraded {
   border-color: var(--status-warning);
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--status-warning) 16%, transparent),
-    color-mix(in srgb, var(--status-warning) 16%, transparent)
-  );
+  background-color: color-mix(in srgb, var(--status-warning) 5%, var(--bg-surface));
 }
 header,
 footer,
@@ -36,20 +29,21 @@ header {
   align-items: flex-start;
 }
 h3 {
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 8px;
   overflow-wrap: anywhere;
 }
 .role,
 .state {
   display: inline-block;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border-radius: 5px;
-  padding: 4px 7px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 3px 10px;
   background: var(--status-neutral-bg);
-  color: var(--text-secondary);
+  color: var(--status-neutral);
 }
 .role.fallback {
   background: var(--status-fallback-bg);
@@ -74,29 +68,32 @@ dl {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin: 24px 0;
+  margin: 28px 0;
 }
 dt,
 .success-label,
 footer {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
 }
 dd {
   color: var(--text-primary);
-  font-size: 1.125rem;
+  font-family: var(--font-family-display);
+  font-size: 1.5rem;
   font-weight: 600;
-  margin-top: 7px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
 }
 .success-label strong {
   color: var(--text-primary);
   font-weight: 500;
 }
 .track {
-  height: 6px;
+  height: 4px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--indicator-bg);
+  background: var(--border-color);
   margin-top: 10px;
 }
 .track span {
@@ -116,7 +113,7 @@ dd {
 footer {
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
-  margin-top: 20px;
+  margin-top: 24px;
   align-items: flex-start;
 }
 footer p {
@@ -124,11 +121,13 @@ footer p {
 }
 a {
   white-space: nowrap;
-  color: var(--color-accent);
+  font-weight: 500;
+  color: var(--color-accent-ink);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 a:focus-visible {
   outline: 2px solid var(--color-accent);

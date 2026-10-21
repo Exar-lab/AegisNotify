@@ -1,4 +1,4 @@
-<article [class]="'provider-card glass-card ' + circuitTone()" appGlassTilt="4">
+<article [class]="'provider-card panel panel--lift ' + circuitTone()">
   <header>
     <div>
       <h3>{{ provider().name }}</h3>
@@ -62,7 +62,7 @@
       routerLink="/notifications"
       [queryParams]="{ channel: provider().channel }"
       [attr.aria-label]="'View ' + provider().channel + ' delivery logs'"
-      >View Logs <span aria-hidden="true">↗</span></a
+      >View logs</a
     >
   </footer>
 </article>

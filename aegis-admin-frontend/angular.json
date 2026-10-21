@@ -31,6 +31,9 @@
               }
             ],
             "styles": [
+              "node_modules/@fontsource-variable/inter/index.css",
+              "node_modules/@fontsource-variable/outfit/index.css",
+              "node_modules/@fontsource-variable/jetbrains-mono/index.css",
               "src/styles.tailwind.css",
               "src/styles.scss"
             ]
@@ -45,8 +48,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "10kB",
-                  "maximumError": "16kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "12kB"
                 }
               ],
               "outputHashing": "all"
