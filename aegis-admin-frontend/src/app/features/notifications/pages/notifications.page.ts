@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { NotificationPage } from '../../../core/models/notification-list.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
+import { ShieldTokensComponent } from '../components/shield-tokens/shield-tokens.component';
 
 type ListState = { kind: 'loading' | 'error' } | { kind: 'ready'; data: NotificationPage };
 const defaults = {
@@ -22,7 +23,7 @@ const defaults = {
 @Component({
   selector: 'app-notifications-page',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink],
+  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, ShieldTokensComponent],
   templateUrl: './notifications.page.html',
   styleUrl: './notifications.page.scss',
 })

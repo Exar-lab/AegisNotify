@@ -6,6 +6,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
 import { ManagedUser, UserPage } from '../../../core/models/user.models';
 import { UsersApiService } from '../../../core/services/users-api.service';
+import { SettingsShieldComponent } from '../components/settings-shield/settings-shield.component';
 
 type ListState = { kind: 'loading' | 'error' } | { kind: 'ready'; data: UserPage };
 
@@ -17,7 +18,7 @@ const PAGE_SIZE = 20;
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, ReactiveFormsModule],
+  imports: [DatePipe, DecimalPipe, ReactiveFormsModule, SettingsShieldComponent],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
 })

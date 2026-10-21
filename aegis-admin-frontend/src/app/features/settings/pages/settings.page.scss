@@ -2,6 +2,9 @@
   display: block;
 }
 .settings-page {
+  /* Sits above the fixed watermark shield (z-index 0); data surfaces below are opaque. */
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 32px;
 }

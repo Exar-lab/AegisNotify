@@ -4,6 +4,9 @@
 .notifications-page {
   display: grid;
   gap: 32px;
+  /* Lifts the whole page above the fixed shield-token backdrop (z-index 0). */
+  position: relative;
+  z-index: 1;
 }
 .filters {
   display: flex;

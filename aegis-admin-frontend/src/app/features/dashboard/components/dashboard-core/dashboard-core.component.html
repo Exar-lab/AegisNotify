@@ -1,0 +1,71 @@
+<section
+  #vitrine
+  class="vitrine"
+  aria-label="Orchestration core"
+  (pointermove)="onPointerMove($event)"
+  (pointerleave)="onPointerLeave()"
+>
+  <div class="floor" #floor aria-hidden="true"></div>
+  <canvas #canvas aria-hidden="true"></canvas>
+
+  @if (unsupported()) {
+    <svg class="fallback" viewBox="3 3 18 18" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 12h7M12 12l3.5-5.94M12 12 8.5 6.06M12 12H5M12 12l-3.5 5.94M12 12l3.5 5.94" />
+      <circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="6.06" r="1.7" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="6.06" r="1.7" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="17.94" r="1.7" fill="currentColor" stroke="none" />
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="15.5" cy="17.94" r="1.5" />
+    </svg>
+  }
+
+  <!-- The whole core is one giant button: a generous circle over the silhouette, natively focusable. -->
+  <button
+    #coreBtn
+    type="button"
+    class="core"
+    aria-label="Open notifications"
+    (click)="activate()"
+    (pointerenter)="onCoreEnter()"
+    (pointerleave)="onCoreLeave()"
+    (focus)="onCoreEnter()"
+    (blur)="onCoreLeave()"
+  ></button>
+
+  @if (!unsupported()) {
+    @for (id of nodeIds; track id) {
+      <button
+        #spot
+        type="button"
+        class="hotspot"
+        [attr.data-id]="id"
+        [attr.aria-label]="spotLabel(id)"
+        (pointerenter)="onSpotEnter(id, $event)"
+        (pointerleave)="onSpotLeave(id)"
+        (focus)="onSpotFocus(id)"
+        (blur)="onSpotBlur(id)"
+        (click)="onSpotClick(id, $event)"
+      >
+        <span class="ring" aria-hidden="true"></span>
+      </button>
+    }
+  }
+
+  <!-- One glass card at a time, pinned beside the active node; the node's aria-label already carries the figure. -->
+  <div class="card-anchor" #anchor aria-hidden="true">
+    <div class="card" #cardEl [attr.data-side]="cardSide()" [attr.data-tone]="card()?.tone">
+      <span class="card-value">{{ card()?.value }}@if (card()?.unit) {<span class="card-unit">{{ card()?.unit }}</span>}</span>
+      <span class="card-label"><i class="card-dot"></i>{{ card()?.label }}</span>
+    </div>
+  </div>
+
+  <div class="placard" #placard>
+    <span class="placard-title"><i class="placard-dot"></i>Orchestration core</span>
+    <span class="placard-hint">Hover a node for live figures</span>
+    <span class="placard-cta" #cta>Open notifications <span aria-hidden="true">→</span></span>
+  </div>
+
+  <div class="flash" #flash aria-hidden="true"></div>
+</section>

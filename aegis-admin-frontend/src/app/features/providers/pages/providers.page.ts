@@ -2,8 +2,16 @@ import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Subject, catchError, exhaustMap, map, merge, of, scan, timer } from 'rxjs';
-import { ProviderCircuitBreakerStatus } from '../../../core/models/dashboard.models';
+import { Channel, ProviderCircuitBreakerStatus } from '../../../core/models/dashboard.models';
 import { DashboardApiService } from '../../../core/services/dashboard-api.service';
+import {
+  ChannelTones,
+  NEUTRAL_TONES,
+  ProviderShieldComponent,
+  ShieldTone,
+  toneOfCircuit,
+  worstTone,
+} from '../components/provider-shield/provider-shield.component';
 import { ProviderCardComponent } from '../provider-card.component';
 
 interface ProviderState {
@@ -15,7 +23,7 @@ interface ProviderState {
 @Component({
   selector: 'app-providers-page',
   standalone: true,
-  imports: [DecimalPipe, ProviderCardComponent],
+  imports: [DecimalPipe, ProviderCardComponent, ProviderShieldComponent],
   templateUrl: './providers.page.html',
   styleUrl: './providers.page.scss',
 })
@@ -53,6 +61,16 @@ export class ProvidersPage {
         .sort((a, b) => Number(b.role === 'PRIMARY') - Number(a.role === 'PRIMARY')),
     })),
   );
+  /** Per-channel health for the backdrop shield: real data only, calm neutral until a snapshot has loaded. */
+  readonly channelTones = computed<ChannelTones>(() => {
+    const providers = this.state().providers;
+    if (providers === null) return NEUTRAL_TONES;
+    const toneOf = (channel: Channel): ShieldTone =>
+      worstTone(
+        providers.filter((provider) => provider.channel === channel).map((p) => toneOfCircuit(p.state)),
+      );
+    return { EMAIL: toneOf('EMAIL'), SMS: toneOf('SMS'), WHATSAPP: toneOf('WHATSAPP'), PUSH: toneOf('PUSH') };
+  });
   readonly summary = computed(() => {
     const providers = this.state().providers ?? [];
     return {

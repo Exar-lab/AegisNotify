@@ -4,6 +4,9 @@
     <p class="page-lede">Delivery health across every channel, updated as providers report in.</p>
   </header>
 
+  <!-- Dark display case holding the 3D core; owned (and destroyed) with this route. -->
+  <app-dashboard-core [hotspots]="coreHotspots()" />
+
   <section class="kpi-grid panel" aria-label="Key indicators">
     @if (kpis(); as kpiState) {
       @switch (kpiState.status) {

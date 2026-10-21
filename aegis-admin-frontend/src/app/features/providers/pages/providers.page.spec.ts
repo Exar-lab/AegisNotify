@@ -85,4 +85,39 @@ describe('ProvidersPage', () => {
     expect(fixture.nativeElement.textContent).toContain('No providers available');
     fixture.destroy();
   });
+
+  it('derives the backdrop shield tones from real circuit states and stays neutral without data', () => {
+    const fixture = TestBed.createComponent(ProvidersPage);
+    fixture.detectChanges();
+    vi.advanceTimersByTime(0);
+    expect(Object.values(fixture.componentInstance.channelTones())).toEqual([
+      'neutral',
+      'neutral',
+      'neutral',
+      'neutral',
+    ]);
+    const provider = (key: string, channel: string, role: string, state: string) => ({
+      key,
+      name: key,
+      channel,
+      role,
+      fallbackProvider: null,
+      state,
+    });
+    http.expectOne(endpoint).flush([
+      provider('e1', 'EMAIL', 'PRIMARY', 'CLOSED'),
+      provider('e2', 'EMAIL', 'FALLBACK', 'NOT_PROTECTED'),
+      provider('s1', 'SMS', 'PRIMARY', 'HALF_OPEN'),
+      provider('w1', 'WHATSAPP', 'PRIMARY', 'CLOSED'),
+      provider('w2', 'WHATSAPP', 'FALLBACK', 'FORCED_OPEN'),
+    ]);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.channelTones()).toEqual({
+      EMAIL: 'healthy',
+      SMS: 'degraded',
+      WHATSAPP: 'open',
+      PUSH: 'neutral',
+    });
+    fixture.destroy();
+  });
 });

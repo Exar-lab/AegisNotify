@@ -3,6 +3,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MetricsChannel, MetricsSummary } from '../../../core/models/metrics.models';
 import { MetricsApiService } from '../../../core/services/metrics-api.service';
+import { ChannelBarDatum, ChannelBarsComponent } from '../components/channel-bars/channel-bars.component';
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
 
@@ -27,7 +28,7 @@ export function formatSeconds(seconds: number): string {
 @Component({
   selector: 'app-metrics-page',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, ChannelBarsComponent],
   templateUrl: './metrics.page.html',
   styleUrl: './metrics.page.scss',
 })
@@ -37,6 +38,12 @@ export class MetricsPage {
 
   readonly state = signal<LoadState<MetricsSummary>>({ status: 'loading' });
   readonly formatSeconds = formatSeconds;
+
+  /**
+   * Real per-channel counts for the 3D chart. Kept across a refresh (so bars glide old -> new) and cleared to
+   * null on error, so the chart rests at zero instead of showing numbers it no longer has.
+   */
+  readonly chartData = signal<ChannelBarDatum[] | null>(null);
 
   readonly channelCards = computed(() => {
     const s = this.state();
@@ -67,8 +74,19 @@ export class MetricsPage {
       .getSummary()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (data) => this.state.set({ status: 'ready', data }),
-        error: () => this.state.set({ status: 'error' }),
+        next: (data) => {
+          this.chartData.set(
+            CHANNELS.map((c) => ({
+              ...c,
+              count: data.requestsByChannel.find((r) => r.channel === c.channel)?.count ?? 0,
+            })),
+          );
+          this.state.set({ status: 'ready', data });
+        },
+        error: () => {
+          this.chartData.set(null);
+          this.state.set({ status: 'error' });
+        },
       });
   }
 }

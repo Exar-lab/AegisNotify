@@ -1,0 +1,39 @@
+/*
+ * Fixed to the routed content area (the component measures `.content-area` and sets left/top/width/height),
+ * so it persists across scroll and never paints over the sidebar or top bar. It sits at z-index 0 and the page
+ * lifts itself to z-index 1, so every real element is drawn over it. Effective visibility is set here, as a
+ * whole-canvas opacity: the tokens are a watermark texture, never foreground.
+ */
+:host {
+  --tokens-opacity: 0.14;
+  position: fixed;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+
+:host-context([data-theme='dark']) {
+  --tokens-opacity: 0.2;
+}
+
+:host(.is-live) {
+  opacity: var(--tokens-opacity);
+}
+
+:host(.is-unsupported) {
+  display: none;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    transition: none;
+  }
+}

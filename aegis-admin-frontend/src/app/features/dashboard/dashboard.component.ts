@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
@@ -11,6 +11,7 @@ import {
 } from '../../core/models/dashboard.models';
 import { DashboardApiService } from '../../core/services/dashboard-api.service';
 import { notificationTone } from '../../core/models/notification-presentation';
+import { CoreHotspot, DashboardCoreComponent } from './components/dashboard-core/dashboard-core.component';
 
 export type LoadState<T> =
   | { status: 'loading' }
@@ -32,7 +33,7 @@ export interface KpiTile {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, DashboardCoreComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -44,6 +45,48 @@ export class DashboardComponent {
   readonly kpis = signal<LoadState<KpiTile[]>>({ status: 'loading' });
   readonly providers = signal<LoadState<ProviderCircuitBreakerStatus[]>>({ status: 'loading' });
   readonly recentNotifications = signal<LoadState<NotificationSummary[]>>({ status: 'loading' });
+
+  private readonly summary = signal<DashboardSummary | null>(null);
+
+  /**
+   * The six signals the Orchestration Core reveals on hover, each read straight from live state:
+   * the 24h summary, the circuit-breaker poll and the latest notifications. Placeholders until data arrives.
+   */
+  readonly coreHotspots = computed<CoreHotspot[]>(() => {
+    const summary = this.summary();
+    const providers = this.providers();
+    const recent = this.recentNotifications();
+    const none = '—';
+
+    let circuits = none;
+    let circuitTone: CoreHotspot['tone'] = 'neutral';
+    if (providers.status === 'ready' && providers.data.length > 0) {
+      const closed = providers.data.filter((p) => p.state === 'CLOSED').length;
+      circuits = `${closed}/${providers.data.length}`;
+      circuitTone = providers.data.some((p) => p.state === 'OPEN' || p.state === 'FORCED_OPEN')
+        ? 'critical'
+        : closed === providers.data.length
+          ? 'ok'
+          : 'neutral';
+    }
+
+    let failed = none;
+    let failedTone: CoreHotspot['tone'] = 'neutral';
+    if (recent.status === 'ready') {
+      const count = recent.data.filter((n) => n.status === 'FAILED' || n.status === 'FAILED_CRITICAL').length;
+      failed = count.toLocaleString();
+      failedTone = count === 0 ? 'ok' : 'critical';
+    }
+
+    return [
+      { id: 'latency', label: 'Delivery latency', value: summary ? summary.avgDeliveryLatency.currentValue.toLocaleString() : none, unit: summary ? 'ms' : undefined, tone: 'neutral' },
+      { id: 'success', label: 'Success rate', value: summary ? `${summary.successRate.currentValue.toFixed(2)}%` : none, tone: 'neutral' },
+      { id: 'requests', label: 'Requests, last 24h', value: summary ? summary.totalRequests.currentValue.toLocaleString() : none, tone: 'neutral' },
+      { id: 'critical', label: 'Failed in latest 20', value: failed, tone: failedTone },
+      { id: 'fallbacks', label: 'Fallback activations', value: summary ? summary.fallbackActivations.currentValue.toLocaleString() : none, tone: 'neutral' },
+      { id: 'circuits', label: 'Circuit breakers', value: circuits, unit: circuits === none ? undefined : 'closed', tone: circuitTone },
+    ];
+  });
 
   constructor() {
     this.loadSummary();
@@ -66,11 +109,13 @@ export class DashboardComponent {
       .getSummary()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (summary) =>
+        next: (summary) => {
+          this.summary.set(summary);
           this.kpis.set({
             status: 'ready',
             data: this.buildKpiTiles(summary),
-          }),
+          });
+        },
         error: () => this.kpis.set({ status: 'error' }),
       });
   }

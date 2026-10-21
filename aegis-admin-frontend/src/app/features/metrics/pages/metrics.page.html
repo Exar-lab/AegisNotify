@@ -1,4 +1,5 @@
 <div class="metrics-page page">
+  <app-channel-bars [data]="chartData()" />
   <header>
     <div>
       <h1 class="page-title">Metrics</h1>
@@ -24,6 +25,18 @@
       Refresh
     </button>
   </header>
+
+  <div class="chart-stage" data-chart-anchor>
+    <p class="chart-caption" role="status">
+      @if (chartData()) {
+        Bar height: requests per channel, scaled to the busiest.
+      } @else if (state().status === 'error') {
+        No live data: chart at rest.
+      } @else {
+        Loading channel totals…
+      }
+    </p>
+  </div>
 
   @switch (state().status) {
     @case ('loading') {

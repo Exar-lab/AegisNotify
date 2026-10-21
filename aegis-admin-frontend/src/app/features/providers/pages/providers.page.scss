@@ -4,6 +4,9 @@
 .providers-page {
   display: grid;
   gap: 32px;
+  /* Own stacking context: the fixed shield backdrop (z-index -1) paints behind this page's content only. */
+  position: relative;
+  isolation: isolate;
 }
 header,
 h2,
@@ -113,6 +116,13 @@ h2 .provider-icon {
   justify-content: space-between;
   gap: 16px;
   border-color: var(--status-offline);
+}
+/* Wide screens: the content hugs the left and the shield backdrop owns the whitespace on the right. */
+@media (min-width: 1200px) {
+  .providers-page {
+    max-width: 960px;
+    margin-inline: 0 auto;
+  }
 }
 @media (max-width: 640px) {
   .provider-grid {

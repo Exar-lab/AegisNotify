@@ -4,6 +4,24 @@
 .metrics-page {
   display: grid;
   gap: 32px;
+  /* Own stacking context: the fixed 3D chart sits at z-index -1 inside it, below every in-flow panel. */
+  isolation: isolate;
+}
+
+/* Spacer that reserves the chart's spot at the top of the page; the chart itself is a fixed backdrop. */
+.chart-stage {
+  display: flex;
+  align-items: flex-start;
+  min-height: clamp(300px, 46vh, 460px);
+  margin: -8px 0;
+}
+.chart-caption {
+  margin: 0 0 0 auto;
+  text-align: right;
+  color: var(--text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
 }
 header,
 button {

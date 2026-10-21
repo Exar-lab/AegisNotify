@@ -1,7 +1,8 @@
+<app-shield-tokens />
 <div class="notifications-page page">
   <header>
-    <h1 class="page-title">Notifications</h1>
-    <p class="page-lede">Search, filter, and audit every notification sent.</p>
+    <h1 class="page-title" data-shield-avoid>Notifications</h1>
+    <p class="page-lede" data-shield-avoid>Search, filter, and audit every notification sent.</p>
   </header>
   <form class="filters panel" (ngSubmit)="apply()">
     <label class="search"
@@ -41,7 +42,7 @@
     ><button class="secondary" type="button" (click)="clear()">Clear</button>
   </form>
   @if (dateError()) {
-    <p role="alert">The start date must be on or before the end date.</p>
+    <p role="alert" data-shield-avoid>The start date must be on or before the end date.</p>
   }
   @switch (state().kind) {
     @case ('loading') {
