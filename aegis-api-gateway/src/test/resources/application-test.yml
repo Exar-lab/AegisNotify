@@ -9,24 +9,34 @@ spring:
   cloud:
     gateway:
       default-filters: []
+      # Port zero prevents security tests from reaching locally running services.
       routes:
         - id: notification-submit
-          uri: http://localhost:8082
+          uri: http://127.0.0.1:0
           predicates:
             - Path=/api/v1/notifications
             - Method=POST
         - id: notification-status
-          uri: http://localhost:8082
+          uri: http://127.0.0.1:0
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
         - id: dashboard-summary
-          uri: http://localhost:8082
+          uri: http://127.0.0.1:0
           predicates:
             - Path=/api/v1/dashboard/**
             - Method=GET
+        - id: metrics-summary
+          uri: http://127.0.0.1:0
+          predicates:
+            - Path=/api/v1/metrics/**
+            - Method=GET
+        - id: users-api
+          uri: http://127.0.0.1:0
+          predicates:
+            - Path=/api/v1/users/**
         - id: audit-read
-          uri: http://localhost:8083
+          uri: http://127.0.0.1:0
           predicates:
             - Path=/api/v1/audit/**
             - Method=GET

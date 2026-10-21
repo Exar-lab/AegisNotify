@@ -1,0 +1,135 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+/* Surface (fill, hairline, shadow, lift) comes from the global .panel / .panel--lift rules.
+   Abnormal circuits are marked by border colour and a soft tint over the white fill;
+   CLOSED stays plain so problems are the only thing that draws the eye. */
+.provider-card {
+  height: 100%;
+  padding: 24px;
+}
+.provider-card.open {
+  border-color: var(--status-offline);
+  background-color: color-mix(in srgb, var(--status-offline) 5%, var(--bg-surface));
+}
+.provider-card.degraded {
+  border-color: var(--status-warning);
+  background-color: color-mix(in srgb, var(--status-warning) 5%, var(--bg-surface));
+}
+header,
+footer,
+.success-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+header {
+  align-items: flex-start;
+}
+h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.role,
+.state {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral);
+}
+.role.fallback {
+  background: var(--status-fallback-bg);
+  color: var(--status-fallback);
+}
+.state {
+  white-space: nowrap;
+}
+.healthy .state {
+  color: var(--status-online);
+  background: var(--status-success-bg);
+}
+.degraded .state {
+  color: var(--status-warning);
+  background: var(--status-warning-bg);
+}
+.open .state {
+  color: var(--status-offline);
+  background: var(--status-danger-bg);
+}
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 28px 0;
+}
+dt,
+.success-label,
+footer {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+dd {
+  color: var(--text-primary);
+  font-family: var(--font-family-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+}
+.success-label strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.track {
+  height: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--border-color);
+  margin-top: 10px;
+}
+.track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.track .healthy {
+  background: var(--status-online);
+}
+.track .degraded {
+  background: var(--status-warning);
+}
+.track .open {
+  background: var(--status-offline);
+}
+footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  margin-top: 24px;
+  align-items: flex-start;
+}
+footer p {
+  line-height: 1.5;
+}
+a {
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--color-accent-ink);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}

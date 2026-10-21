@@ -137,7 +137,7 @@ describe('DashboardComponent', () => {
     const values = Array.from(compiled.querySelectorAll('.kpi-value')).map(
       (el) => el.textContent?.trim()
     );
-    expect(values[0]).toBe('1,250');
+    expect(values[0]).toBe((1250).toLocaleString());
     expect(values[1]).toBe('99.40%');
     expect(values[2]).toBe('12');
     expect(values[3]).toBe('142 ms');

@@ -1,0 +1,164 @@
+<app-shield-tokens />
+<div class="notifications-page page">
+  <header>
+    <h1 class="page-title" data-shield-avoid>Notifications</h1>
+    <p class="page-lede" data-shield-avoid>Search, filter, and audit every notification sent.</p>
+  </header>
+  <form class="filters panel" (ngSubmit)="apply()">
+    <label class="search"
+      >Search<input
+        name="search"
+        [(ngModel)]="filters.search"
+        placeholder="ID, recipient, or template"
+        maxlength="320"
+    /></label>
+    <label
+      >Channel<select name="channel" [(ngModel)]="filters.channel">
+        <option value="">All Channels</option>
+        @for (channel of channels; track channel) {
+          <option [value]="channel">{{ channel }}</option>
+        }
+      </select></label
+    >
+    <label
+      >Priority<select name="priority" [(ngModel)]="filters.priority">
+        <option value="">All Priorities</option>
+        @for (priority of priorities; track priority) {
+          <option [value]="priority">{{ priority }}</option>
+        }
+      </select></label
+    >
+    <label
+      >Status<select name="status" [(ngModel)]="filters.status">
+        <option value="">All Statuses</option>
+        @for (status of statuses; track status) {
+          <option [value]="status">{{ label(status) }}</option>
+        }
+      </select></label
+    >
+    <label>From<input type="date" name="from" [(ngModel)]="fromDate" /></label>
+    <label>Through<input type="date" name="to" [(ngModel)]="toDate" /></label>
+    <button type="submit">Apply filters</button
+    ><button class="secondary" type="button" (click)="clear()">Clear</button>
+  </form>
+  @if (dateError()) {
+    <p role="alert" data-shield-avoid>The start date must be on or before the end date.</p>
+  }
+  @switch (state().kind) {
+    @case ('loading') {
+      <section class="panel" aria-label="Notifications" aria-busy="true">
+        <div class="message" role="status">Loading notifications…</div>
+      </section>
+    }
+    @case ('error') {
+      <section class="panel" aria-label="Notifications">
+        <div class="message" role="alert">
+          <h2>Couldn't load notifications</h2>
+          <p>Please try again.</p>
+          <button (click)="load()">Retry</button>
+        </div>
+      </section>
+    }
+    @case ('ready') {
+      <section class="panel" aria-label="Notifications">
+        @if (result(); as data) {
+          <div class="table-header">
+            <h2>All notifications</h2>
+            <span aria-live="polite">{{ data.totalElements | number }} results</span>
+          </div>
+          @if (data.content.length === 0) {
+            <div class="message" role="status">
+              <h2>No notifications found</h2>
+              <p>Try changing your filters or check back later.</p>
+              <button class="secondary" (click)="clear()">Clear filters</button>
+            </div>
+          } @else {
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">
+                  Notifications matching the applied filters
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Notification</th>
+                    <th scope="col">Recipient</th>
+                    <th scope="col">Priority</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Provider</th>
+                    <th scope="col">Created at</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (notification of data.content; track notification.id) {
+                    <tr>
+                      <td>
+                        <a class="identifier" [routerLink]="['/notifications', notification.id]">{{
+                          notification.id
+                        }}</a
+                        ><small>{{ notification.channel }}</small
+                        ><small>{{ notification.templateName }}</small>
+                      </td>
+                      <td class="recipient">{{ notification.recipient }}</td>
+                      <td>
+                        <span class="badge" [attr.data-priority]="notification.priority">{{
+                          notification.priority
+                        }}</span>
+                      </td>
+                      <td>
+                        <span class="badge" [attr.data-tone]="tone(notification.status)"
+                          ><span aria-hidden="true">{{ icon(notification.status) }}</span
+                          >{{ label(notification.status) }}</span
+                        >
+                      </td>
+                      <td>{{ notification.providerUsed ?? '—' }}</td>
+                      <td>
+                        <time [attr.datetime]="notification.createdAt">{{
+                          notification.createdAt | date: 'medium'
+                        }}</time>
+                      </td>
+                      <td>
+                        <a
+                          [routerLink]="['/notifications', notification.id]"
+                          [attr.aria-label]="'View notification ' + notification.id"
+                          >View</a
+                        >
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <footer>
+            <span
+              >Showing {{ data.content.length ? data.page * data.size + 1 : 0 }}–{{
+                data.page * data.size + data.content.length
+              }}
+              of {{ data.totalElements | number }}</span
+            ><label
+              >Rows per page
+              <select name="size" [(ngModel)]="size" (ngModelChange)="apply()">
+                @for (count of [10, 20, 50, 100]; track count) {
+                  <option [ngValue]="count">{{ count }}</option>
+                }
+              </select></label
+            >
+            <nav aria-label="Pagination">
+              <button class="secondary" (click)="go(data.page - 1)" [disabled]="data.page === 0">
+                Previous</button
+              ><span>Page {{ data.page + 1 }} of {{ totalPages() }}</span
+              ><button
+                class="secondary"
+                (click)="go(data.page + 1)"
+                [disabled]="data.page + 1 >= totalPages()"
+              >
+                Next
+              </button>
+            </nav>
+          </footer>
+        }
+      </section>
+    }
+  }
+</div>

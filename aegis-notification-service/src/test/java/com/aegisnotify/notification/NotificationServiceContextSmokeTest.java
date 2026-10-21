@@ -8,6 +8,7 @@ import com.aegisnotify.notification.infrastructure.persistence.adapter.DeliveryA
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.ProviderCallMetricsAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.TemplateRepositoryAdapter;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +40,9 @@ class NotificationServiceContextSmokeTest {
 
   @MockitoBean
   private AggregationBufferRepositoryAdapter aggregationBufferRepositoryAdapter;
+
+  @MockitoBean
+  private ProviderCallMetricsAdapter providerCallMetricsAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;

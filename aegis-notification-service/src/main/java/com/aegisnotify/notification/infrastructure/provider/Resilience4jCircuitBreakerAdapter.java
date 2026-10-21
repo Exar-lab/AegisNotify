@@ -5,7 +5,11 @@ import com.aegisnotify.notification.application.port.out.CircuitBreakerInspectio
 import com.aegisnotify.notification.domain.enums.Channel;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -51,23 +55,34 @@ public class Resilience4jCircuitBreakerAdapter implements CircuitBreakerInspecti
   );
 
   private final CircuitBreakerRegistry circuitBreakerRegistry;
+  private final Map<String, Instant> lastStateChanges = new ConcurrentHashMap<>();
 
   public Resilience4jCircuitBreakerAdapter(CircuitBreakerRegistry circuitBreakerRegistry) {
     this.circuitBreakerRegistry = circuitBreakerRegistry;
+    circuitBreakerRegistry.getEventPublisher()
+        .onEntryAdded(event -> observe(event.getAddedEntry()));
+    circuitBreakerRegistry.getAllCircuitBreakers().forEach(this::observe);
+  }
+
+  private void observe(CircuitBreaker circuitBreaker) {
+    circuitBreaker.getEventPublisher().onStateTransition(event ->
+        lastStateChanges.put(circuitBreaker.getName(), event.getCreationTime().toInstant()));
   }
 
   @Override
   public List<ProviderCircuitBreakerStatus> getProviderCircuitBreakerStatuses() {
     return MONITORED_PROVIDERS.stream()
-        .map(this::toStatus)
+        .flatMap(def -> Stream.of(toStatus(def), new ProviderCircuitBreakerStatus(
+            def.key() + "-fallback", def.fallbackProvider(), def.channel(), "FALLBACK",
+            null, "NOT_PROTECTED")))
         .toList();
   }
 
   private ProviderCircuitBreakerStatus toStatus(ProviderDefinition def) {
-    String state = circuitBreakerRegistry.find(def.key())
-        .map(CircuitBreaker::getState)
-        .map(CircuitBreaker.State::name)
-        .orElse("UNKNOWN");
+    var circuitBreaker = circuitBreakerRegistry.find(def.key());
+    String state = circuitBreaker.map(CircuitBreaker::getState)
+        .map(CircuitBreaker.State::name).orElse("UNKNOWN");
+    var metrics = circuitBreaker.map(CircuitBreaker::getMetrics);
 
     return new ProviderCircuitBreakerStatus(
         def.key(),
@@ -75,7 +90,14 @@ public class Resilience4jCircuitBreakerAdapter implements CircuitBreakerInspecti
         def.channel(),
         def.role(),
         def.fallbackProvider(),
-        state
+        state,
+        metrics.map(value -> availableRate(value.getFailureRate())).orElse(null),
+        metrics.map(value -> availableRate(value.getSlowCallRate())).orElse(null),
+        lastStateChanges.get(def.key()), null, null, null
     );
+  }
+
+  private Double availableRate(float rate) {
+    return rate < 0 ? null : (double) rate;
   }
 }

@@ -278,3 +278,29 @@ aegis-admin-frontend/
 - Consolidated and cleaned up SCSS styles, removing redundant rules and unifying CSS custom properties across components.
 - Scaffolded lazy-loaded feature pages for `dashboard`, `notifications`, `notification-detail`, `providers`, `metrics`, and `settings`.
 - Added `public/silent-check-sso.html` for seamless background session verification.
+
+
+### Notifications list
+
+`/notifications` uses `GET /api/v1/notifications?page=0&size=20`.
+The paginated response contains `content`, `totalElements`, `page` (zero-based), and `size`.
+Optional filters: `search` (ID, recipient or template), `recipient`, `channel`, `priority`,
+`status`, `from`, and `to`. Text matching is case-insensitive and treats SQL wildcard
+characters literally. All supplied filters are combined; search matches any of its three fields.
+`from` is inclusive and `to` is exclusive, both ISO-8601 instants. The UI converts the
+selected dates from the browser's local time zone and includes the entire final day.
+Page size must be between 1 and 100. Results are ordered by creation time and ID descending.
+Filters apply on form submission and return to page zero. Row links open the existing detail screen.
+
+For compatibility with the Dashboard, requests without `page` or the new filters retain
+the existing array response with `channel`, `status`, and `limit` (default 20, maximum 100).
+New clients should always supply `page`, including for an unfiltered first page.
+The optional manual-send action is outside this screen's scope.
+
+
+Validation for this feature: `pnpm test:ci`, `pnpm build`, and the backend
+`ListNotificationsServiceTest`, `NotificationControllerTest`,
+`NotificationRepositoryAdapterIT`, and `ArchitectureTest`.
+On this Windows machine, Maven must use Java 21. Docker Desktop 29 with the current
+Testcontainers version requires `$env:JAVA_TOOL_OPTIONS='-Dapi.version=1.44'`
+in the PowerShell session running the PostgreSQL integration tests.

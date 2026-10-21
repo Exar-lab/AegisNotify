@@ -38,6 +38,14 @@ audit:
     enabled: true
   topic: notification-audit-events
 
+# Local-demo only. Seeds the in-process Micrometer meters behind the admin
+# metrics screen; leave it false everywhere else so the screen reflects
+# real traffic. See DemoMetricsSeeder.
+aegis:
+  demo:
+    metrics:
+      enabled: ${AEGIS_DEMO_METRICS_ENABLED:false}
+
 notification:
   template:
     cache:

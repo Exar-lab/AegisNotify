@@ -12,6 +12,7 @@ import com.aegisnotify.notification.infrastructure.persistence.adapter.DeliveryA
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.ProviderCallMetricsAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.TemplateRepositoryAdapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
@@ -72,6 +73,9 @@ class KafkaMessageBrokerAdapterIT {
 
   @MockitoBean
   private TemplateRepositoryAdapter templateRepositoryAdapter;
+
+  @MockitoBean
+  private ProviderCallMetricsAdapter providerCallMetricsAdapter;
 
   @MockitoBean
   private NotificationRepositoryAdapter notificationRepositoryAdapter;

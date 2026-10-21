@@ -1,35 +1,45 @@
-/* Design Tokens & CSS Variables */
+/* Design Tokens & CSS Variables
+   One light-first system. The dark block below is derived from it, not designed separately. */
 :root {
-  /* Light Theme (Default) */
-  --bg-sidebar: #f8fafc;
-  --bg-topbar: #ffffff;
-  --bg-sidebar-active: rgba(244, 9, 76, 0.12);
-  --bg-sidebar-hover: rgba(244, 9, 76, 0.05);
+  /* Surfaces: near-white page, one step off-white for sidebar/topbar, separated by hairlines. */
+  --bg-main: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #fafaf9;
+  --bg-topbar: #fafaf9;
+  --bg-sidebar-hover-surface: rgba(21, 22, 26, 0.04);
+  --bg-sidebar-active-surface: rgba(244, 9, 76, 0.06);
+
+  /* Single accent. `-ink` is the same hue darkened so small accent text clears 4.5:1 on white. */
   --color-accent: #f4094c;
   --color-accent-hover: #d1073f;
-  --color-accent-subtle: rgba(244, 9, 76, 0.12);
-  --bg-main: #f1f5f9;
-  --bg-surface: #ffffff;
-  --border-color: #e2e8f0;
-  --border-sidebar: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-sidebar: #475569;
-  --text-sidebar-active: #0f172a;
-  --status-online: #10B981;
-  --status-offline: #EA580C;
-  --status-warning: #D97706;
-  --status-warning-bg: rgba(217, 119, 6, 0.12);
-  --status-fallback: #8B5CF6;
-  --status-fallback-bg: rgba(139, 92, 246, 0.12);
-  --status-success-bg: rgba(16, 185, 129, 0.12);
-  --status-danger-bg: rgba(234, 88, 12, 0.12);
-  --status-neutral: #64748b;
-  --status-neutral-bg: rgba(100, 116, 139, 0.12);
+  --color-accent-ink: #d1073f;
+  --color-accent-subtle: rgba(244, 9, 76, 0.07);
+
+  --border-color: #e8e6e2;
+  --border-sidebar: var(--border-color);
+
+  --text-primary: #15161a;
+  --text-secondary: #6b7076;
+  --text-sidebar: #6b7076;
+  --text-sidebar-active: #15161a;
   --text-inverted: #ffffff;
-  --env-badge-bg: rgba(244, 9, 76, 0.12);
-  --env-badge-border: rgba(244, 9, 76, 0.3);
-  --indicator-bg: rgba(0, 0, 0, 0.04);
+
+  /* Status hues tuned for white: each text colour is >= 4.5:1 on white and on its own 10% tint. */
+  --status-online: #047857;
+  --status-online-bg: rgba(4, 120, 87, 0.1);
+  --status-success-bg: var(--status-online-bg);
+  --status-offline: #b42318;
+  --status-danger-bg: rgba(180, 35, 24, 0.1);
+  --status-warning: #a04d06;
+  --status-warning-bg: rgba(160, 77, 6, 0.1);
+  --status-fallback: #be185d;
+  --status-fallback-bg: rgba(190, 24, 93, 0.1);
+  --status-neutral: #5b6168;
+  --status-neutral-bg: rgba(91, 97, 104, 0.1);
+
+  --env-badge-bg: rgba(244, 9, 76, 0.06);
+  --env-badge-border: rgba(244, 9, 76, 0.2);
+  --indicator-bg: rgba(21, 22, 26, 0.04);
 
   /* 8px Grid Spacing Scale */
   --space-8: 8px;
@@ -37,39 +47,60 @@
   --space-24: 24px;
 
   /* Typography */
-  --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-family-base: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-family-display: 'Outfit Variable', 'Outfit', var(--font-family-base);
+  --font-family-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* Radius Scale */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* One barely-there elevation, plus its marginally deeper hover state. */
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -16px rgba(0, 0, 0, 0.08);
+  --shadow-surface-hover: 0 1px 2px rgba(0, 0, 0, 0.05), 0 12px 28px -16px rgba(0, 0, 0, 0.14);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 220ms ease;
 }
 
-[data-theme="dark"] {
-  /* Dark Theme */
-  --bg-sidebar: #11151f;
-  --bg-topbar: #181e2b;
-  --bg-sidebar-active: rgba(255, 77, 128, 0.18);
-  --bg-sidebar-hover: rgba(255, 77, 128, 0.07);
-  --color-accent: #f4094c;
+[data-theme='dark'] {
+  --bg-main: #0e0f12;
+  --bg-surface: #15161a;
+  --bg-sidebar: #0e0f12;
+  --bg-topbar: #0e0f12;
+  --bg-sidebar-hover-surface: rgba(255, 255, 255, 0.05);
+  --bg-sidebar-active-surface: rgba(244, 9, 76, 0.14);
+
   --color-accent-hover: #ff4d80;
-  --color-accent-subtle: rgba(244, 9, 76, 0.18);
-  --bg-main: #0b0d14;
-  --bg-surface: #1f2937;
-  --border-color: #374151;
-  --border-sidebar: #1f2330;
-  --text-primary: #F8FAFC;
-  --text-secondary: #9ca3af;
-  --text-sidebar: #94A3B8;
-  --text-sidebar-active: #FFFFFF;
-  --status-offline: #FB923C;
-  --status-warning: #FBBF24;
-  --status-warning-bg: rgba(251, 191, 36, 0.16);
-  --status-fallback: #A78BFA;
-  --status-fallback-bg: rgba(167, 139, 250, 0.16);
-  --status-success-bg: rgba(16, 185, 129, 0.16);
-  --status-danger-bg: rgba(251, 146, 60, 0.16);
-  --status-neutral: #94A3B8;
-  --status-neutral-bg: rgba(148, 163, 184, 0.16);
-  --text-inverted: #ffffff;
-  --env-badge-bg: rgba(244, 9, 76, 0.18);
+  --color-accent-ink: #ff5c8a;
+  --color-accent-subtle: rgba(244, 9, 76, 0.16);
+
+  --border-color: #26282e;
+
+  --text-primary: #f2f2f0;
+  --text-secondary: #9a9ea5;
+  --text-sidebar: #9a9ea5;
+  --text-sidebar-active: #f2f2f0;
+
+  --status-online: #34d399;
+  --status-online-bg: rgba(52, 211, 153, 0.14);
+  --status-offline: #f87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.14);
+  --status-warning: #fbbf24;
+  --status-warning-bg: rgba(251, 191, 36, 0.14);
+  --status-fallback: #f472b6;
+  --status-fallback-bg: rgba(244, 114, 182, 0.14);
+  --status-neutral: #9a9ea5;
+  --status-neutral-bg: rgba(154, 158, 165, 0.14);
+
+  --env-badge-bg: rgba(244, 9, 76, 0.14);
   --env-badge-border: rgba(244, 9, 76, 0.35);
-  --indicator-bg: rgba(255, 255, 255, 0.04);
+  --indicator-bg: rgba(255, 255, 255, 0.05);
+
+  --shadow-surface: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -16px rgba(0, 0, 0, 0.5);
+  --shadow-surface-hover: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px -16px rgba(0, 0, 0, 0.65);
 }
 
 *,
@@ -89,4 +120,108 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-family-display);
+  letter-spacing: -0.02em;
+}
+
+/* Page frame: shared padding and measure for every routed screen. */
+.page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 56px) clamp(16px, 4vw, 56px) clamp(40px, 6vw, 88px);
+}
+
+/* Page title: the large, tight display wordmark each screen opens with. */
+.page-title {
+  font-family: var(--font-family-display);
+  font-size: clamp(2.5rem, 5.4vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  color: var(--text-primary);
+}
+
+.page-lede {
+  margin-top: 16px;
+  max-width: 52ch;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* Flat surface: hairline border, one soft shadow, no blur, no translucency.
+   `panel--lift` adds the understated hover lift for small, glanceable cards. */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-surface);
+}
+
+.panel--lift {
+  translate: 0 0;
+  transition:
+    translate var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+
+  &:hover {
+    translate: 0 -1px;
+    box-shadow: var(--shadow-surface-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel--lift {
+    transition: none;
+
+    &:hover {
+      translate: 0 0;
+    }
+  }
+}
+
+/* Stat strip: a row of figures sharing one surface, divided by hairlines (used with `.panel`). */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+
+  > * {
+    border-left: 1px solid var(--border-color);
+  }
+
+  > :first-child {
+    border-left: 0;
+  }
+
+  @media (max-width: 1000px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    > :nth-child(odd) {
+      border-left: 0;
+    }
+
+    > :nth-child(n + 3) {
+      border-top: 1px solid var(--border-color);
+    }
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+
+    > * {
+      border-left: 0;
+    }
+
+    > :nth-child(n + 2) {
+      border-top: 1px solid var(--border-color);
+    }
+  }
 }

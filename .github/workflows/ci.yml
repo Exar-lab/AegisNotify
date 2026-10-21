@@ -30,6 +30,9 @@ jobs:
         run: ./mvnw validate -Dmaven.test.skip=true
 
       - name: Build and test
+        env:
+          # Docker on ubuntu-latest now requires API >= 1.40; Testcontainers 1.20.x defaults to 1.32.
+          JAVA_TOOL_OPTIONS: -Dapi.version=1.44
         run: ./mvnw clean verify -Dcheckstyle.skip=true
 
       - name: Upload test reports

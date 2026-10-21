@@ -8,22 +8,13 @@ import { Injectable, signal } from '@angular/core';
   providedIn: 'root'
 })
 export class ThemeService {
-  private readonly darkThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-  
   /** Reactive signal indicating whether the dark theme is currently active. */
   readonly isDarkTheme = signal<boolean>(false);
 
   constructor() {
-    // Check local storage or system preference to initialize the theme
+    // Light is the primary look: dark applies only when the user explicitly chose it.
     const savedTheme = localStorage.getItem('aegis-theme');
-    
-    if (savedTheme === 'dark') {
-      this.setDarkTheme(true);
-    } else if (savedTheme === 'light') {
-      this.setDarkTheme(false);
-    } else {
-      this.setDarkTheme(this.darkThemeMedia.matches);
-    }
+    this.setDarkTheme(savedTheme === 'dark');
   }
 
   /**

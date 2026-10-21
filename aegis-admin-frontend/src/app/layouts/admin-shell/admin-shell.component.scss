@@ -15,25 +15,24 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-main);
 }
 
+/* Routed screens own their spacing through the global `.page` frame. */
 .content-area {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-24);
+  background-color: var(--bg-main);
 }
 
 @media (max-width: 767px) {
-  .content-area {
-    padding: var(--space-16);
-  }
-
   .sidebar-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(21, 22, 26, 0.4);
     z-index: 99;
   }
 }

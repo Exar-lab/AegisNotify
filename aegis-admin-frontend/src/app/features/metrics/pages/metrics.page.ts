@@ -1,11 +1,92 @@
-import { Component } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MetricsChannel, MetricsSummary } from '../../../core/models/metrics.models';
+import { MetricsApiService } from '../../../core/services/metrics-api.service';
+import { ChannelBarDatum, ChannelBarsComponent } from '../components/channel-bars/channel-bars.component';
+
+type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T };
+
+const CHANNELS: { channel: MetricsChannel; label: string }[] = [
+  { channel: 'EMAIL', label: 'Email' },
+  { channel: 'SMS', label: 'SMS' },
+  { channel: 'WHATSAPP', label: 'WhatsApp' },
+  { channel: 'PUSH', label: 'Push' },
+];
+
+/** Formats seconds as "380ms" below one second, otherwise "2.1s". */
+export function formatSeconds(seconds: number): string {
+  if (seconds < 1) {
+    return `${Math.round(seconds * 1000)}ms`;
+  }
+  return `${Number(seconds.toFixed(2))}s`;
+}
 
 /**
- * Page component representing the Metrics view.
+ * Metrics screen: read-only view over GET /api/v1/metrics/summary.
  */
 @Component({
   selector: 'app-metrics-page',
   standalone: true,
-  template: `<h1>Metrics</h1>`,
+  imports: [DecimalPipe, ChannelBarsComponent],
+  templateUrl: './metrics.page.html',
+  styleUrl: './metrics.page.scss',
 })
-export class MetricsPage {}
+export class MetricsPage {
+  private readonly api = inject(MetricsApiService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly state = signal<LoadState<MetricsSummary>>({ status: 'loading' });
+  readonly formatSeconds = formatSeconds;
+
+  /**
+   * Real per-channel counts for the 3D chart. Kept across a refresh (so bars glide old -> new) and cleared to
+   * null on error, so the chart rests at zero instead of showing numbers it no longer has.
+   */
+  readonly chartData = signal<ChannelBarDatum[] | null>(null);
+
+  readonly channelCards = computed(() => {
+    const s = this.state();
+    const counts = s.status === 'ready' ? s.data.requestsByChannel : [];
+    return CHANNELS.map((c) => ({
+      ...c,
+      count: counts.find((r) => r.channel === c.channel)?.count ?? 0,
+    }));
+  });
+
+  /** 'danger' when anything reached the DLQ, 'warning' when failures are >= 10% of handled messages. */
+  readonly kafkaTone = computed<'ok' | 'warning' | 'danger'>(() => {
+    const s = this.state();
+    if (s.status !== 'ready') return 'ok';
+    const { success, failure, dlq } = s.data.kafkaConsumer;
+    if (dlq > 0) return 'danger';
+    const total = success + failure;
+    return total > 0 && failure / total >= 0.1 ? 'warning' : 'ok';
+  });
+
+  constructor() {
+    this.load();
+  }
+
+  load(): void {
+    this.state.set({ status: 'loading' });
+    this.api
+      .getSummary()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.chartData.set(
+            CHANNELS.map((c) => ({
+              ...c,
+              count: data.requestsByChannel.find((r) => r.channel === c.channel)?.count ?? 0,
+            })),
+          );
+          this.state.set({ status: 'ready', data });
+        },
+        error: () => {
+          this.chartData.set(null);
+          this.state.set({ status: 'error' });
+        },
+      });
+  }
+}

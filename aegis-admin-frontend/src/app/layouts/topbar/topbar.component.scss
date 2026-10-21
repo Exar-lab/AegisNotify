@@ -15,24 +15,26 @@
   gap: var(--space-16);
 }
 
+/* The page itself carries the large title; the bar only names where you are. */
 .feature-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
+  font-family: var(--font-family-base);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0;
 }
 
 .env-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
-  padding: 4px var(--space-8);
+  padding: 4px 10px;
   background-color: var(--env-badge-bg);
   border: 1px solid var(--env-badge-border);
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-ink);
 }
 
 .env-dot {
@@ -40,7 +42,6 @@
   height: 6px;
   border-radius: 50%;
   background-color: var(--color-accent);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
 }
 
 .topbar-right {
@@ -55,14 +56,17 @@
   gap: 10px;
   height: 36px;
   padding: 0 12px;
-  background-color: var(--indicator-bg);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-sidebar);
-  border-radius: var(--space-8);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--text-secondary);
+  }
 
   &:focus-within {
     border-color: var(--color-accent);
-    box-shadow: 0 0 0 1px var(--color-accent);
   }
 }
 
@@ -82,7 +86,6 @@
 
   &::placeholder {
     color: var(--text-secondary);
-    opacity: 0.8;
   }
 }
 
@@ -95,21 +98,27 @@
 .bell-btn {
   width: 36px;
   height: 36px;
-  background-color: var(--indicator-bg);
-  border: 1px solid var(--border-sidebar);
-  border-radius: var(--space-8);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 
   &:hover,
   &.active {
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-    background-color: var(--bg-sidebar-hover);
+    color: var(--text-primary);
+    background-color: var(--bg-sidebar-hover-surface);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 }
 
@@ -118,10 +127,10 @@
   top: calc(100% + 8px);
   right: 0;
   width: 280px;
-  background-color: var(--bg-topbar);
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-sidebar);
-  border-radius: var(--space-8);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-surface-hover);
   z-index: 1000;
   overflow: hidden;
 }
@@ -143,8 +152,8 @@
 .panel-badge {
   font-size: 0.6875rem;
   font-weight: 600;
-  background-color: var(--bg-sidebar-active);
-  color: var(--color-accent);
+  background-color: var(--bg-sidebar-active-surface);
+  color: var(--color-accent-ink);
   padding: 2px 8px;
   border-radius: 9999px;
 }
@@ -184,28 +193,27 @@
 .user-profile {
   display: flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: 10px;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-accent, #F4094C) 0%, var(--color-accent-hover, #D1073F) 100%);
-  color: var(--text-inverted);
+  background: var(--text-primary);
+  color: var(--bg-main);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .user-name {
@@ -216,7 +224,7 @@
 
 .user-role {
   font-size: 0.6875rem;
-  color: var(--text-sidebar);
+  color: var(--text-secondary);
 }
 
 .theme-toggle {
@@ -230,12 +238,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
   margin-left: var(--space-8);
 
   &:hover {
-    background-color: var(--indicator-bg);
-    color: var(--color-accent);
+    background-color: var(--bg-sidebar-hover-surface);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 }
 
@@ -249,12 +264,12 @@
   height: 36px;
   align-items: center;
   justify-content: center;
-  border-radius: var(--space-8);
-  transition: background-color 0.2s;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
   flex-shrink: 0;
 
   &:hover {
-    background-color: var(--indicator-bg);
+    background-color: var(--bg-sidebar-hover-surface);
   }
 }
 
