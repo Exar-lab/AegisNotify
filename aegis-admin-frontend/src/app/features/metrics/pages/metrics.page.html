@@ -1,0 +1,148 @@
+<div class="metrics-page">
+  <header>
+    <div>
+      <h1>Metrics</h1>
+      <p>Live delivery and consumer metrics</p>
+    </div>
+    <button type="button" (click)="load()">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M20 7v5h-5" />
+        <path d="M4 17v-5h5" />
+        <path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17" />
+      </svg>
+      Refresh
+    </button>
+  </header>
+
+  @switch (state().status) {
+    @case ('loading') {
+      <div class="stat-grid">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="panel stat stat--loading">
+            <div class="skeleton-line skeleton-line--sm"></div>
+            <div class="skeleton-line skeleton-line--lg"></div>
+          </div>
+        }
+      </div>
+      <div class="panel-grid">
+        @for (i of [1, 2]; track i) {
+          <div class="panel panel--loading">
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+          </div>
+        }
+      </div>
+    }
+    @case ('error') {
+      <div class="notice error glass-card" role="alert">
+        <span>Couldn't load metrics.</span>
+        <button type="button" (click)="load()">Retry</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (state(); as s) {
+        @if (s.status === 'ready') {
+          <section aria-labelledby="requests-heading">
+            <h2 id="requests-heading">Requests by channel</h2>
+            <div class="stat-grid">
+              @for (card of channelCards(); track card.channel) {
+                <article class="stat glass-card" appGlassTilt="5">
+                  <span class="label">{{ card.label }}</span>
+                  <strong class="value">{{ card.count | number }}</strong>
+                </article>
+              }
+            </div>
+          </section>
+
+          <section class="panel-grid">
+            <article class="panel glass-card" appGlassTilt="2.5">
+              <h2>Delivery latency</h2>
+              <dl class="metric-list">
+                <div>
+                  <dt>Deliveries</dt>
+                  <dd>{{ s.data.deliveryLatency.count | number }}</dd>
+                </div>
+                <div>
+                  <dt>Mean</dt>
+                  <dd>{{ formatSeconds(s.data.deliveryLatency.meanSeconds) }}</dd>
+                </div>
+                <div>
+                  <dt>Max</dt>
+                  <dd>{{ formatSeconds(s.data.deliveryLatency.maxSeconds) }}</dd>
+                </div>
+                <div>
+                  <dt>Fallback transmissions</dt>
+                  <dd>{{ s.data.fallbackTransmissions | number }}</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article
+              class="panel glass-card kafka"
+              [class.tone-warning]="kafkaTone() === 'warning'"
+              [class.tone-danger]="kafkaTone() === 'danger'"
+              appGlassTilt="2.5"
+            >
+              <h2>Kafka consumer health</h2>
+              <dl class="metric-list">
+                <div class="m-success">
+                  <dt>Success</dt>
+                  <dd>{{ s.data.kafkaConsumer.success | number }}</dd>
+                </div>
+                <div class="m-failure">
+                  <dt>Failure</dt>
+                  <dd>{{ s.data.kafkaConsumer.failure | number }}</dd>
+                </div>
+                <div>
+                  <dt>Retry</dt>
+                  <dd>{{ s.data.kafkaConsumer.retry | number }}</dd>
+                </div>
+                <div class="m-dlq">
+                  <dt>DLQ</dt>
+                  <dd>{{ s.data.kafkaConsumer.dlq | number }}</dd>
+                </div>
+              </dl>
+            </article>
+          </section>
+
+          <section class="panel glass-card" aria-labelledby="errors-heading">
+            <h2 id="errors-heading">Provider errors</h2>
+            @if (s.data.providerErrors.length === 0) {
+              <p class="empty" role="status">No provider errors</p>
+            } @else {
+              <table>
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Error code</th>
+                    <th class="num">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of s.data.providerErrors; track e.provider + e.errorCode) {
+                    <tr>
+                      <td>{{ e.provider }}</td>
+                      <td>{{ e.errorCode }}</td>
+                      <td class="num">{{ e.count | number }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </section>
+        }
+      }
+    }
+  }
+</div>

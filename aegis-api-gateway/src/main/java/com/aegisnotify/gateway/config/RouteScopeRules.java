@@ -10,11 +10,9 @@ import org.springframework.stereotype.Component;
 /**
  * The route pattern to required-scope mapping table (design decision A1).
  *
- * <p>{@code user:read} / {@code user:admin} rules are forward-looking: the
- * {@code aegis-user-service} routes they govern are not yet proxied by this
- * gateway (they ship in a later slice), but the scope-gating contract is
- * defined here up front so both the docs and the eventual realm import stay
- * in lockstep with the code.</p>
+ * <p>{@code user:read} / {@code user:admin} rules govern the
+ * {@code aegis-user-service} routes ({@code /api/v1/users/**}) proxied by this
+ * gateway.</p>
  */
 @Component
 public class RouteScopeRules {
@@ -37,6 +35,9 @@ public class RouteScopeRules {
           SecurityScopes.NOTIFICATION_WRITE),
       new RouteScopeRule(
           pathMatchers(HttpMethod.GET, "/api/v1/dashboard/**"),
+          SecurityScopes.NOTIFICATION_READ),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.GET, "/api/v1/metrics/**"),
           SecurityScopes.NOTIFICATION_READ),
       new RouteScopeRule(
           pathMatchers("/api/v1/audit/**"),
