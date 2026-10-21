@@ -92,6 +92,43 @@ class ResilientNotificationProviderAdapterTest {
   }
 
   @Test
+  void send_recordsEveryRetryAndFallbackWithCodesAndTiming() {
+    when(primaryAdapter.send(Channel.EMAIL, "to", "body", "subject"))
+        .thenReturn(new ProviderResult(Outcome.FAILED, "SendGrid", "Unavailable", true)
+            .withCode("503"));
+    when(secondaryProvider.send(Channel.EMAIL, "to", "body", "subject"))
+        .thenReturn(new ProviderResult(Outcome.SENT, "Backup", null).withCode("202"));
+
+    ProviderResult result = retryExerciseAdapter.send(Channel.EMAIL, "to", "body", "subject");
+
+    assertThat(result.attempts()).hasSize(4);
+    assertThat(result.attempts()).extracting(attempt -> attempt.role())
+        .containsExactly("PRIMARY", "PRIMARY", "PRIMARY", "FALLBACK");
+    assertThat(result.attempts()).extracting(attempt -> attempt.code())
+        .containsExactly("503", "503", "503", "202");
+    assertThat(result.attempts()).allSatisfy(attempt -> {
+      assertThat(attempt.latencyMillis()).isNotNegative();
+      assertThat(attempt.timestamp()).isNotNull();
+    });
+    assertThat(result.attempts().get(3).success()).isTrue();
+  }
+
+  @Test
+  void send_recordsCircuitRejectionAndFallbackFailure() {
+    circuitBreakerRegistry.circuitBreaker(CIRCUIT_BREAKER_NAME).transitionToOpenState();
+    when(secondaryProvider.send(Channel.EMAIL, "to", "body", "subject"))
+        .thenReturn(new ProviderResult(Outcome.FAILED, "Backup", "Unauthorized").withCode("401"));
+
+    ProviderResult result = adapter.send(Channel.EMAIL, "to", "body", "subject");
+
+    assertThat(result.outcome()).isEqualTo(Outcome.FAILED_CRITICAL);
+    assertThat(result.attempts()).hasSize(2);
+    assertThat(result.attempts().get(0).code()).isEqualTo("CIRCUIT_OPEN");
+    assertThat(result.attempts().get(1).errorDetail()).isEqualTo("Unauthorized");
+    verify(primaryAdapter, never()).send(any(), any(), any(), any());
+  }
+
+  @Test
   void send_primarySucceeds_returnsSentAndNeverCallsSecondary() {
     when(primaryAdapter.send(Channel.EMAIL, "to", "body", "subject"))
         .thenReturn(new ProviderResult(Outcome.SENT, "SendGrid", null));

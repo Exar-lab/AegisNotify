@@ -4,12 +4,16 @@ import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.ProviderResult.Outcome;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.model.DeliveryAttempt;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -72,9 +76,13 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
     String instanceName = RESILIENCE_INSTANCE_NAMES.get(channel);
     CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(instanceName);
     Retry retry = retryRegistry.retry(instanceName);
+    List<DeliveryAttempt> attempts = new ArrayList<>();
 
     Supplier<ProviderResult> primaryCall = () -> {
+      Instant timestamp = Instant.now();
+      long started = System.nanoTime();
       ProviderResult result = primaryRouter.send(channel, recipient, renderedContent, subject);
+      attempts.add(attempt(result, "PRIMARY", timestamp, started));
       if (result.outcome() == Outcome.FAILED) {
         throw result.retryable()
             ? new TransientProviderDeliveryException(result.errorDetail())
@@ -84,27 +92,51 @@ public class ResilientNotificationProviderAdapter implements NotificationProvide
     };
 
     try {
-      return Retry.decorateSupplier(retry, circuitBreaker.decorateSupplier(primaryCall)).get();
+      return Retry.decorateSupplier(retry, circuitBreaker.decorateSupplier(primaryCall))
+          .get().withAttempts(attempts);
     } catch (CallNotPermittedException | ProviderDeliveryException primaryFailure) {
       log.warn("primary_provider_unavailable channel={} reason={}", channel,
           primaryFailure.getMessage());
-      return failOver(channel, recipient, renderedContent, subject);
+      if (primaryFailure instanceof CallNotPermittedException) {
+        attempts.add(new DeliveryAttempt(primaryName(channel), "PRIMARY", false,
+            "CIRCUIT_OPEN", "Primary call rejected by the circuit breaker", 0, Instant.now()));
+      }
+      return failOver(channel, recipient, renderedContent, subject, attempts);
     }
   }
 
   private ProviderResult failOver(Channel channel, String recipient, String renderedContent,
-      String subject) {
+      String subject, List<DeliveryAttempt> attempts) {
     NotificationProviderPort secondary = secondaryProvidersByChannel.get(channel);
+    Instant timestamp = Instant.now();
+    long started = System.nanoTime();
     ProviderResult secondaryResult =
         secondary.send(channel, recipient, renderedContent, subject);
+    attempts.add(attempt(secondaryResult, "FALLBACK", timestamp, started));
 
     if (secondaryResult.outcome() == Outcome.SENT) {
       meterRegistry.counter(METER_FALLBACK_TRANSMISSIONS).increment();
-      return new ProviderResult(Outcome.SENT_VIA_FALLBACK, secondaryResult.providerName(), null);
+      return new ProviderResult(Outcome.SENT_VIA_FALLBACK, secondaryResult.providerName(), null)
+          .withAttempts(attempts);
     }
 
     return new ProviderResult(Outcome.FAILED_CRITICAL, null,
         "Primary and secondary providers both failed for channel " + channel + ": "
-            + secondaryResult.errorDetail());
+            + secondaryResult.errorDetail()).withAttempts(attempts);
+  }
+
+  private DeliveryAttempt attempt(ProviderResult result, String role, Instant timestamp,
+      long started) {
+    return new DeliveryAttempt(result.providerName(), role, result.outcome() == Outcome.SENT,
+        result.code(), result.errorDetail(), (System.nanoTime() - started) / 1_000_000, timestamp);
+  }
+
+  private String primaryName(Channel channel) {
+    return switch (channel) {
+      case EMAIL -> "SendGrid";
+      case SMS -> "Twilio";
+      case WHATSAPP -> "Twilio";
+      case PUSH -> "FCM";
+    };
   }
 }

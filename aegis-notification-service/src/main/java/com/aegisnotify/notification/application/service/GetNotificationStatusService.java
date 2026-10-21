@@ -3,6 +3,7 @@ package com.aegisnotify.notification.application.service;
 import com.aegisnotify.notification.application.dto.NotificationLogEntry;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
+import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
@@ -17,11 +18,14 @@ public class GetNotificationStatusService implements GetNotificationStatusUseCas
 
   private final NotificationRepository notificationRepository;
   private final NotificationLogRepository notificationLogRepository;
+  private final DeliveryAttemptRepository deliveryAttemptRepository;
 
   public GetNotificationStatusService(NotificationRepository notificationRepository,
-      NotificationLogRepository notificationLogRepository) {
+      NotificationLogRepository notificationLogRepository,
+      DeliveryAttemptRepository deliveryAttemptRepository) {
     this.notificationRepository = notificationRepository;
     this.notificationLogRepository = notificationLogRepository;
+    this.deliveryAttemptRepository = deliveryAttemptRepository;
   }
 
   @Override
@@ -48,7 +52,10 @@ public class GetNotificationStatusService implements GetNotificationStatusUseCas
         notification.getStatus(),
         notification.getCreatedAt(),
         notification.getUpdatedAt(),
-        auditTrail
+        auditTrail,
+        notification.getPriority(),
+        notification.getId(),
+        deliveryAttemptRepository.findByNotificationId(notificationId)
     );
   }
 }
