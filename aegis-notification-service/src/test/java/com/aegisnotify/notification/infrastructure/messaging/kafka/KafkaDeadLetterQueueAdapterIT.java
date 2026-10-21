@@ -11,6 +11,7 @@ import com.aegisnotify.notification.infrastructure.persistence.adapter.DeliveryA
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationLogRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.NotificationRepositoryAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.OutboxEventRepositoryAdapter;
+import com.aegisnotify.notification.infrastructure.persistence.adapter.ProviderCallMetricsAdapter;
 import com.aegisnotify.notification.infrastructure.persistence.adapter.TemplateRepositoryAdapter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -86,6 +87,9 @@ class KafkaDeadLetterQueueAdapterIT {
 
   @MockitoBean
   private DeliveryAttemptRepositoryAdapter deliveryAttemptRepositoryAdapter;
+
+  @MockitoBean
+  private ProviderCallMetricsAdapter providerCallMetricsAdapter;
 
   @MockitoBean
   private NotificationProviderPort notificationProviderPort;
