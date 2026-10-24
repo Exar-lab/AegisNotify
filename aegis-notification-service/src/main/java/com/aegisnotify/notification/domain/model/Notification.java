@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public final class Notification {
 
   private static final Pattern EMAIL_PATTERN =
-      Pattern.compile("^[\\w\\-\\.]+@([\\w\\-]+\\.)+[\\w\\-]{2,4}$");
+      Pattern.compile("^[\\w\\-\\.]++@(?:[\\w\\-]++\\.)++[\\w\\-]{2,4}$");
   private static final Pattern PHONE_PATTERN =
       Pattern.compile("^\\+[1-9]\\d{1,14}$");
 
