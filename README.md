@@ -218,7 +218,10 @@ In separate terminals, in this order:
 ./mvnw -pl aegis-api-gateway spring-boot:run
 ```
 
-- Eureka (`http://localhost:8761`) has no external dependency and is the simplest to verify first.
+- Eureka (`http://localhost:8761`) has no external dependency and is the simplest to verify first, but
+  now requires `EUREKA_SECURITY_USER` / `EUREKA_SECURITY_PASSWORD` (HTTP Basic) for its dashboard and
+  registry API — every other service picks the same credentials up automatically via the
+  `EUREKA_SECURITY_USER:EUREKA_SECURITY_PASSWORD@` embedded in their registration URL.
 - Config Server requires its own Git repository and Basic Auth environment variables
   (`CONFIG_SERVER_USER`, `CONFIG_SERVER_PASSWORD`, `CONFIG_REPO_URI`) if you intend to use
   centralized configuration; it's optional for a local run using each service's own
@@ -412,6 +415,7 @@ The most important environment variables are:
 | `JWKS_URI` | Keycloak realm at `localhost:8088` | Gateway, notification, audit, and user services |
 | `KEYCLOAK_BASE_URL` / `KEYCLOAK_REALM` | `http://localhost:8088` / `aegis` | User service |
 | `KEYCLOAK_ADMIN_CLIENT_ID` / `KEYCLOAK_ADMIN_CLIENT_SECRET` | `aegis-user-service` / none | User service (Admin API access) |
+| `EUREKA_SECURITY_USER` / `EUREKA_SECURITY_PASSWORD` | None | Eureka server and every registering client |
 | `CONFIG_SERVER_USER` / `CONFIG_SERVER_PASSWORD` | None | Config Server |
 | `CONFIG_REPO_URI` | None | Config Server Git backend |
 | `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |

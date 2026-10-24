@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: aegis-eureka-server
+  security:
+    user:
+      name: ${EUREKA_SECURITY_USER}
+      password: ${EUREKA_SECURITY_PASSWORD}
 
 eureka:
   client:
@@ -12,3 +16,12 @@ eureka:
   server:
     enable-self-preservation: false
     eviction-interval-timer-in-ms: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
