@@ -31,6 +31,10 @@ spring:
           predicates:
             - Path=/api/v1/metrics/**
             - Method=GET
+        - id: templates-api
+          uri: http://127.0.0.1:0
+          predicates:
+            - Path=/api/v1/templates/**
         - id: users-api
           uri: http://127.0.0.1:0
           predicates:

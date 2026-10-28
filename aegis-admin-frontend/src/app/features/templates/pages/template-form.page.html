@@ -1,0 +1,95 @@
+<div class="template-form-page page" [attr.aria-busy]="state().kind === 'loading'">
+  <nav aria-label="Breadcrumb" class="breadcrumb">
+    <a routerLink="/templates">Templates</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ isEdit() ? (template()?.name ?? 'Edit template') : 'New template' }}</span>
+  </nav>
+
+  <header>
+    <div>
+      <h1 class="page-title">{{ isEdit() ? 'Edit template' : 'New template' }}</h1>
+      <p class="page-lede">
+        {{
+          isEdit()
+            ? 'Name and channel are fixed once a template is created.'
+            : 'Define the content rendered for a notification channel.'
+        }}
+      </p>
+    </div>
+  </header>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <section class="panel">
+        <div class="message" role="status">Loading template…</div>
+      </section>
+    }
+    @case ('not-found') {
+      <section class="panel">
+        <div class="message">
+          <h2>Template not found</h2>
+          <p>This template does not exist or is no longer available.</p>
+          <a routerLink="/templates">Back to Templates</a>
+        </div>
+      </section>
+    }
+    @case ('error') {
+      <section class="panel">
+        <div class="message" role="alert">
+          <h2>Couldn't load the template</h2>
+          <p>Please go back and try again.</p>
+          <a routerLink="/templates">Back to Templates</a>
+        </div>
+      </section>
+    }
+    @default {
+      <form
+        class="template-form panel"
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        [attr.aria-label]="isEdit() ? 'Edit template' : 'Create template'"
+      >
+        <div class="row">
+          <label
+            >Name<input formControlName="name" autocomplete="off" maxlength="255"
+          /></label>
+          <label
+            >Channel
+            <select formControlName="channel">
+              @for (channel of channels; track channel) {
+                <option [value]="channel">{{ channel }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <label>Subject<input formControlName="subject" maxlength="255" /></label>
+        <label
+          >Body<textarea formControlName="body" rows="12" spellcheck="false"></textarea>
+        </label>
+        <label
+          >Variables
+          <input formControlName="variables" autocomplete="off" placeholder="name, orderId, link" />
+          <span class="hint">Comma-separated variable names used in the body.</span>
+        </label>
+
+        @if (form.touched && form.invalid) {
+          <p class="form-error" role="alert">Name, channel and body are required.</p>
+        }
+        @if (formError()) {
+          <p class="form-error" role="alert">{{ formError() }}</p>
+        }
+
+        <div class="form-actions">
+          <a class="button secondary" routerLink="/templates">Cancel</a>
+          <button type="submit" [disabled]="submitting()">
+            @if (submitting()) {
+              Saving…
+            } @else {
+              {{ isEdit() ? 'Save changes' : 'Create template' }}
+            }
+          </button>
+        </div>
+      </form>
+    }
+  }
+</div>

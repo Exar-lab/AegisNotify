@@ -40,6 +40,18 @@ public class RouteScopeRules {
           pathMatchers(HttpMethod.GET, "/api/v1/metrics/**"),
           SecurityScopes.NOTIFICATION_READ),
       new RouteScopeRule(
+          pathMatchers(HttpMethod.GET, "/api/v1/templates", "/api/v1/templates/*"),
+          SecurityScopes.NOTIFICATION_READ),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.POST, "/api/v1/templates"),
+          SecurityScopes.NOTIFICATION_WRITE),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.PUT, "/api/v1/templates/*"),
+          SecurityScopes.NOTIFICATION_WRITE),
+      new RouteScopeRule(
+          pathMatchers(HttpMethod.PATCH, "/api/v1/templates/*/status"),
+          SecurityScopes.NOTIFICATION_WRITE),
+      new RouteScopeRule(
           pathMatchers("/api/v1/audit/**"),
           SecurityScopes.AUDIT_READ),
       new RouteScopeRule(

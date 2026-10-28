@@ -1,0 +1,135 @@
+/* Shared control/table styles for the Templates screens (mirrors the Settings page). */
+:host {
+  display: block;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+input,
+select,
+textarea,
+button,
+.button {
+  font: inherit;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+}
+input,
+select,
+textarea {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  min-width: 0;
+  font-size: 0.875rem;
+  transition: border-color var(--transition-fast);
+}
+input:hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+}
+input:disabled,
+select:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--text-inverted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+button:hover:not(:disabled),
+.button:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+button.secondary,
+.button.secondary {
+  background: var(--bg-surface);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+button.secondary:hover:not(:disabled),
+.button.secondary:hover {
+  background: var(--bg-surface);
+  border-color: var(--text-secondary);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+.form-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--status-offline);
+  font-size: 0.875rem;
+}
+.panel {
+  min-width: 0;
+  overflow: hidden;
+}
+h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.message {
+  padding: 72px 24px;
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+[data-tone='success'] {
+  color: var(--status-online);
+  background: var(--status-success-bg);
+}
+[data-tone='danger'] {
+  color: var(--status-offline);
+  background: var(--status-danger-bg);
+}
+.identifier {
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

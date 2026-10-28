@@ -204,6 +204,50 @@ class SecurityConfigTest {
   }
 
   @Test
+  void templatesList_withNotificationReadScope_isNotForbidden() {
+    // Same no-live-backend situation as the notification routes: clearing the
+    // security layer surfaces as a downstream 5xx on the templates-api route.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/api/v1/templates")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void templateCreate_withoutNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .post().uri("/api/v1/templates")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:write");
+  }
+
+  @Test
+  void templateUpdate_withNotificationWriteScope_isNotForbidden() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .put().uri("/api/v1/templates/some-id")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void templateStatus_withoutNotificationWriteScope_returns403() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .patch().uri("/api/v1/templates/some-id/status")
+        .exchange()
+        .expectStatus().isForbidden();
+  }
+
+  @Test
+  void templateGet_withoutNotificationReadScope_returns403() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .get().uri("/api/v1/templates/some-id")
+        .exchange()
+        .expectStatus().isForbidden();
+  }
+
+  @Test
   void unmappedApiPath_withAuthenticatedJwtAndNoScope_isNotRejectedForMissingScope() {
     // /api/v1/does-not-exist matches no RouteScopeRule, so it falls through to the
     // generic /api/v1/** .authenticated() catch-all in SecurityConfig: any
