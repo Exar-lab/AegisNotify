@@ -10,10 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.cors.CorsConfiguration;
 import reactor.core.publisher.Mono;
 
 @SpringBootTest
@@ -296,5 +299,24 @@ class SecurityConfigTest {
         .header("Authorization", "Bearer not-a-valid-jwt")
         .exchange()
         .expectStatus().isUnauthorized();
+  }
+
+  @Test
+  void corsConfigurationSource_allowsPatch() {
+    // Regression for a real bug this test class's own documented WebTestClient
+    // limitation (see optionsRequest_withoutAuth_isNotRejectedForMissingCredentials)
+    // let slip through: PATCH was missing from setAllowedMethods, so every real
+    // browser CORS preflight for a PATCH endpoint (template activate/deactivate,
+    // notification cancel, user status) failed with a bare 403 before the request
+    // body was ever sent — confirmed against the running app with curl, where every
+    // non-PATCH method preflighted fine and every PATCH one didn't, regardless of
+    // path. Asserted directly against the bean since this class can't exercise a
+    // real preflight (see the comment above).
+    CorsConfiguration configuration = new SecurityConfig()
+        .corsConfigurationSource("http://localhost:4200")
+        .getCorsConfiguration(MockServerWebExchange.from(MockServerHttpRequest.get("/")));
+
+    assertThat(configuration.getAllowedMethods())
+        .containsExactlyInAnyOrder("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
   }
 }
