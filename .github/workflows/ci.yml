@@ -12,9 +12,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -23,6 +27,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache SonarCloud packages
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
       - name: Make Maven wrapper executable
         run: chmod +x ./mvnw
 
@@ -30,6 +42,9 @@ jobs:
         run: ./mvnw validate -Dmaven.test.skip=true
 
       - name: Build and test
+        env:
+          # Docker on ubuntu-latest now requires API >= 1.40; Testcontainers 1.20.x defaults to 1.32.
+          JAVA_TOOL_OPTIONS: -Dapi.version=1.44
         run: ./mvnw clean verify -Dcheckstyle.skip=true
 
       - name: Upload test reports
@@ -37,5 +52,73 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: '**/target/surefire-reports/'
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
           retention-days: 7
+
+      - name: SonarCloud scan
+        if: ${{ env.SONAR_TOKEN != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dsonar.projectKey=Exar-lab_AegisNotify
+          -Dsonar.organization=exar-lab
+          -Dsonar.host.url=https://sonarcloud.io
+
+  docker-build:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - aegis-eureka-server
+          - aegis-config-server
+          - aegis-notification-service
+          - aegis-audit-service
+          - aegis-api-gateway
+          - aegis-user-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve project version and image owner
+        id: vars
+        run: |
+          chmod +x ./mvnw
+          echo "version=$(./mvnw -q -ntp -DforceStdout help:evaluate -Dexpression=project.version | tail -n 1)" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/${{ matrix.module }}
+          tags: |
+            type=raw,value=${{ steps.vars.outputs.version }}
+            type=sha
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (push only on main)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.module }}/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

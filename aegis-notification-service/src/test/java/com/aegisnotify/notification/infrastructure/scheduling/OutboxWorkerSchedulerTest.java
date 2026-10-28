@@ -19,7 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * context, verifying delegation and the per-tick exception guard directly by
  * invoking the scheduled method. Actual {@code @Scheduled} firing on a
  * configured interval is proven separately by
- * {@link OutboxWorkerSchedulerIntegrationTest}.</p>
+ * {@link OutboxWorkerSchedulerIT}.</p>
  */
 @ExtendWith(MockitoExtension.class)
 class OutboxWorkerSchedulerTest {

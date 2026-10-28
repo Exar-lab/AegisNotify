@@ -1,0 +1,38 @@
+/* A persistent backdrop: fixed to the app's scroll container (the component sets left/top/width/height from it),
+   painted behind the page content (the page isolates its own stacking context) and never interactive.
+   --shield-x is where (0..1) across the backdrop the shield's centre sits. */
+:host {
+  --shield-x: 0.72;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+:host(.is-live) canvas {
+  opacity: 1;
+}
+
+:host(.is-unsupported) {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  :host {
+    --shield-x: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  canvas {
+    transition: none;
+  }
+}

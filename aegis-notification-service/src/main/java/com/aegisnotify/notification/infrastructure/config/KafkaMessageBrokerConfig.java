@@ -1,6 +1,8 @@
 package com.aegisnotify.notification.infrastructure.config;
 
+import com.aegisnotify.notification.application.port.out.DeadLetterQueuePort;
 import com.aegisnotify.notification.application.port.out.MessageBrokerPort;
+import com.aegisnotify.notification.infrastructure.messaging.kafka.KafkaDeadLetterQueueAdapter;
 import com.aegisnotify.notification.infrastructure.messaging.kafka.KafkaMessageBrokerAdapter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.HashMap;
@@ -24,6 +26,33 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
  * deliberately NOT reusing {@code auditKafkaTemplate}: that bean is typed to
  * {@code AuditEventMessage} and gated on {@code audit.publishing.enabled} —
  * the delivery-critical relay must not depend on audit configuration.</p>
+ *
+ * <p><strong>DLQ producer reuse (issue #30):</strong> {@link KafkaDeadLetterQueueAdapter}
+ * reuses this same {@code messageBrokerKafkaTemplate}/{@code messageBrokerProducerFactory}
+ * pair instead of a dedicated one: {@link DeadLetterQueuePort#sendToDlq} already
+ * takes a {@code Map<String, Object>} payload — the exact same wire type this
+ * producer is configured for — and this producer already carries the
+ * {@code acks=all} + idempotence durability settings #30 asks for. A second,
+ * separately-pooled producer connected to the same broker for the same value
+ * type would duplicate connections and configuration drift risk for no
+ * isolation benefit (unlike the audit template, which is a genuinely
+ * different value type gated on a different, non-delivery-critical flag).</p>
+ *
+ * <p>{@code retries} is set explicitly (#30's literal acceptance criterion)
+ * even though {@code enable.idempotence=true} already implies an effectively
+ * unbounded retry count by default in this Kafka client version — making it
+ * explicit documents the intent instead of relying on an implicit default
+ * that could change with a future client upgrade.</p>
+ *
+ * <p>{@code reconnect.backoff(.max).ms} are widened from the client's
+ * defaults (50ms / 1000ms) to 1s / 30s. The retry count itself is still
+ * unbounded — a broker outage never drops a notification — only how often
+ * each retry is attempted changes. At the default backoff, an unreachable
+ * broker makes {@code NetworkClient} log a reconnect warning roughly once a
+ * second for as long as it stays down, which is noise, not signal, once
+ * you already know Kafka is unavailable; the capped exponential backoff
+ * still reaches a broker that comes back up within 30s of its next
+ * attempt.</p>
  */
 @Configuration
 public class KafkaMessageBrokerConfig {
@@ -43,6 +72,9 @@ public class KafkaMessageBrokerConfig {
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
     props.put(ProducerConfig.ACKS_CONFIG, "all");
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+    props.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MS_CONFIG, 1_000);
+    props.put(ProducerConfig.RECONNECT_BACKOFF_MAX_MS_CONFIG, 30_000);
     props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
     return new DefaultKafkaProducerFactory<>(props);
   }
@@ -60,6 +92,15 @@ public class KafkaMessageBrokerConfig {
       MeterRegistry meterRegistry) {
     return new KafkaMessageBrokerAdapter(
         messageBrokerKafkaTemplate, topicAliases(notificationKafkaProperties), meterRegistry);
+  }
+
+  @Bean
+  public DeadLetterQueuePort deadLetterQueuePort(
+      KafkaTemplate<String, Map<String, Object>> messageBrokerKafkaTemplate,
+      NotificationKafkaProperties notificationKafkaProperties,
+      MeterRegistry meterRegistry) {
+    return new KafkaDeadLetterQueueAdapter(
+        messageBrokerKafkaTemplate, notificationKafkaProperties.topics().dlq(), meterRegistry);
   }
 
   /**

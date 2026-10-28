@@ -2,6 +2,8 @@ package com.aegisnotify.notification.application.dto;
 
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
+import com.aegisnotify.notification.domain.enums.Priority;
+import com.aegisnotify.notification.domain.model.DeliveryAttempt;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,6 +16,9 @@ public record NotificationStatusResponse(
     NotificationStatus status,
     Instant createdAt,
     Instant updatedAt,
-    List<NotificationLogEntry> auditTrail
+    List<NotificationLogEntry> auditTrail,
+    Priority priority,
+    UUID correlationId,
+    List<DeliveryAttempt> providerAttempts
 ) {
 }

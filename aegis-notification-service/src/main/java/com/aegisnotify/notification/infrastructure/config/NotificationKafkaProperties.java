@@ -58,6 +58,13 @@ public record NotificationKafkaProperties(
             "notification.kafka.topics.low-priority"
         },
         requireText(topics.dltSuffix(), "notification.kafka.topics.dlt-suffix"));
+
+    // The DLQ topic (issue #30) is a standalone publish target for
+    // DeadLetterQueuePort, not derived from the dlt-suffix six-topic
+    // topology above, so it gets its own direct name validation.
+    validateTopicName(
+        requireText(topics.dlq(), "notification.kafka.topics.dlq"),
+        "notification.kafka.topics.dlq");
   }
 
   public String[] sourceTopics() {
@@ -177,6 +184,10 @@ public record NotificationKafkaProperties(
    * @param replicationFactor replication factor shared by all six topics
    * @param minInSyncReplicas minimum in-sync replicas shared by all six topics
    * @param dltSuffix suffix used to derive the three dead-letter topic names
+   * @param dlq dedicated dead-letter-queue topic published to by
+   *     {@link com.aegisnotify.notification.application.port.out.DeadLetterQueuePort}
+   *     (issue #30) — distinct from the per-source {@code dltSuffix} topics above,
+   *     which are populated by the Kafka listener's error handler instead
    */
   public record Topics(
       String highPriority,
@@ -185,7 +196,8 @@ public record NotificationKafkaProperties(
       int partitions,
       short replicationFactor,
       int minInSyncReplicas,
-      String dltSuffix) {
+      String dltSuffix,
+      String dlq) {
 
     @ConstructorBinding
     public Topics {
@@ -201,6 +213,7 @@ public record NotificationKafkaProperties(
                 + "notification.kafka.topics.replication-factor");
       }
       dltSuffix = requireText(dltSuffix, "notification.kafka.topics.dlt-suffix");
+      dlq = requireText(dlq, "notification.kafka.topics.dlq");
     }
 
     public Topics(
@@ -211,7 +224,7 @@ public record NotificationKafkaProperties(
         short replicationFactor,
         String dltSuffix) {
       this(highPriority, mediumPriority, lowPriority, partitions, replicationFactor,
-          Math.min(2, replicationFactor), dltSuffix);
+          Math.min(2, replicationFactor), dltSuffix, "notifications-dlq");
     }
 
     public Topics() {
@@ -222,7 +235,8 @@ public record NotificationKafkaProperties(
           3,
           (short) 3,
           2,
-          "-dlt");
+          "-dlt",
+          "notifications-dlq");
     }
   }
 

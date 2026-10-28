@@ -1,0 +1,35 @@
+/* Fixed backdrop: JS sizes it to the shell's content area. It sits at z-index -1 inside the page's own
+   stacking context, so every in-flow UI element (opaque panels, cards) paints above it. */
+:host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  display: block;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+:host(.is-live) canvas {
+  opacity: 1;
+}
+
+:host(.is-unsupported) canvas {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  canvas {
+    transition: none;
+  }
+}

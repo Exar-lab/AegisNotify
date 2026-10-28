@@ -1,0 +1,184 @@
+<div class="dashboard page">
+  <header class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-lede">Delivery health across every channel, updated as providers report in.</p>
+  </header>
+
+  <!-- Dark display case holding the 3D core; owned (and destroyed) with this route. -->
+  <app-dashboard-core [hotspots]="coreHotspots()" />
+
+  <section class="kpi-grid panel" aria-label="Key indicators">
+    @if (kpis(); as kpiState) {
+      @switch (kpiState.status) {
+        @case ('loading') {
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="kpi-card kpi-card--loading">
+              <div class="skeleton-line skeleton-line--sm"></div>
+              <div class="skeleton-line skeleton-line--lg"></div>
+              <div class="skeleton-line skeleton-line--xs"></div>
+            </div>
+          }
+        }
+        @case ('error') {
+          <div class="panel-error kpi-error">
+            <p>Couldn't load dashboard KPIs.</p>
+            <button type="button" class="btn-retry" (click)="loadSummary()">Retry</button>
+          </div>
+        }
+        @case ('ready') {
+          @for (tile of kpiState.data; track tile.label) {
+            <div class="kpi-card">
+              <span class="kpi-label">{{ tile.label }}</span>
+              <span class="kpi-value">{{ tile.value }}</span>
+              <div class="kpi-trend" [class]="'trend-' + tile.deltaTrend">
+                @if (tile.deltaTrend === 'up') {
+                  <span class="trend-icon" aria-hidden="true">↑</span>
+                } @else if (tile.deltaTrend === 'down') {
+                  <span class="trend-icon" aria-hidden="true">↓</span>
+                }
+                <span class="kpi-delta">{{ tile.deltaText }}</span>
+              </div>
+            </div>
+          }
+        }
+      }
+    }
+  </section>
+
+  <section class="panel panel--resilience">
+    <div class="panel-header">
+      <h2 class="panel-title">Provider circuit breakers</h2>
+    </div>
+    @if (providers(); as providerState) {
+      @switch (providerState.status) {
+        @case ('loading') {
+          <div class="panel-loading">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <div class="skeleton-row"></div>
+            }
+          </div>
+        }
+        @case ('error') {
+          <div class="panel-error">
+            <p>Couldn't load circuit breaker status.</p>
+            <button type="button" class="btn-retry" (click)="loadCircuitBreakers()">Retry</button>
+          </div>
+        }
+        @case ('ready') {
+          @if (providerState.data.length === 0) {
+            <p class="panel-hint">No circuit breakers reporting.</p>
+          } @else {
+            <div class="table-scroll">
+              <table class="provider-table">
+                <thead>
+                  <tr>
+                    <th>Provider</th>
+                    <th>Channel</th>
+                    <th>Role</th>
+                    <th>Fallback</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of providerState.data; track row.key) {
+                    <tr class="provider-row">
+                      <td>
+                        <div class="provider-name-cell">
+                          <span class="provider-icon" [attr.data-channel]="row.channel">
+                            @switch (row.channel) {
+                              @case ('EMAIL') {
+                                <svg class="channel-icon channel-email" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                              }
+                              @case ('SMS') {
+                                <svg class="channel-icon channel-sms" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                              }
+                              @case ('WHATSAPP') {
+                                <svg class="channel-icon channel-whatsapp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                              }
+                              @case ('PUSH') {
+                                <svg class="channel-icon channel-push" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                              }
+                            }
+                          </span>
+                          <span class="provider-name">{{ row.name }}</span>
+                        </div>
+                      </td>
+                      <td class="provider-channel">{{ row.channel }}</td>
+                      <td class="provider-role">{{ row.role }}</td>
+                      <td class="provider-fallback">{{ row.fallbackProvider ?? 'None' }}</td>
+                      <td>
+                        <span class="badge" [class]="breakerBadgeClass(row.state)">{{ row.state }}</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      }
+    }
+  </section>
+
+  <section class="panel panel--table">
+    <div class="panel-header">
+      <h2 class="panel-title">Recent notifications</h2>
+      <a routerLink="/notifications" class="panel-action-link">View all</a>
+    </div>
+    @if (recentNotifications(); as notificationsState) {
+      @switch (notificationsState.status) {
+        @case ('loading') {
+          <div class="panel-loading">
+            @for (i of [1, 2, 3, 4, 5]; track i) {
+              <div class="skeleton-row"></div>
+            }
+          </div>
+        }
+        @case ('error') {
+          <div class="panel-error">
+            <p>Couldn't load recent notifications.</p>
+            <button type="button" class="btn-retry" (click)="loadNotifications()">Retry</button>
+          </div>
+        }
+        @case ('ready') {
+          @if (notificationsState.data.length === 0) {
+            <p class="panel-hint">No notifications in the last 24h</p>
+          } @else {
+            <div class="table-scroll">
+              <table class="notification-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Channel</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (n of notificationsState.data; track n.id) {
+                    <tr
+                      [routerLink]="['/notifications', n.id]"
+                      (click)="navigateToNotification(n.id)"
+                      class="notification-row"
+                    >
+                      <td class="notification-id">{{ n.id }}</td>
+                      <td>{{ n.channel }}</td>
+                      <td>
+                        <span class="priority-tag" [attr.data-priority]="n.priority">{{ n.priority }}</span>
+                      </td>
+                      <td>
+                        <span class="badge" [class]="statusBadgeClass(n.status)">{{ n.status }}</span>
+                      </td>
+                      <td class="notification-time">{{ formatTime(n.createdAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      }
+    }
+  </section>
+</div>

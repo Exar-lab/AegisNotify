@@ -1,0 +1,390 @@
+:host {
+  display: block;
+  /* Lets the hero's art break out to the full content width (cqw) without touching the shell. */
+  container-type: inline-size;
+  overflow-x: clip;
+}
+.result-code {
+  margin-left: 8px;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+}
+.detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.breadcrumb {
+  display: flex;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.breadcrumb a,
+.breadcrumb [aria-hidden='true'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.breadcrumb [aria-current='page'] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+}
+a {
+  color: var(--color-accent-ink);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 24px;
+}
+.panel {
+  min-width: 0;
+  padding: 28px;
+}
+h2 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+}
+.count {
+  margin-left: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-family-base);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+dl {
+  display: grid;
+  gap: 20px;
+}
+dl > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  font-size: 0.875rem;
+}
+dt,
+.hint,
+time {
+  color: var(--text-secondary);
+}
+dd,
+.attempt-details {
+  overflow-wrap: anywhere;
+}
+.identifier {
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+}
+.hint {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+dl + .hint {
+  margin-top: 24px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.large {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+[data-tone='success'] {
+  color: var(--status-online);
+  background: var(--status-success-bg);
+}
+[data-tone='fallback'] {
+  color: var(--status-fallback);
+  background: var(--status-fallback-bg);
+}
+[data-tone='danger'] {
+  color: var(--status-offline);
+  background: var(--status-danger-bg);
+}
+[data-tone='warning'] {
+  color: var(--status-warning);
+  background: var(--status-warning-bg);
+}
+[data-tone='neutral'] {
+  color: var(--status-neutral);
+  background: var(--status-neutral-bg);
+}
+.timeline {
+  list-style: none;
+}
+.timeline li {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-bottom: 28px;
+}
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+.timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+}
+.step-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 0;
+  font-size: 1rem;
+}
+.step-content {
+  min-width: 0;
+  padding-top: 2px;
+}
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+time {
+  font-size: 0.8125rem;
+}
+.step-content p {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+th {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+th,
+td {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+th:first-child,
+td:first-child {
+  padding-left: 0;
+}
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+td {
+  min-width: 90px;
+}
+.attempt-details {
+  margin-top: 8px;
+  min-width: 180px;
+  line-height: 1.5;
+}
+.dlq-notice {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--status-danger-bg);
+  color: var(--status-offline);
+  font-size: 0.875rem;
+}
+.empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.empty-state h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.empty-state p {
+  color: var(--text-secondary);
+}
+button {
+  background: var(--color-accent);
+  color: var(--text-inverted);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+button:hover {
+  background: var(--color-accent-hover);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Hero: the shield is painted straight onto the page (transparent WebGL canvas that bleeds past the page
+   frame), with the editorial copy in the remaining space. No panel, no border, no tint. */
+.detail-page {
+  --bleed: clamp(16px, 4vw, 56px);
+}
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  min-height: clamp(500px, calc(100vh - 380px), 800px);
+  /* Wider than the 1280px page frame on large screens, so the shield has room to dominate. */
+  align-self: center;
+  margin-bottom: 20px;
+  width: min(calc(100cqw - 2 * var(--bleed)), 1560px);
+}
+.hero-art {
+  --shield-x: 0.27;
+  position: absolute;
+  top: -24px;
+  right: calc(50% - 50cqw);
+  bottom: -56px;
+  left: calc(50% - 50cqw);
+  pointer-events: none;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  display: grid;
+  gap: clamp(28px, 5vh, 56px);
+  min-width: 0;
+}
+.readout {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  min-width: 0;
+  max-width: 44ch;
+}
+.readout-context {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.readout .large {
+  padding: 10px 18px;
+  font-size: 1.0625rem;
+}
+.readout-copy {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+dl.mini {
+  grid-auto-flow: column;
+  gap: 40px;
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+  width: 100%;
+}
+dl.mini > div {
+  display: block;
+}
+dl.mini dd {
+  margin-top: 6px;
+  font-family: var(--font-family-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.timeline li.inspectable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0 -8px;
+  padding: 4px 8px 28px;
+  transition: background-color var(--transition-fast);
+  &:last-child {
+    padding-bottom: 4px;
+  }
+  &:hover,
+  &.is-active {
+    background: var(--indicator-bg);
+  }
+  &.is-active {
+    box-shadow: inset 2px 0 0 var(--color-accent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  &:not(:last-child)::before {
+    left: 23px;
+    top: 38px;
+  }
+}
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    gap: 8px;
+  }
+  .hero-art {
+    --shield-x: 0.5;
+    position: relative;
+    inset: auto;
+    height: clamp(380px, 62vw, 520px);
+    margin-inline: calc(-1 * var(--bleed));
+  }
+  .hero-copy {
+    grid-column: 1;
+  }
+  .readout {
+    max-width: none;
+  }
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .panel {
+    padding: 20px 16px;
+  }
+  dl > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  dl.mini {
+    gap: 24px;
+  }
+}

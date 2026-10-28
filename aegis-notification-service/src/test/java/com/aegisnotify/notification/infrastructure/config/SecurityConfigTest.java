@@ -2,11 +2,15 @@ package com.aegisnotify.notification.infrastructure.config;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
+import com.aegisnotify.notification.application.port.in.ListNotificationsUseCase;
+import com.aegisnotify.notification.application.port.in.RetryFailedNotificationUseCase;
 import com.aegisnotify.notification.infrastructure.web.NotificationController;
 import com.aegisnotify.notification.infrastructure.web.mapper.NotificationWebMapper;
 import java.util.UUID;
@@ -35,6 +39,15 @@ class SecurityConfigTest {
 
   @MockitoBean
   private GetNotificationStatusUseCase getNotificationStatusUseCase;
+
+  @MockitoBean
+  private CancelNotificationUseCase cancelNotificationUseCase;
+
+  @MockitoBean
+  private RetryFailedNotificationUseCase retryFailedNotificationUseCase;
+
+  @MockitoBean
+  private ListNotificationsUseCase listNotificationsUseCase;
 
   @MockitoBean
   private NotificationWebMapper mapper;
@@ -73,5 +86,32 @@ class SecurityConfigTest {
     mockMvc.perform(get("/api/v1/notifications/{id}/status", id)
             .header("Authorization", "Bearer not-a-valid-jwt"))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void cancelEndpoint_withNotificationWriteScope_returns200() throws Exception {
+    UUID id = UUID.randomUUID();
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", id)
+            .with(jwt().authorities(() -> "SCOPE_notification:write")))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void cancelEndpoint_withoutNotificationWriteScope_returns403() throws Exception {
+    UUID id = UUID.randomUUID();
+
+    mockMvc.perform(patch("/api/v1/notifications/{id}/cancel", id)
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void retryEndpoint_withoutNotificationWriteScope_returns403() throws Exception {
+    UUID id = UUID.randomUUID();
+
+    mockMvc.perform(post("/api/v1/notifications/{id}/retry", id)
+            .with(jwt().authorities(() -> "SCOPE_notification:read")))
+        .andExpect(status().isForbidden());
   }
 }

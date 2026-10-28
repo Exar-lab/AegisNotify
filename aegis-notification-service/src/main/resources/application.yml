@@ -29,7 +29,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://${EUREKA_SECURITY_USER}:${EUREKA_SECURITY_PASSWORD}@localhost:8761/eureka/
   instance:
     prefer-ip-address: true
 
@@ -37,6 +37,14 @@ audit:
   publishing:
     enabled: true
   topic: notification-audit-events
+
+# Local-demo only. Seeds the in-process Micrometer meters behind the admin
+# metrics screen; leave it false everywhere else so the screen reflects
+# real traffic. See DemoMetricsSeeder.
+aegis:
+  demo:
+    metrics:
+      enabled: ${AEGIS_DEMO_METRICS_ENABLED:false}
 
 notification:
   template:
@@ -76,6 +84,7 @@ notification:
       replication-factor: ${NOTIFICATION_KAFKA_TOPIC_REPLICATION_FACTOR:3}
       min-in-sync-replicas: ${NOTIFICATION_KAFKA_TOPIC_MIN_IN_SYNC_REPLICAS:2}
       dlt-suffix: ${NOTIFICATION_KAFKA_DLT_SUFFIX:-dlt}
+      dlq: ${NOTIFICATION_KAFKA_DLQ_TOPIC:notifications-dlq}
   providers:
     email:
       base-url: ${SENDGRID_BASE_URL:https://api.sendgrid.com}
@@ -172,7 +181,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info,prometheus,circuitbreakers
   health:
     circuitbreakers:
       enabled: true

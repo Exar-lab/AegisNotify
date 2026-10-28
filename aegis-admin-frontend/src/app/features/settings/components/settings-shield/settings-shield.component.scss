@@ -1,0 +1,49 @@
+/* Decorative watermark: fixed over the routed scroller's viewport (JS pins left/top/width/height to
+   `.content-area`), behind the page content. The page frame sits above it with z-index 1; every data
+   surface on top stays opaque. CSS owns the composition through --shield-x / --shield-y / --shield-h. */
+:host {
+  --shield-x: 0.86;
+  --shield-y: 0.64;
+  --shield-h: 0.6;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+/* The quiet: the shield is fully rendered, then held well below full strength so it reads as a watermark. */
+:host(.is-live) canvas {
+  opacity: 0.45;
+}
+
+:host(.is-unsupported) canvas {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  :host {
+    --shield-x: 0.5;
+    --shield-y: 0.6;
+    --shield-h: 0.55;
+  }
+
+  :host(.is-live) canvas {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  canvas {
+    transition: none;
+  }
+}

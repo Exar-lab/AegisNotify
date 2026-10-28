@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.aegisnotify.notification.domain.enums.Channel;
@@ -12,6 +13,7 @@ import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.InvalidRecipientException;
 import com.aegisnotify.notification.domain.model.Notification;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -72,6 +74,20 @@ class NotificationTest {
         Notification.create(
             Channel.EMAIL, "not-an-email", "welcome",
             Map.of(), Priority.HIGH
+        )
+    );
+  }
+
+  @Test
+  void create_withCatastrophicBacktrackingEmail_rejectsWithoutHanging() {
+    String maliciousRecipient = "user@" + "a.".repeat(35) + "!";
+
+    assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+        assertThrows(InvalidRecipientException.class, () ->
+            Notification.create(
+                Channel.EMAIL, maliciousRecipient, "welcome",
+                Map.of(), Priority.HIGH
+            )
         )
     );
   }

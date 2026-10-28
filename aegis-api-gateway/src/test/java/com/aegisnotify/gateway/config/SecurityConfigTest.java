@@ -122,6 +122,39 @@ class SecurityConfigTest {
   }
 
   @Test
+  void dashboardSummary_noToken_returns401() {
+    webTestClient.get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().isUnauthorized();
+  }
+
+  @Test
+  void dashboardSummary_withNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:read");
+  }
+
+  @Test
+  void dashboardSummary_withNotificationReadScope_isNotForbidden() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/api/v1/dashboard/summary")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void actuatorCircuitBreakers_isNotRoutedAsBusinessEndpoint() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/actuator/circuitbreakers")
+        .exchange()
+        .expectStatus().isNotFound();
+  }
+
+  @Test
   void auditEndpoint_withoutAuditReadScope_returns403WithRequiredScope() {
     webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
         .get().uri("/api/v1/audit")
@@ -129,6 +162,32 @@ class SecurityConfigTest {
         .expectStatus().isForbidden()
         .expectBody()
         .jsonPath("$.requiredScope").isEqualTo("audit:read");
+  }
+
+  @Test
+  void auditEndpoint_withAuditReadScope_isNotForbidden() {
+    // Symmetric positive case for the existing audit 403 test. No live
+    // aegis-audit-service in this context (application-test.yml points at a closed
+    // port), so a correctly scoped request clears security and fails downstream at
+    // routing with a 5xx, proving it passed authorization, not 401/403.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_audit:read"))
+        .get().uri("/api/v1/audit/notifications/some-id")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void auditEndpoint_withAuditReadScope_postDoesNotMatchAuditRoute() {
+    // RouteScopeRules gates /api/v1/audit/** on any method, so a POST with the
+    // audit:read scope clears security same as GET does. The audit-read route's
+    // Method=GET predicate must still exclude it: with no other route registered
+    // for this path, Spring Cloud Gateway finds no matching route and returns 404 -
+    // a different failure mode than the 5xx the GET pass-through test above expects,
+    // proving Method=GET actually restricts the verb rather than merely existing.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_audit:read"))
+        .post().uri("/api/v1/audit/notifications/some-id")
+        .exchange()
+        .expectStatus().isNotFound();
   }
 
   @Test
@@ -155,6 +214,33 @@ class SecurityConfigTest {
         .get().uri("/api/v1/does-not-exist")
         .exchange()
         .expectStatus().isNotFound();
+  }
+
+  @Test
+  void optionsRequest_withoutAuth_isNotRejectedForMissingCredentials() {
+    // A browser's CORS preflight OPTIONS request never carries credentials.
+    // Before this rule existed, OPTIONS fell through to the scoped/
+    // authenticated rules below and got a 401 (WWW-Authenticate: Bearer),
+    // which the browser reads as the whole CORS handshake failing — the
+    // real GET/POST is never even sent. Route chosen because it normally
+    // requires notification:read on GET.
+    //
+    // This only asserts the security-layer half of the fix (no auth
+    // challenge). The full preflight — status 200 plus
+    // Access-Control-Allow-Origin — can't be asserted here: this class's
+    // WebTestClient binds directly to the ApplicationContext (no
+    // webEnvironment = RANDOM_PORT), so the mock exchange's request URI has
+    // no real host/port. CorsConfigurationSource's own CORS WebFilter reads
+    // those via CorsUtils.isSameOrigin() and throws IllegalArgumentException
+    // on the null/undefined values, which DefaultCorsProcessor swallows into
+    // a bare 403 ("Reject: origin is malformed" at DEBUG) — a mock-harness
+    // artifact, not a real bug. Verified for real with the app running:
+    // `curl -i -X OPTIONS http://localhost:8090/api/v1/notifications -H
+    // "Origin: http://localhost:4200" -H "Access-Control-Request-Method:
+    // GET"` returns 200 with Access-Control-Allow-Origin set.
+    webTestClient.options().uri("/api/v1/notifications")
+        .exchange()
+        .expectHeader().doesNotExist("WWW-Authenticate");
   }
 
   @Test

@@ -1,0 +1,116 @@
+<div class="providers-page page" data-shield-anchor>
+  <app-provider-shield [tones]="channelTones()" />
+  <header>
+    <div>
+      <h1 class="page-title">Providers</h1>
+      <p class="page-lede">Monitor provider health and circuit breakers across every channel.</p>
+    </div>
+    <button type="button" (click)="refresh()">
+      <svg
+        class="provider-icon"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d="M20 7v5h-5" />
+        <path d="M4 17v-5h5" />
+        <path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17" />
+      </svg>
+      Refresh
+    </button>
+  </header>
+  @if (state().error) {
+    <div class="notice error" role="alert">
+      @if (state().providers !== null) {
+        Live update failed. Showing the last successful snapshot; provider states may have changed.
+      } @else {
+        Couldn't load provider health.
+      }
+      <button type="button" (click)="refresh()">Retry</button>
+    </div>
+  }
+  @if (state().providers !== null) {
+    <div class="summary stat-strip panel" aria-label="Provider health summary">
+      <article class="stat healthy">
+        <span>Healthy circuits</span><strong>{{ summary().healthy }}</strong
+        ><small>CLOSED</small>
+      </article>
+      <article class="stat degraded">
+        <span>Degraded circuits</span><strong>{{ summary().degraded }}</strong
+        ><small>HALF_OPEN</small>
+      </article>
+      <article class="stat open">
+        <span>Open circuits</span><strong>{{ summary().open }}</strong
+        ><small>OPEN / FORCED_OPEN</small>
+      </article>
+      <article class="stat">
+        <span>Total calls today</span><strong>{{ summary().calls | number }}</strong
+        ><small>Since 00:00 UTC, includes retries</small>
+      </article>
+    </div>
+    <ul class="caption">
+      <li>Auto-refresh every 15 seconds</li>
+      <li>Call history covers the last 24 hours</li>
+      <li>Circuit rates use the Resilience4j sliding window</li>
+    </ul>
+    @if (state().providers?.length === 0) {
+      <div class="notice" role="status">No providers available.</div>
+    } @else {
+      @for (group of groups(); track group.channel) {
+        <section [attr.aria-labelledby]="'channel-' + group.channel">
+          <h2 [id]="'channel-' + group.channel">
+            <svg
+              class="provider-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              @switch (group.icon) {
+                @case ('mail') {
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="m3 6 9 7 9-7" />
+                }
+                @case ('sms') {
+                  <path d="M21 11a8 8 0 0 1-8 8H7l-4 3V7a4 4 0 0 1 4-4h6a8 8 0 0 1 8 8Z" />
+                  <path d="M7 8h8M7 12h6" />
+                }
+                @case ('chat') {
+                  <path d="M21 11.5a9 9 0 0 1-13.4 7.9L3 21l1.6-4.6A9 9 0 1 1 21 11.5Z" />
+                  <path d="m9 7-1 2c1 3 3 5 6 6l2-1-2-2-1 1-2-2 1-1-2-3Z" />
+                }
+                @case ('notifications_active') {
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M10 21h4M2 8a10 10 0 0 1 2-6M22 8a10 10 0 0 0-2-6" />
+                }
+              }
+            </svg>
+            {{ group.label }}<small>{{ group.providers.length }} providers</small>
+          </h2>
+          <div class="provider-grid">
+            @for (provider of group.providers; track provider.key) {
+              <app-provider-card [provider]="provider" [now]="state().updatedAt ?? 0" />
+            } @empty {
+              <p class="caption">No providers configured for this channel.</p>
+            }
+          </div>
+        </section>
+      }
+    }
+  } @else if (!state().error) {
+    <div class="notice" role="status">Loading provider health…</div>
+  }
+</div>

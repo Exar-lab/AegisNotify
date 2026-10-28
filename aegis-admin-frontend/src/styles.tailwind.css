@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* This app toggles dark mode via ThemeService setting [data-theme="dark"]
+   on <html>, not Tailwind's default .dark class — register a matching variant. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Map Tailwind's color utilities to the CSS custom properties defined in
+   styles.scss, so `bg-brand`, `text-brand`, `bg-status-success`, etc. stay
+   in sync with ThemeService / FRONTEND_REQUIREMENTS.md without duplicating
+   the palette in two places. */
+@theme inline {
+  --color-brand: var(--color-accent);
+  --color-brand-hover: var(--color-accent-hover);
+  --color-brand-subtle: var(--color-accent-subtle);
+
+  --color-surface: var(--bg-surface);
+  --color-surface-app: var(--bg-main);
+  --color-surface-sidebar: var(--bg-sidebar);
+  --color-border: var(--border-color);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-inverted: var(--text-inverted);
+
+  --color-status-success: var(--status-online);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-danger: var(--status-offline);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-fallback: var(--status-fallback);
+  --color-status-fallback-bg: var(--status-fallback-bg);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+}
