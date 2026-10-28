@@ -305,6 +305,10 @@ docker rm -f aegis-postgres aegis-mongo aegis-kafka
 
 ## Services
 
+Per-module details (responsibility, security posture, startup order):
+[gateway](aegis-api-gateway/README.md), [Eureka](aegis-eureka-server/README.md),
+[Config Server](aegis-config-server/README.md), [audit service](aegis-audit-service/README.md).
+
 | Module | Default port | Responsibility |
 | --- | ---: | --- |
 | [`aegis-api-gateway`](aegis-api-gateway/) | 8080 | Reactive entry point, JWT validation, per-route scope enforcement, CORS, and Eureka load-balanced routing |
