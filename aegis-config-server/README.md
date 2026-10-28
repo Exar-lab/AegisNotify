@@ -48,7 +48,20 @@ export CONFIG_REPO_TOKEN=your-token
 
 ## Service Discovery
 
-Registers with Eureka Server at `http://localhost:8761/eureka/`. Ensure the Eureka Server is running before starting this module.
+Registers with Eureka Server at `http://localhost:8761/eureka/` (`register-with-eureka: true`, `fetch-registry: false`). Ensure the Eureka Server is running before starting this module.
+
+## Startup order and dependencies
+
+1. Eureka Server (8761) first.
+2. Config Server (this module). The Git repository must be reachable at startup (`clone-on-start: true`, default label `main`); the server fails to start otherwise.
+3. Client services afterwards. Gateway and audit service import configuration with `optional:configserver:`, so they also start when this server is absent.
+
+All five environment variables above have no default and must be set.
+
+## Known limitations
+
+- Actuator exposes only `health` and `info`; `health` details are shown only to authorized users.
+- Client imports in `aegis-api-gateway` and `aegis-audit-service` carry no Basic credentials, so they cannot fetch configuration from this server as configured.
 
 ## Dependencies
 

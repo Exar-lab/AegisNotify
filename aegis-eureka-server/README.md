@@ -16,6 +16,20 @@ All microservices register with this server to enable dynamic service-to-service
 | `eureka.server.enable-self-preservation` | false | Disabled for faster eviction in dev |
 | `eureka.server.eviction-interval-timer-in-ms` | 5000 | Aggressive eviction for local dev |
 
+## Security
+
+- No Spring Security dependency or configuration: the dashboard (`/`) and registry (`/eureka/**`) accept unauthenticated requests.
+- Intended for local development only.
+
+## Startup order and dependencies
+
+Start this module first. It has no external dependency and does not register with or fetch from another registry. Config Server, gateway, and the domain services register with it on startup.
+
+## Known limitations
+
+- Unauthenticated registry and dashboard (see Security).
+- Self-preservation is disabled and eviction runs every 5 seconds; instances may be evicted during network partitions.
+
 ## Run
 
 ```bash
