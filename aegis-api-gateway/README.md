@@ -55,6 +55,16 @@ Audit (8083) and user (8084) endpoints are not proxied; call those services dire
 - Authorization failures use `ScopeAwareAccessDeniedHandler`.
 - Downstream services validate the JWT again; the gateway is not the only enforcement point.
 
+## API documentation routes
+
+Only with the Spring profile `local`, the gateway proxies each service's docs (public, no JWT) with `StripPrefix=2`:
+
+- `/docs/notification/**` -> `aegis-notification-service` (e.g. `/docs/notification/v3/api-docs`, `/docs/notification/swagger-ui/index.html`)
+- `/docs/user/**` -> `aegis-user-service`
+- `/docs/audit/**` -> `aegis-audit-service`
+
+The services must also run with the `local` profile (docs are disabled otherwise). Without `local` the routes do not exist and `/docs/**` returns 401. The routes are defined in `ApiDocsConfig` (not YAML) so they add to, rather than replace, the base route list.
+
 ## Startup order and dependencies
 
 Start last, after the services it routes to:
