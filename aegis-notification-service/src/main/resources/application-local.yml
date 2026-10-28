@@ -3,3 +3,13 @@ notification:
     topics:
       replication-factor: 1
       min-in-sync-replicas: 1
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Honor X-Forwarded-Prefix from the gateway (/docs/<service>) so Swagger UI builds correct URLs.
+server:
+  forward-headers-strategy: framework

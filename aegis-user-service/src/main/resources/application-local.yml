@@ -1,0 +1,9 @@
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Honor X-Forwarded-Prefix from the gateway (/docs/<service>) so Swagger UI builds correct URLs.
+server:
+  forward-headers-strategy: framework
