@@ -283,6 +283,23 @@ docker compose -f docker-compose.yml -f docker-compose.full.yml down -v
 | [`aegis-audit-service`](aegis-audit-service/) | 8083 | Kafka audit ingestion, recipient encryption, MongoDB persistence, and audit queries |
 | [`aegis-user-service`](aegis-user-service/) | 8084 | User administration against the Keycloak Admin API (list/create/update/disable/reset password); not yet proxied through the gateway |
 
+### Module documentation
+
+Each infrastructure and audit module has its own README covering responsibility, security posture,
+and startup order and dependencies:
+
+- [`aegis-eureka-server`](aegis-eureka-server/README.md) — service registry, HTTP Basic-protected
+- [`aegis-config-server`](aegis-config-server/README.md) — Git-backed configuration server
+- [`aegis-api-gateway`](aegis-api-gateway/README.md) — JWT validation, scope enforcement, and routing
+- [`aegis-audit-service`](aegis-audit-service/README.md) — Kafka audit ingestion and audit queries
+
+How they fit together: a client calls the gateway with a Keycloak JWT; the gateway validates it,
+checks the route's required scope, and forwards the request (with the original `Authorization`
+header) to a service resolved through Eureka. The notification service publishes audit events to
+Kafka, which the audit service consumes and stores in MongoDB; audit reads come back through the
+gateway under `/api/v1/audit`. The Config Server optionally supplies shared configuration. For
+diagrams, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ## HTTP API
 
 All business endpoints require a bearer JWT. Requests sent directly to a domain service are

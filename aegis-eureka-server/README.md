@@ -16,7 +16,17 @@ All microservices register with this server to enable dynamic service-to-service
 | `eureka.server.enable-self-preservation` | false | Disabled for faster eviction in dev |
 | `eureka.server.eviction-interval-timer-in-ms` | 5000 | Aggressive eviction for local dev |
 
-## Run
+## Security
+
+- HTTP Basic authentication protects the dashboard and the registry API (`/eureka/**`); credentials come from `EUREKA_SECURITY_USER` and `EUREKA_SECURITY_PASSWORD`, which have no defaults in `application.yml`, so both must be set.
+- Public endpoints: `/actuator/health` and `/actuator/info` only. CSRF is disabled.
+- Registering clients authenticate with the same credentials embedded in their Eureka URL (`http://user:password@host:8761/eureka/`).
+
+## Startup order and dependencies
+
+- Start this module first. It has no external dependencies and does not import from the Config Server (`config-repo/aegis-eureka-server.yml` is currently a placeholder).
+- Every other module registers here, including `aegis-config-server`, so they must start after it.
+
 
 ```bash
 # From project root
@@ -27,9 +37,12 @@ cd aegis-eureka-server
 ../mvnw spring-boot:run
 ```
 
-The Eureka dashboard is available at [http://localhost:8761](http://localhost:8761).
+The Eureka dashboard is available at [http://localhost:8761](http://localhost:8761) after signing in with the Basic credentials above.
 
 ## Dependencies
 
 - Spring Cloud Netflix Eureka Server
-- Spring Boot Starter Test
+- Spring Boot Starter Security
+- Spring Boot Starter Actuator
+
+See the [root README](../README.md) for the full platform setup.
