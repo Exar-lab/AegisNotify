@@ -2,6 +2,7 @@ package com.aegisnotify.user.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aegisnotify.user.application.port.in.ManageUsersUseCase;
@@ -49,5 +50,10 @@ class ApiDocsLocalProfileSecurityTest {
   @Test
   void businessEndpoint_withoutJwt_stillReturns401() throws Exception {
     mockMvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void docsPath_postWithoutCsrfToken_isRejected() throws Exception {
+    mockMvc.perform(post("/v3/api-docs")).andExpect(status().isForbidden());
   }
 }

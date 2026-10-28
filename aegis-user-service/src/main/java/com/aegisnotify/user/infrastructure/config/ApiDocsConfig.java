@@ -25,7 +25,6 @@ public class ApiDocsConfig {
   SecurityFilterChain apiDocsSecurityFilterChain(HttpSecurity http) throws Exception {
     http
         .securityMatcher("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
-        .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());

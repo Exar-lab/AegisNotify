@@ -2,6 +2,7 @@ package com.aegisnotify.audit.infrastructure.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aegisnotify.audit.application.port.in.GetAuditTrailUseCase;
@@ -51,5 +52,10 @@ class ApiDocsLocalProfileSecurityTest {
   void businessEndpoint_withoutJwt_stillReturns401() throws Exception {
     mockMvc.perform(get("/api/v1/audit/{notificationId}", UUID.randomUUID()))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void docsPath_postWithoutCsrfToken_isRejected() throws Exception {
+    mockMvc.perform(post("/v3/api-docs")).andExpect(status().isForbidden());
   }
 }
