@@ -19,7 +19,7 @@ import reactor.core.publisher.Flux;
  *
  * <p>The rule-count assertion is load-bearing: a route added to the table
  * without an accompanying case in {@link #routeScopeCases()} still passes
- * every other test here, so {@link #rules_declaresExactlyTwelveRoutes()}
+ * every other test here, so {@link #rules_declaresExactlySixteenRoutes()}
  * is what actually catches that gap (issue #173).</p>
  */
 class RouteScopeRulesTest {
@@ -27,8 +27,8 @@ class RouteScopeRulesTest {
   private final RouteScopeRules routeScopeRules = new RouteScopeRules();
 
   @Test
-  void rules_declaresExactlyTwelveRoutes() {
-    assertThat(routeScopeRules.rules()).hasSize(12);
+  void rules_declaresExactlySixteenRoutes() {
+    assertThat(routeScopeRules.rules()).hasSize(16);
   }
 
   @ParameterizedTest(name = "{0} {1} requires scope {2}")
@@ -68,6 +68,12 @@ class RouteScopeRulesTest {
         Arguments.of(HttpMethod.POST, "/api/v1/notifications/abc-123/retry", "notification:write"),
         Arguments.of(HttpMethod.GET, "/api/v1/dashboard/summary", "notification:read"),
         Arguments.of(HttpMethod.GET, "/api/v1/metrics/summary", "notification:read"),
+        Arguments.of(HttpMethod.GET, "/api/v1/templates", "notification:read"),
+        Arguments.of(HttpMethod.GET, "/api/v1/templates/abc-123", "notification:read"),
+        Arguments.of(HttpMethod.POST, "/api/v1/templates", "notification:write"),
+        Arguments.of(HttpMethod.PUT, "/api/v1/templates/abc-123", "notification:write"),
+        Arguments.of(
+            HttpMethod.PATCH, "/api/v1/templates/abc-123/status", "notification:write"),
         Arguments.of(HttpMethod.GET, "/api/v1/audit/notifications/abc-123", "audit:read"),
         Arguments.of(HttpMethod.POST, "/api/v1/audit/notifications/abc-123", "audit:read"),
         Arguments.of(HttpMethod.GET, "/api/v1/users/123", "user:read"),

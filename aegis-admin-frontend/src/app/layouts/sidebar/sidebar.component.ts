@@ -33,6 +33,7 @@ export class SidebarComponent {
     { label: 'Notifications', route: '/notifications', icon: 'notifications' },
     { label: 'Providers', route: '/providers', icon: 'providers' },
     { label: 'Metrics', route: '/metrics', icon: 'metrics' },
+    { label: 'Templates', route: '/templates', icon: 'templates' },
     { label: 'Settings', route: '/settings', icon: 'settings' },
   ];
 

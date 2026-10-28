@@ -1,0 +1,67 @@
+@use 'templates-shared';
+
+.templates-page {
+  display: grid;
+  gap: 32px;
+}
+.table-header {
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.table-header span {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+th,
+td {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+th:first-child,
+td:first-child {
+  padding-left: 28px;
+}
+th:last-child,
+td:last-child {
+  padding-right: 28px;
+}
+th {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+td {
+  vertical-align: middle;
+}
+td a.identifier {
+  color: var(--color-accent-ink);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+td a.identifier:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+time {
+  white-space: nowrap;
+  color: var(--text-secondary);
+}

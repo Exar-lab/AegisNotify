@@ -53,6 +53,27 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'templates',
+        loadComponent: () =>
+          import('./features/templates/pages/templates.page').then(
+            (m) => m.TemplatesPage,
+          ),
+      },
+      {
+        path: 'templates/new',
+        loadComponent: () =>
+          import('./features/templates/pages/template-form.page').then(
+            (m) => m.TemplateFormPage,
+          ),
+      },
+      {
+        path: 'templates/:id/edit',
+        loadComponent: () =>
+          import('./features/templates/pages/template-form.page').then(
+            (m) => m.TemplateFormPage,
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/pages/settings.page').then(

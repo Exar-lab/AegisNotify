@@ -1,0 +1,96 @@
+<div class="templates-page page">
+  <header>
+    <div>
+      <h1 class="page-title">Templates</h1>
+      <p class="page-lede">Manage the message templates used to render notifications.</p>
+    </div>
+    <a class="button" routerLink="/templates/new">New template</a>
+  </header>
+
+  @if (actionError()) {
+    <p class="form-error" role="alert">{{ actionError() }}</p>
+  }
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <section class="panel" aria-label="Templates" aria-busy="true">
+        <div class="message" role="status">Loading templates…</div>
+      </section>
+    }
+    @case ('error') {
+      <section class="panel" aria-label="Templates">
+        <div class="message" role="alert">
+          <h2>Couldn't load templates</h2>
+          <p>Please try again.</p>
+          <button type="button" (click)="load()">Retry</button>
+        </div>
+      </section>
+    }
+    @case ('ready') {
+      <section class="panel" aria-label="Templates">
+        <div class="table-header">
+          <h2>All templates</h2>
+          <span aria-live="polite">{{ templates().length }} templates</span>
+        </div>
+        @if (templates().length === 0) {
+          <div class="message" role="status">
+            <h2>No templates yet</h2>
+            <p>Create the first notification template.</p>
+          </div>
+        } @else {
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">
+                Notification templates
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Channel</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Updated at</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (template of templates(); track template.id) {
+                  <tr>
+                    <td>
+                      <a class="identifier" [routerLink]="['/templates', template.id, 'edit']">{{
+                        template.name
+                      }}</a>
+                    </td>
+                    <td>{{ template.channel }}</td>
+                    <td>
+                      <span class="badge" [attr.data-tone]="template.active ? 'success' : 'danger'">{{
+                        template.active ? 'Active' : 'Inactive'
+                      }}</span>
+                    </td>
+                    <td>
+                      <time [attr.datetime]="template.updatedAt">{{
+                        template.updatedAt | date: 'medium'
+                      }}</time>
+                    </td>
+                    <td class="actions">
+                      <a class="button secondary" [routerLink]="['/templates', template.id, 'edit']"
+                        >Edit</a
+                      >
+                      <button
+                        type="button"
+                        class="secondary"
+                        (click)="toggleStatus(template)"
+                        [disabled]="busyId() === template.id"
+                      >
+                        {{ template.active ? 'Deactivate' : 'Activate' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+  }
+</div>

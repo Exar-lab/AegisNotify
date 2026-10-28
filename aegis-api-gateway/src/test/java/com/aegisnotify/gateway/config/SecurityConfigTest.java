@@ -10,10 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.cors.CorsConfiguration;
 import reactor.core.publisher.Mono;
 
 @SpringBootTest
@@ -204,6 +207,50 @@ class SecurityConfigTest {
   }
 
   @Test
+  void templatesList_withNotificationReadScope_isNotForbidden() {
+    // Same no-live-backend situation as the notification routes: clearing the
+    // security layer surfaces as a downstream 5xx on the templates-api route.
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .get().uri("/api/v1/templates")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void templateCreate_withoutNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .post().uri("/api/v1/templates")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:write");
+  }
+
+  @Test
+  void templateUpdate_withNotificationWriteScope_isNotForbidden() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .put().uri("/api/v1/templates/some-id")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
+  void templateStatus_withoutNotificationWriteScope_returns403() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .patch().uri("/api/v1/templates/some-id/status")
+        .exchange()
+        .expectStatus().isForbidden();
+  }
+
+  @Test
+  void templateGet_withoutNotificationReadScope_returns403() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .get().uri("/api/v1/templates/some-id")
+        .exchange()
+        .expectStatus().isForbidden();
+  }
+
+  @Test
   void unmappedApiPath_withAuthenticatedJwtAndNoScope_isNotRejectedForMissingScope() {
     // /api/v1/does-not-exist matches no RouteScopeRule, so it falls through to the
     // generic /api/v1/** .authenticated() catch-all in SecurityConfig: any
@@ -252,5 +299,24 @@ class SecurityConfigTest {
         .header("Authorization", "Bearer not-a-valid-jwt")
         .exchange()
         .expectStatus().isUnauthorized();
+  }
+
+  @Test
+  void corsConfigurationSource_allowsPatch() {
+    // Regression for a real bug this test class's own documented WebTestClient
+    // limitation (see optionsRequest_withoutAuth_isNotRejectedForMissingCredentials)
+    // let slip through: PATCH was missing from setAllowedMethods, so every real
+    // browser CORS preflight for a PATCH endpoint (template activate/deactivate,
+    // notification cancel, user status) failed with a bare 403 before the request
+    // body was ever sent — confirmed against the running app with curl, where every
+    // non-PATCH method preflighted fine and every PATCH one didn't, regardless of
+    // path. Asserted directly against the bean since this class can't exercise a
+    // real preflight (see the comment above).
+    CorsConfiguration configuration = new SecurityConfig()
+        .corsConfigurationSource("http://localhost:4200")
+        .getCorsConfiguration(MockServerWebExchange.from(MockServerHttpRequest.get("/")));
+
+    assertThat(configuration.getAllowedMethods())
+        .containsExactlyInAnyOrder("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
   }
 }

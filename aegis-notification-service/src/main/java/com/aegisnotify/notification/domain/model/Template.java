@@ -32,6 +32,26 @@ public final class Template {
     this.updatedAt = updatedAt;
   }
 
+  /**
+   * Creates a brand-new template: generated id, {@code active=true}, and
+   * {@code createdAt == updatedAt == now}.
+   *
+   * @param name unique template name (immutable after creation)
+   * @param channel delivery channel (immutable after creation)
+   * @param subject optional subject line, may be {@code null}
+   * @param body template body
+   * @param variables declared variable names, {@code null} treated as empty
+   * @return the new template
+   */
+  public static Template create(String name, Channel channel, String subject,
+      String body, List<String> variables) {
+    Instant now = Instant.now();
+    return new Template(
+        UUID.randomUUID(), name, channel, subject, body,
+        copyOf(variables), true, now, now
+    );
+  }
+
   public static Template reconstitute(UUID id, String name, Channel channel,
       String subject, String body, List<String> variables, boolean active,
       Instant createdAt, Instant updatedAt) {
@@ -39,6 +59,44 @@ public final class Template {
         id, name, channel, subject, body,
         List.copyOf(variables), active, createdAt, updatedAt
     );
+  }
+
+  /**
+   * Returns a copy with new editable content and a bumped {@code updatedAt}.
+   * {@code name} and {@code channel} are immutable and carried over as-is.
+   *
+   * @param newSubject optional subject line, may be {@code null}
+   * @param newBody template body
+   * @param newVariables declared variable names, {@code null} treated as empty
+   * @return the updated copy
+   */
+  public Template withContent(String newSubject, String newBody, List<String> newVariables) {
+    return new Template(
+        id, name, channel, newSubject, newBody,
+        copyOf(newVariables), active, createdAt, Instant.now()
+    );
+  }
+
+  /**
+   * Returns a copy with the requested active state. Idempotent: when the
+   * template is already in that state, this same instance is returned
+   * unchanged (no {@code updatedAt} bump).
+   *
+   * @param newActive the desired active state
+   * @return this instance if unchanged, otherwise an updated copy
+   */
+  public Template withActive(boolean newActive) {
+    if (active == newActive) {
+      return this;
+    }
+    return new Template(
+        id, name, channel, subject, body,
+        variables, newActive, createdAt, Instant.now()
+    );
+  }
+
+  private static List<String> copyOf(List<String> variables) {
+    return variables == null ? List.of() : List.copyOf(variables);
   }
 
   public UUID getId() {
