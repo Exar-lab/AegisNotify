@@ -4,6 +4,7 @@ import com.aegisnotify.user.application.dto.PagedResult;
 import com.aegisnotify.user.application.port.in.QueryUsersUseCase;
 import com.aegisnotify.user.application.port.out.UserDirectoryPort;
 import com.aegisnotify.user.domain.model.ManagedUser;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,11 +22,21 @@ public class UserQueryService implements QueryUsersUseCase {
 
   @Override
   public PagedResult<ManagedUser> listUsers(int page, int size) {
-    return userDirectoryPort.findAll(page, size);
+    return listUsers(page, size, null);
+  }
+
+  @Override
+  public PagedResult<ManagedUser> listUsers(int page, int size, String search) {
+    return userDirectoryPort.findAll(page, size, search);
   }
 
   @Override
   public ManagedUser getUser(String id) {
     return userDirectoryPort.findById(id);
+  }
+
+  @Override
+  public List<String> getAvailableRoles() {
+    return userDirectoryPort.getAvailableRoles();
   }
 }
