@@ -7,3 +7,17 @@ audit:
   encryption:
     # Local-development fallback only; production must provide AUDIT_ENCRYPTION_KEY.
     key: ${AUDIT_ENCRYPTION_KEY:MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
+
+aegis:
+  api-docs:
+    title: AegisNotify Audit Service API
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# Honor X-Forwarded-Prefix from the gateway (/docs/<service>) so Swagger UI builds correct URLs.
+server:
+  forward-headers-strategy: framework
