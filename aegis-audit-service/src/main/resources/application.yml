@@ -36,3 +36,10 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+
+# API docs are off by default; enabled only by the "local" profile (application-local.yml).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
