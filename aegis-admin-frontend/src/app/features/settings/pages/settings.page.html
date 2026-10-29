@@ -4,140 +4,68 @@
   <header>
     <div>
       <h1 class="page-title">Settings</h1>
-      <p class="page-lede">Manage administrator accounts.</p>
+      <p class="page-lede">System parameters, runtime environment, and platform configuration.</p>
     </div>
-    <button type="button" (click)="toggleCreate()" [attr.aria-expanded]="creating()">
-      {{ creating() ? 'Cancel' : 'Create user' }}
-    </button>
   </header>
 
-  @if (creating()) {
-    <form class="create panel" [formGroup]="form" (ngSubmit)="submit()" aria-label="Create user">
-      <label
-        >Username<input formControlName="username" autocomplete="off" maxlength="255"
-      /></label>
-      <label>Email<input type="email" formControlName="email" maxlength="320" /></label>
-      <label>First name<input formControlName="firstName" maxlength="255" /></label>
-      <label>Last name<input formControlName="lastName" maxlength="255" /></label>
-      <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creating…' : 'Create' }}
-      </button>
-      @if (form.touched && form.invalid) {
-        <p class="form-error" role="alert">All fields are required and the email must be valid.</p>
-      }
-      @if (formError()) {
-        <p class="form-error" role="alert">{{ formError() }}</p>
-      }
-    </form>
-  }
+  <div class="user-management-banner panel">
+    <div class="banner-content">
+      <div class="banner-icon">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      </div>
+      <div>
+        <h2>User Management</h2>
+        <p>User accounts and role administration have moved to <a routerLink="/users">User Management</a>.</p>
+      </div>
+    </div>
+    <a class="button" routerLink="/users">Go to Users</a>
+  </div>
 
-  @if (actionError()) {
-    <p class="form-error" role="alert">{{ actionError() }}</p>
-  }
-
-  @switch (state().kind) {
-    @case ('loading') {
-      <section class="panel" aria-label="Users" aria-busy="true">
-        <div class="message" role="status">Loading users…</div>
-      </section>
-    }
-    @case ('error') {
-      <section class="panel" aria-label="Users">
-        <div class="message" role="alert">
-          <h2>Couldn't load users</h2>
-          <p>Please try again.</p>
-          <button (click)="load()">Retry</button>
-        </div>
-      </section>
-    }
-    @case ('ready') {
-      <section class="panel" aria-label="Users">
-        @if (result(); as data) {
-          <div class="table-header">
-            <h2>Administrators</h2>
-            <span aria-live="polite">{{ data.totalElements | number }} users</span>
-          </div>
-          @if (data.content.length === 0) {
-            <div class="message" role="status">
-              <h2>No users yet</h2>
-              <p>Create the first administrator account.</p>
-            </div>
-          } @else {
-            <div class="table-scroll">
-              <table>
-                <caption class="sr-only">
-                  Administrator accounts
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Username</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Created at</th>
-                    <th scope="col">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (user of data.content; track user.id) {
-                    <tr>
-                      <td class="identifier">{{ user.username }}</td>
-                      <td class="wrap">{{ user.email }}</td>
-                      <td>{{ fullName(user) }}</td>
-                      <td>
-                        <span class="badge" [attr.data-tone]="user.enabled ? 'success' : 'danger'">{{
-                          user.enabled ? 'Enabled' : 'Disabled'
-                        }}</span>
-                      </td>
-                      <td>
-                        <time [attr.datetime]="user.createdAt">{{
-                          user.createdAt | date: 'medium'
-                        }}</time>
-                      </td>
-                      <td class="actions">
-                        <button
-                          class="secondary"
-                          (click)="toggleStatus(user)"
-                          [disabled]="busyId() === user.id"
-                        >
-                          {{ user.enabled ? 'Disable' : 'Enable' }}
-                        </button>
-                        <button
-                          class="secondary"
-                          (click)="resetPassword(user)"
-                          [disabled]="busyId() === user.id"
-                        >
-                          Reset password
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-          <footer>
-            <span
-              >Showing {{ data.content.length ? data.page * data.size + 1 : 0 }}–{{
-                data.page * data.size + data.content.length
-              }}
-              of {{ data.totalElements | number }}</span
-            >
-            <nav aria-label="Pagination">
-              <button class="secondary" (click)="go(data.page - 1)" [disabled]="data.page === 0">
-                Previous</button
-              ><span>Page {{ data.page + 1 }} of {{ totalPages() }}</span
-              ><button
-                class="secondary"
-                (click)="go(data.page + 1)"
-                [disabled]="data.page + 1 >= totalPages()"
-              >
-                Next
-              </button>
-            </nav>
-          </footer>
-        }
-      </section>
-    }
-  }
+  <section class="panel config-section" aria-label="System configuration">
+    <div class="panel-header">
+      <h2>Runtime parameters</h2>
+      <span class="badge" data-tone="success">Online</span>
+    </div>
+    <div class="config-grid">
+      <div class="config-card">
+        <span class="config-label">Environment</span>
+        <span class="config-value">{{ environmentName }}</span>
+      </div>
+      <div class="config-card">
+        <span class="config-label">API Gateway</span>
+        <span class="config-value identifier">{{ apiBaseUrl }}</span>
+      </div>
+      <div class="config-card">
+        <span class="config-label">Auth Provider</span>
+        <span class="config-value">Keycloak Realm (Aegis)</span>
+      </div>
+      <div class="config-card">
+        <span class="config-label">Event Broker</span>
+        <span class="config-value">Apache Kafka (Distributed)</span>
+      </div>
+      <div class="config-card">
+        <span class="config-label">Service Discovery</span>
+        <span class="config-value">Netflix Eureka</span>
+      </div>
+      <div class="config-card">
+        <span class="config-label">Config Repository</span>
+        <span class="config-value">Spring Cloud Config Server</span>
+      </div>
+    </div>
+  </section>
 </div>
