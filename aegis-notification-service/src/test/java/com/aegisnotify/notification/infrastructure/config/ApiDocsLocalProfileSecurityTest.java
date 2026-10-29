@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * (anything but 401/403, e.g. a dispatcher 404).
  */
 @WebMvcTest(NotificationController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 @ActiveProfiles("local")
 class ApiDocsLocalProfileSecurityTest {
 

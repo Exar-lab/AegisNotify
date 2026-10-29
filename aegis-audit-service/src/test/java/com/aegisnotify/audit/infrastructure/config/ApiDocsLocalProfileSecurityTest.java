@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.aegisnotify.audit.application.port.in.GetAuditTrailUseCase;
 import com.aegisnotify.audit.application.port.in.SearchAuditEventsUseCase;
 import com.aegisnotify.audit.infrastructure.web.AuditQueryController;
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,7 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * (anything but 401/403, e.g. a dispatcher 404).
  */
 @WebMvcTest(AuditQueryController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 @ActiveProfiles("local")
 class ApiDocsLocalProfileSecurityTest {
 

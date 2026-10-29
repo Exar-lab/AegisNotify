@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import com.aegisnotify.user.application.port.in.ManageUsersUseCase;
 import com.aegisnotify.user.application.port.in.QueryUsersUseCase;
 import com.aegisnotify.user.infrastructure.web.UserController;
@@ -25,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * (anything but 401/403, e.g. a dispatcher 404).
  */
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 @ActiveProfiles("local")
 class ApiDocsLocalProfileSecurityTest {
 

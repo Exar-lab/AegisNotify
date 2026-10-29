@@ -4,6 +4,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import com.aegisnotify.user.application.port.in.ManageUsersUseCase;
 import com.aegisnotify.user.application.port.in.QueryUsersUseCase;
 import com.aegisnotify.user.infrastructure.web.UserController;
@@ -18,10 +19,10 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * Without the {@code local} profile the docs paths stay behind the default
  * {@code denyAll()} (401 anonymous, 403 authenticated): the profile-gated
- * {@link ApiDocsConfig} must not contribute its permitAll chain.
+ * {@link ApiDocsAutoConfiguration} must not contribute its permitAll chain.
  */
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 class ApiDocsDefaultProfileSecurityTest {
 
   @Autowired

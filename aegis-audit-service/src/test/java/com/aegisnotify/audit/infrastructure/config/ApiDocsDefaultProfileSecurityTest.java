@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.aegisnotify.audit.application.port.in.GetAuditTrailUseCase;
 import com.aegisnotify.audit.application.port.in.SearchAuditEventsUseCase;
 import com.aegisnotify.audit.infrastructure.web.AuditQueryController;
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +17,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * Without the {@code local} profile the docs paths stay protected: the
- * profile-gated {@link ApiDocsConfig} must not contribute its permitAll chain.
+ * profile-gated {@link ApiDocsAutoConfiguration} must not contribute its permitAll chain.
  */
 @WebMvcTest(AuditQueryController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 class ApiDocsDefaultProfileSecurityTest {
 
   @Autowired

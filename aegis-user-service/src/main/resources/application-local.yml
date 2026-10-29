@@ -1,3 +1,7 @@
+aegis:
+  api-docs:
+    title: AegisNotify User Service API
+
 springdoc:
   api-docs:
     enabled: true

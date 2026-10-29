@@ -21,11 +21,10 @@
         <spring-cloud.version>2024.0.0</spring-cloud.version>
         <!-- 2.8.4 is built against Spring Boot 3.4.x (parent 3.4.2); later 2.8.x move to Boot 3.5. -->
         <springdoc.version>2.8.4</springdoc.version>
-        <!-- Each service owns an identical profile-gated ApiDocsConfig; services share no library by design. -->
-        <sonar.cpd.exclusions>**/infrastructure/config/ApiDocsConfig.java</sonar.cpd.exclusions>
     </properties>
 
     <modules>
+        <module>aegis-api-docs-support</module>
         <module>aegis-eureka-server</module>
         <module>aegis-config-server</module>
         <module>aegis-notification-service</module>

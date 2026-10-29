@@ -3,6 +3,7 @@ package com.aegisnotify.notification.infrastructure.config;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aegisnotify.docs.ApiDocsAutoConfiguration;
 import com.aegisnotify.notification.application.port.in.CancelNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.CreateNotificationUseCase;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
@@ -20,10 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * Without the {@code local} profile the docs paths stay protected: the
- * profile-gated {@link ApiDocsConfig} must not contribute its permitAll chain.
+ * profile-gated {@link ApiDocsAutoConfiguration} must not contribute its permitAll chain.
  */
 @WebMvcTest(NotificationController.class)
-@Import({SecurityConfig.class, ApiDocsConfig.class})
+@Import({SecurityConfig.class, ApiDocsAutoConfiguration.class})
 class ApiDocsDefaultProfileSecurityTest {
 
   @Autowired
