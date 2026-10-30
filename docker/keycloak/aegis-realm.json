@@ -104,7 +104,9 @@
       "defaultClientScopes": [
         "notification:read",
         "notification:write",
-        "audit:read"
+        "audit:read",
+        "user:read",
+        "user:admin"
       ]
     }
   ],

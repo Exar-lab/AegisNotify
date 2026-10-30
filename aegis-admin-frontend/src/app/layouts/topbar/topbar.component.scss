@@ -227,6 +227,7 @@
   color: var(--text-secondary);
 }
 
+.logout-btn,
 .theme-toggle {
   background: transparent;
   border: 1px solid var(--border-sidebar);
@@ -308,6 +309,7 @@
     display: none;
   }
 
+  .logout-btn,
   .theme-toggle {
     margin-left: 0;
   }
