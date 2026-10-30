@@ -53,7 +53,7 @@ details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
 | Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
 | Provider circuit breakers and secondary-account failover | Implemented and unit-tested; production and end-to-end validation remain |
 | RabbitMQ transport | Not implemented |
-| One-command full-stack local environment | Infrastructure (Keycloak, PostgreSQL, Kafka, MongoDB) provided via `docker-compose.full.yml`; application services still run via Maven (see [Installation](#installation)) |
+| One-command full-stack local environment | Implemented: `docker compose -f docker-compose.full.yml up -d --build` starts the infrastructure and all six services (see [Running the full stack in Docker](#running-the-full-stack-in-docker)) |
 
 ## Project scope
 
@@ -81,11 +81,6 @@ ready-to-deploy product.
 
 ### Out of scope (for now, and possibly permanently)
 
-- **A one-command app-container environment.** `docker-compose.full.yml` now bundles PostgreSQL,
-  MongoDB, and Kafka alongside `docker-compose.yml`'s Keycloak (issue #38). Each Spring Boot module
-  has a Dockerfile (issue #39; build from the repo root with
-  `docker build -f <module>/Dockerfile .`), but the app containers are not wired into
-  `docker-compose.full.yml` yet.
 - **Multi-tenancy.** The platform assumes a single tenant/realm.
 - **A notification composition UI or template editor.** Templates are managed directly in
   PostgreSQL; there is no admin UI. Static mockups exist under [`design/`](design/) but no UI code
@@ -150,11 +145,15 @@ Confirm it's up:
 curl -s http://localhost:8088/realms/aegis/.well-known/openid-configuration
 ```
 
-### 3. Start the remaining infrastructure (PostgreSQL, MongoDB, Kafka)
+### 3. Start the remaining infrastructure (PostgreSQL, MongoDB, Kafka, Redis)
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.full.yml up -d postgres mongo kafka
+docker compose -f docker-compose.full.yml up -d postgres mongo kafka redis
 ```
+
+Name the services explicitly: a bare `up -d` also starts the six application containers (see
+[Running the full stack in Docker](#running-the-full-stack-in-docker)), which would clash with the
+ports of the services you start with Maven in step 6.
 
 Matches the notification and audit services' defaults (`DB_URL`/`DB_USERNAME`/`DB_PASSWORD`,
 `MONGODB_URI`, `KAFKA_BOOTSTRAP_SERVERS=localhost:9092` — see [Configuration](#configuration)).
@@ -266,10 +265,31 @@ If scopes drift after editing that file, re-import with
 `docker compose down -v && docker compose up -d keycloak`. Full scope contract:
 [`docs/security/scopes.md`](docs/security/scopes.md).
 
+### Running the full stack in Docker
+
+Instead of steps 2–6, a single command builds the six service images and starts everything
+(Keycloak, PostgreSQL, MongoDB, Kafka, Redis, then Eureka → Config Server → the remaining
+services, each gated by a health check):
+
+```bash
+docker compose -f docker-compose.full.yml up -d --build
+docker compose -f docker-compose.full.yml ps
+```
+
+- The gateway is published at `http://localhost:8080` and Keycloak at `http://localhost:8088`, so
+  the admin frontend runs unchanged on the host (`cd aegis-admin-frontend && pnpm start`,
+  `http://localhost:4200`) and the JWT flow above works as-is.
+- Config Server runs with the `native` profile against
+  [`docker/config-repo`](docker/config-repo/README.md), so no external Git repository is needed.
+- Every credential has a local-development default in the compose file; override any of them in
+  `.env` (see [`.env.example`](.env.example)). Provider credentials default to placeholders: the
+  notification service starts, but deliveries fail against the real vendor APIs (ending in
+  `FAILED_CRITICAL`) until real values are set.
+
 ### Tearing down
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.full.yml down -v
+docker compose -f docker-compose.full.yml down -v
 ```
 
 ## Services
@@ -420,6 +440,7 @@ The most important environment variables are:
 | `KEYCLOAK_BASE_URL` / `KEYCLOAK_REALM` | `http://localhost:8088` / `aegis` | User service |
 | `KEYCLOAK_ADMIN_CLIENT_ID` / `KEYCLOAK_ADMIN_CLIENT_SECRET` | `aegis-user-service` / none | User service (Admin API access) |
 | `EUREKA_SECURITY_USER` / `EUREKA_SECURITY_PASSWORD` | None | Eureka server and every registering client |
+| `EUREKA_HOST` | `localhost` | Every Eureka client (host part of the registry URL) |
 | `CONFIG_SERVER_USER` / `CONFIG_SERVER_PASSWORD` | None | Config Server |
 | `CONFIG_REPO_URI` | None | Config Server Git backend |
 | `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |
