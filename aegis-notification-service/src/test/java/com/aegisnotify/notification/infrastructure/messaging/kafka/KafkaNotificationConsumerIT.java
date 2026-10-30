@@ -128,7 +128,7 @@ class KafkaNotificationConsumerIT {
     UUID notificationId = UUID.randomUUID();
     TemplateJpaEntity template = new TemplateJpaEntity(
         UUID.randomUUID(), "welcome", Channel.EMAIL, "Hello", "Hi ${name}",
-        List.of("name"), true, Instant.now(), Instant.now());
+        List.of("name"), true, Instant.now(), Instant.now(), 1L);
     NotificationJpaEntity notification = new NotificationJpaEntity(
         notificationId, Channel.EMAIL, "user@example.com", "welcome",
         Map.of("name", "John"), Priority.HIGH, NotificationStatus.PENDING,

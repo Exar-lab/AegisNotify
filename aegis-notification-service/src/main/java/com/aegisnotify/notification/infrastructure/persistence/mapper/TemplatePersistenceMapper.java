@@ -22,7 +22,8 @@ public class TemplatePersistenceMapper {
         variables,
         entity.isActive(),
         entity.getCreatedAt(),
-        entity.getUpdatedAt()
+        entity.getUpdatedAt(),
+        entity.getVersion()
     );
   }
 
@@ -36,7 +37,8 @@ public class TemplatePersistenceMapper {
         new ArrayList<>(domain.getVariables()),
         domain.isActive(),
         domain.getCreatedAt(),
-        domain.getUpdatedAt()
+        domain.getUpdatedAt(),
+        domain.getVersion()
     );
   }
 }

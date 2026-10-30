@@ -13,16 +13,16 @@ import java.util.List;
  *
  * @param name unique template name, max 120 chars (matches the column)
  * @param channel delivery channel
- * @param subject optional subject line
+ * @param subject optional subject line, max 255 chars (matches the column)
  * @param body template body
- * @param variables declared variable names
+ * @param variables declared variable names, each non-blank
  */
 public record CreateTemplateRequest(
     @NotBlank @Size(max = 120) String name,
     @NotNull Channel channel,
-    String subject,
+    @Size(max = 255) String subject,
     @NotBlank String body,
-    List<String> variables
+    List<@NotBlank String> variables
 ) {
 
   public CreateTemplateRequest {

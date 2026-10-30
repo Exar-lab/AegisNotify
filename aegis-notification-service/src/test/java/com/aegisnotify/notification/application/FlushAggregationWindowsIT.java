@@ -132,7 +132,7 @@ class FlushAggregationWindowsIT {
     Instant now = Instant.now();
     templateJpaRepository.save(new TemplateJpaEntity(
         UUID.randomUUID(), "welcome", Channel.EMAIL, "Welcome", "Hello {{name}}",
-        List.of("name"), true, now, now));
+        List.of("name"), true, now, now, 1L));
 
     UUID leaderId = UUID.randomUUID();
     UUID siblingId = UUID.randomUUID();

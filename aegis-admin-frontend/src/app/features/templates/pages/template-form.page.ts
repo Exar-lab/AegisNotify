@@ -49,7 +49,7 @@ export class TemplateFormPage {
   readonly channels = TEMPLATE_CHANNELS;
 
   readonly form = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.maxLength(255)]],
+    name: ['', [Validators.required, Validators.maxLength(120)]],
     channel: ['EMAIL' as TemplateChannel, Validators.required],
     subject: ['', Validators.maxLength(255)],
     body: ['', Validators.required],

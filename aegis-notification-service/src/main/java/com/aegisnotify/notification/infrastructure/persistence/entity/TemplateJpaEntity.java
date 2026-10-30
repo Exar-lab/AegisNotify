@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -45,12 +46,15 @@ public class TemplateJpaEntity {
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
 
+  @Version
+  private Long version;
+
   protected TemplateJpaEntity() {
   }
 
   public TemplateJpaEntity(UUID id, String name, Channel channel,
       String subject, String body, List<String> variables, boolean active,
-      Instant createdAt, Instant updatedAt) {
+      Instant createdAt, Instant updatedAt, Long version) {
     this.id = id;
     this.name = name;
     this.channel = channel;
@@ -60,6 +64,7 @@ public class TemplateJpaEntity {
     this.active = active;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+    this.version = version;
   }
 
   public UUID getId() {
@@ -96,5 +101,9 @@ public class TemplateJpaEntity {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  public Long getVersion() {
+    return version;
   }
 }

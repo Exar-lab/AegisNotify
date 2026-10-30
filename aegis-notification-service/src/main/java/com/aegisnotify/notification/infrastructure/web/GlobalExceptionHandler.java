@@ -10,6 +10,7 @@ import com.aegisnotify.notification.domain.exception.TemplateRenderingException;
 import com.aegisnotify.notification.infrastructure.web.dto.ApiErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -65,6 +66,16 @@ public class GlobalExceptionHandler {
             HttpStatus.CONFLICT.value(),
             "Conflict",
             ex.getMessage()));
+  }
+
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  public ResponseEntity<ApiErrorResponse> handleOptimisticLockingFailure(
+      OptimisticLockingFailureException ex) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            "Conflict",
+            "This template was modified by someone else. Reload it and try again."));
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)

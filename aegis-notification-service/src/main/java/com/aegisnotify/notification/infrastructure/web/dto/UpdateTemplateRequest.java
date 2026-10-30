@@ -2,6 +2,7 @@ package com.aegisnotify.notification.infrastructure.web.dto;
 
 import com.aegisnotify.notification.application.dto.UpdateTemplateCommand;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -10,14 +11,14 @@ import java.util.List;
  * and unknown JSON properties are ignored. A missing {@code variables} list
  * defaults to empty.
  *
- * @param subject optional subject line
+ * @param subject optional subject line, max 255 chars (matches the column)
  * @param body template body
- * @param variables declared variable names
+ * @param variables declared variable names, each non-blank
  */
 public record UpdateTemplateRequest(
-    String subject,
+    @Size(max = 255) String subject,
     @NotBlank String body,
-    List<String> variables
+    List<@NotBlank String> variables
 ) {
 
   public UpdateTemplateRequest {

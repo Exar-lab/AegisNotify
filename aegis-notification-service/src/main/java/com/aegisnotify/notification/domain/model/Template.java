@@ -17,10 +17,11 @@ public final class Template {
   private final boolean active;
   private final Instant createdAt;
   private final Instant updatedAt;
+  private final Long version;
 
   private Template(UUID id, String name, Channel channel, String subject,
       String body, List<String> variables, boolean active,
-      Instant createdAt, Instant updatedAt) {
+      Instant createdAt, Instant updatedAt, Long version) {
     this.id = id;
     this.name = name;
     this.channel = channel;
@@ -30,6 +31,7 @@ public final class Template {
     this.active = active;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+    this.version = version;
   }
 
   /**
@@ -48,16 +50,34 @@ public final class Template {
     Instant now = Instant.now();
     return new Template(
         UUID.randomUUID(), name, channel, subject, body,
-        copyOf(variables), true, now, now
+        copyOf(variables), true, now, now, null
     );
   }
 
+  /**
+   * Reconstitutes a template without a known optimistic-lock version
+   * (version-unaware callers, e.g. most tests). {@link #withContent} and
+   * {@link #withActive} on an instance built this way carry a {@code null}
+   * version forward, same as {@link #create}.
+   */
   public static Template reconstitute(UUID id, String name, Channel channel,
       String subject, String body, List<String> variables, boolean active,
       Instant createdAt, Instant updatedAt) {
+    return reconstitute(id, name, channel, subject, body, variables, active,
+        createdAt, updatedAt, null);
+  }
+
+  /**
+   * Reconstitutes a template from storage, carrying forward the row's
+   * optimistic-lock version so a later {@code save} fails with a conflict
+   * if another writer updated the row in between.
+   */
+  public static Template reconstitute(UUID id, String name, Channel channel,
+      String subject, String body, List<String> variables, boolean active,
+      Instant createdAt, Instant updatedAt, Long version) {
     return new Template(
         id, name, channel, subject, body,
-        List.copyOf(variables), active, createdAt, updatedAt
+        List.copyOf(variables), active, createdAt, updatedAt, version
     );
   }
 
@@ -73,7 +93,7 @@ public final class Template {
   public Template withContent(String newSubject, String newBody, List<String> newVariables) {
     return new Template(
         id, name, channel, newSubject, newBody,
-        copyOf(newVariables), active, createdAt, Instant.now()
+        copyOf(newVariables), active, createdAt, Instant.now(), version
     );
   }
 
@@ -91,7 +111,7 @@ public final class Template {
     }
     return new Template(
         id, name, channel, subject, body,
-        variables, newActive, createdAt, Instant.now()
+        variables, newActive, createdAt, Instant.now(), version
     );
   }
 
@@ -133,5 +153,14 @@ public final class Template {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  /**
+   * The row's optimistic-lock version, or {@code null} for a template built
+   * via {@link #create} or the version-unaware {@link #reconstitute}
+   * overload (not yet persisted, or the caller doesn't track it).
+   */
+  public Long getVersion() {
+    return version;
   }
 }
