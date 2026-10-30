@@ -47,7 +47,7 @@ Si necesitas levantar todo desde cero:
 1. En la raíz, inicia la infraestructura:
 
 ```powershell
-docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
+docker compose -f docker-compose.full.yml up -d keycloak postgres mongo kafka redis
 ```
 
 2. En una terminal PowerShell dedicada, desde la raíz, inicia Eureka:
