@@ -1,5 +1,6 @@
 package com.aegisnotify.user.infrastructure.web;
 
+import com.aegisnotify.user.domain.exception.RoleNotFoundException;
 import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserDirectoryUnavailableException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
@@ -24,6 +25,11 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(UserNotFoundException.class)
   public ResponseEntity<Map<String, Object>> handleNotFound(UserNotFoundException ex) {
     return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(RoleNotFoundException.class)
+  public ResponseEntity<Map<String, Object>> handleRoleNotFound(RoleNotFoundException ex) {
+    return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(UserAlreadyExistsException.class)

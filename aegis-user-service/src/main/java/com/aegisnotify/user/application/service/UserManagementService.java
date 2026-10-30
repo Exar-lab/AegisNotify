@@ -5,6 +5,7 @@ import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.application.port.in.ManageUsersUseCase;
 import com.aegisnotify.user.application.port.out.UserDirectoryPort;
 import com.aegisnotify.user.domain.model.ManagedUser;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 /**
@@ -33,6 +34,11 @@ public class UserManagementService implements ManageUsersUseCase {
   @Override
   public ManagedUser setUserEnabled(String id, boolean enabled) {
     return userDirectoryPort.setEnabled(id, enabled);
+  }
+
+  @Override
+  public ManagedUser setRoles(String id, List<String> roles) {
+    return userDirectoryPort.setRoles(id, roles);
   }
 
   @Override

@@ -3,6 +3,7 @@ package com.aegisnotify.user.application.port.in;
 import com.aegisnotify.user.application.dto.NewUser;
 import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.domain.model.ManagedUser;
+import java.util.List;
 
 /**
  * Write-side use case exposed to {@code infrastructure.web.UserController}.
@@ -41,6 +42,15 @@ public interface ManageUsersUseCase {
    * @return the updated user
    */
   ManagedUser setUserEnabled(String id, boolean enabled);
+
+  /**
+   * Sets the realm roles for a user.
+   *
+   * @param id the Keycloak user id
+   * @param roles the list of role names to assign
+   * @return the updated user
+   */
+  ManagedUser setRoles(String id, List<String> roles);
 
   /**
    * Resets a user's password.

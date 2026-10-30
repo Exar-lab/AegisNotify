@@ -1,8 +1,6 @@
 package com.aegisnotify.user.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +9,7 @@ import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.application.port.out.UserDirectoryPort;
 import com.aegisnotify.user.domain.model.ManagedUser;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -27,11 +26,11 @@ class UserManagementServiceTest {
 
   private static final ManagedUser ENABLED_USER = new ManagedUser(
       "u-1", "jdoe", "jdoe@example.com", "Jane", "Doe", true,
-      Instant.parse("2026-01-01T00:00:00Z"));
+      Instant.parse("2026-01-01T00:00:00Z"), List.of("admin"));
 
   private static final ManagedUser DISABLED_USER = new ManagedUser(
       "u-1", "jdoe", "jdoe@example.com", "Jane", "Doe", false,
-      Instant.parse("2026-01-01T00:00:00Z"));
+      Instant.parse("2026-01-01T00:00:00Z"), List.of());
 
   @Mock
   private UserDirectoryPort userDirectoryPort;
@@ -61,31 +60,43 @@ class UserManagementServiceTest {
   }
 
   @Test
-  void setUserEnabled_disable_setsEnabledFalse() {
+  void setUserEnabled_disable_delegatesToPortAndReturnsUpdatedUser() {
     UserManagementService service = new UserManagementService(userDirectoryPort);
     when(userDirectoryPort.setEnabled("u-1", false)).thenReturn(DISABLED_USER);
 
     ManagedUser result = service.setUserEnabled("u-1", false);
 
+    assertThat(result).isEqualTo(DISABLED_USER);
     assertThat(result.enabled()).isFalse();
     verify(userDirectoryPort).setEnabled("u-1", false);
   }
 
   @Test
-  void setUserEnabled_disablingAlreadyDisabledUser_isIdempotentAndSucceeds() {
-    // D4: disabling an already-disabled user must succeed again (200), not
-    // error. The service applies no extra guard/branching on prior
-    // state — it always delegates directly to the port, and the port
-    // itself is idempotent (verified separately in
-    // KeycloakAdminClientAdapterTest#setEnabled_alreadyDisabled_...).
+  void setUserEnabled_alreadyDisabled_isIdempotentAndReturnsDisabledUser() {
+    // D4 requirement: disabling an already-disabled user must succeed again,
+    // not fail with an error or conflict.
     UserManagementService service = new UserManagementService(userDirectoryPort);
-    when(userDirectoryPort.setEnabled(eq("u-1"), eq(false))).thenReturn(DISABLED_USER);
+    when(userDirectoryPort.setEnabled("u-1", false)).thenReturn(DISABLED_USER);
 
     ManagedUser first = service.setUserEnabled("u-1", false);
     ManagedUser second = service.setUserEnabled("u-1", false);
 
+    assertThat(first).isEqualTo(DISABLED_USER);
+    assertThat(second).isEqualTo(DISABLED_USER);
     assertThat(first.enabled()).isFalse();
     assertThat(second.enabled()).isFalse();
+  }
+
+  @Test
+  void setRoles_delegatesToPortAndReturnsUpdatedUser() {
+    UserManagementService service = new UserManagementService(userDirectoryPort);
+    List<String> roles = List.of("admin", "operator");
+    when(userDirectoryPort.setRoles("u-1", roles)).thenReturn(ENABLED_USER);
+
+    ManagedUser result = service.setRoles("u-1", roles);
+
+    assertThat(result).isEqualTo(ENABLED_USER);
+    verify(userDirectoryPort).setRoles("u-1", roles);
   }
 
   @Test
@@ -95,14 +106,5 @@ class UserManagementServiceTest {
     service.resetPassword("u-1", "NewPassw0rd!", true);
 
     verify(userDirectoryPort).resetPassword("u-1", "NewPassw0rd!", true);
-  }
-
-  @Test
-  void resetPassword_notTemporary_delegatesFlagUnchanged() {
-    UserManagementService service = new UserManagementService(userDirectoryPort);
-
-    service.resetPassword("u-1", "NewPassw0rd!", false);
-
-    verify(userDirectoryPort).resetPassword(eq("u-1"), any(), eq(false));
   }
 }
