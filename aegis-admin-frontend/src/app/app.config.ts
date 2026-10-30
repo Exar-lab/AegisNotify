@@ -12,56 +12,55 @@ import {
 
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
+import { RUNTIME_CONFIG, RuntimeConfig } from './core/config/runtime-config';
 
-const normalizedApiBaseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
-const apiBaseEndpoint = normalizedApiBaseUrl.endsWith('/api')
-  ? normalizedApiBaseUrl
-  : `${normalizedApiBaseUrl}/api`;
-const escapedApiEndpoint = apiBaseEndpoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// Covers the REST API (/api/**, gateway-routed) protected by JWT bearer token.
-const bearerTokenUrlPattern = new RegExp(`^${escapedApiEndpoint}(\\/.*)?$`, 'i');
+/** Creates authentication and HTTP providers only after runtime configuration is loaded. */
+export function createAppConfig(config: RuntimeConfig): ApplicationConfig {
+  const normalizedApiBaseUrl = config.apiBaseUrl.replace(/\/+$/, '');
+  const apiBaseEndpoint = normalizedApiBaseUrl.endsWith('/api')
+    ? normalizedApiBaseUrl
+    : `${normalizedApiBaseUrl}/api`;
+  const escapedApiEndpoint = apiBaseEndpoint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Covers the REST API (/api/**, gateway-routed) protected by JWT bearer token.
+  const bearerTokenUrlPattern = new RegExp(`^${escapedApiEndpoint}(\\/.*)?$`, 'i');
 
-/**
- * Main application configuration block for Angular.
- * Sets up routing, HTTP interceptors, and Keycloak integration for authentication.
- */
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([includeBearerTokenInterceptor]),
-    ),
-    provideKeycloak({
-      config: {
-        url: environment.keycloakUrl,
-        realm: environment.keycloakRealm,
-        clientId: environment.keycloakClientId,
-      },
-      initOptions: {
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        flow: 'standard'
-      },
-      features: [
-        withAutoRefreshToken({
-          onInactivityTimeout: 'none',
-          sessionTimeout: 300000,
-        }),
-      ],
-      providers: [
-        AutoRefreshTokenService,
-        UserActivityService,
-        {
-          provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
-          useValue: [
-            {
-              urlPattern: bearerTokenUrlPattern,
-              bearerPrefix: 'Bearer',
-            },
-          ],
+  return {
+    providers: [
+      { provide: RUNTIME_CONFIG, useValue: config },
+      provideBrowserGlobalErrorListeners(),
+      provideRouter(routes),
+      provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+      provideKeycloak({
+        config: {
+          url: config.keycloakUrl,
+          realm: environment.keycloakRealm,
+          clientId: environment.keycloakClientId,
         },
-      ],
-    }),
-  ],
-};
+        initOptions: {
+          onLoad: 'check-sso',
+          silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+          flow: 'standard',
+        },
+        features: [
+          withAutoRefreshToken({
+            onInactivityTimeout: 'none',
+            sessionTimeout: 300000,
+          }),
+        ],
+        providers: [
+          AutoRefreshTokenService,
+          UserActivityService,
+          {
+            provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
+            useValue: [
+              {
+                urlPattern: bearerTokenUrlPattern,
+                bearerPrefix: 'Bearer',
+              },
+            ],
+          },
+        ],
+      }),
+    ],
+  };
+}
