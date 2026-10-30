@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { RUNTIME_CONFIG } from '../config/runtime-config';
 import {
   CreateTemplateRequest,
   SetTemplateStatusRequest,
@@ -12,7 +12,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TemplatesApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
+  private readonly baseUrl = inject(RUNTIME_CONFIG).apiBaseUrl.replace(/\/+$/, '');
   private readonly templatesUrl = `${this.baseUrl}/api/v1/templates`;
 
   list(): Observable<TemplateResponse[]> {
