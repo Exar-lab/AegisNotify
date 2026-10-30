@@ -1,0 +1,2743 @@
+{
+  "info": {
+    "_postman_id": "7c12f5c5-bdf9-40b1-8965-5c8431881fb3",
+    "name": "AegisNotify API",
+    "description": "Generated from the live OpenAPI specs exposed by each service (/docs/<service>/v3/api-docs) via the gateway's local-profile-only docs routes (issue #169). Regenerate with `openapi-to-postmanv2 -s <spec>.json -o <out>.json -p` after pulling fresh specs from a locally running stack (SPRING_PROFILES_ACTIVE=local on the gateway and the three backend services).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "aegis-api-gateway base URL."
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "description": "A Keycloak access token for the aegis realm (dev login aegis-dev/dev123 against the aegis-admin-frontend client), scoped for whichever endpoints you're calling."
+    }
+  ],
+  "item": [
+    {
+      "name": "Notification Service",
+      "item": [
+        {
+          "name": "api",
+          "description": "",
+          "item": [
+            {
+              "name": "v1",
+              "description": "",
+              "item": [
+                {
+                  "name": "templates",
+                  "description": "",
+                  "item": [
+                    {
+                      "name": "{id}",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "08a4f5da-382f-4fa9-830a-e0bf00e5049c",
+                          "name": "get",
+                          "request": {
+                            "name": "get",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "templates",
+                                ":id"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": [
+                                {
+                                  "type": "any",
+                                  "value": "<uuid>",
+                                  "key": "id",
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "(Required) ",
+                                    "type": "text/plain"
+                                  }
+                                }
+                              ]
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "aaf22b69-4d50-4dc0-b296-c13aa6c81eb9",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "templates",
+                                    ":id"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      },
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id"
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"id\": \"<uuid>\",\n  \"name\": \"<string>\",\n  \"channel\": \"WHATSAPP\",\n  \"subject\": \"<string>\",\n  \"body\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"active\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\"\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        },
+                        {
+                          "id": "5fdfdbb4-b7f9-4f0d-9233-522360806d45",
+                          "name": "update",
+                          "request": {
+                            "name": "update",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "templates",
+                                ":id"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": [
+                                {
+                                  "type": "any",
+                                  "value": "<uuid>",
+                                  "key": "id",
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "(Required) ",
+                                    "type": "text/plain"
+                                  }
+                                }
+                              ]
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "PUT",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"body\": \"<string>\",\n  \"subject\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            },
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "da39cd7d-f6e6-4dc3-9ec0-33415a86ca68",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "templates",
+                                    ":id"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      },
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id"
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  },
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PUT",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"body\": \"<string>\",\n  \"subject\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                }
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"id\": \"<uuid>\",\n  \"name\": \"<string>\",\n  \"channel\": \"WHATSAPP\",\n  \"subject\": \"<string>\",\n  \"body\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"active\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\"\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        },
+                        {
+                          "name": "status",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "22a41810-2fc9-491a-a049-c9e288ba75b1",
+                              "name": "set Status",
+                              "request": {
+                                "name": "set Status",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "templates",
+                                    ":id",
+                                    "status"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  },
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PATCH",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"active\": \"<boolean>\"\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                },
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "f24aafbc-30fa-4e0f-a66c-f5b6d67c7ddd",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "templates",
+                                        ":id",
+                                        "status"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<uuid>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                      },
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "PATCH",
+                                    "body": {
+                                      "mode": "raw",
+                                      "raw": "{\n  \"active\": \"<boolean>\"\n}",
+                                      "options": {
+                                        "raw": {
+                                          "headerFamily": "json",
+                                          "language": "json"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<uuid>\",\n  \"name\": \"<string>\",\n  \"channel\": \"WHATSAPP\",\n  \"subject\": \"<string>\",\n  \"body\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"active\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\"\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "79580e9a-c320-46b2-acb7-cfc927a34b5c",
+                      "name": "list",
+                      "request": {
+                        "name": "list",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "templates"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {},
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "3676662f-c5ea-4cfd-835f-8bb5cc750245",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "templates"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {}
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "[\n  {\n    \"id\": \"<uuid>\",\n    \"name\": \"<string>\",\n    \"channel\": \"PUSH\",\n    \"subject\": \"<string>\",\n    \"body\": \"<string>\",\n    \"variables\": [\n      \"<string>\",\n      \"<string>\"\n    ],\n    \"active\": \"<boolean>\",\n    \"createdAt\": \"<dateTime>\",\n    \"updatedAt\": \"<dateTime>\"\n  },\n  {\n    \"id\": \"<uuid>\",\n    \"name\": \"<string>\",\n    \"channel\": \"EMAIL\",\n    \"subject\": \"<string>\",\n    \"body\": \"<string>\",\n    \"variables\": [\n      \"<string>\",\n      \"<string>\"\n    ],\n    \"active\": \"<boolean>\",\n    \"createdAt\": \"<dateTime>\",\n    \"updatedAt\": \"<dateTime>\"\n  }\n]",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "id": "fa353b0f-164f-47bb-b015-09754fc2f8e2",
+                      "name": "create",
+                      "request": {
+                        "name": "create",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "templates"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"body\": \"<string>\",\n  \"channel\": \"PUSH\",\n  \"name\": \"<string>\",\n  \"subject\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "36292ae3-d926-41e5-9e8f-d31b78560062",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "templates"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"body\": \"<string>\",\n  \"channel\": \"PUSH\",\n  \"name\": \"<string>\",\n  \"subject\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{\n  \"id\": \"<uuid>\",\n  \"name\": \"<string>\",\n  \"channel\": \"WHATSAPP\",\n  \"subject\": \"<string>\",\n  \"body\": \"<string>\",\n  \"variables\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"active\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\"\n}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "notifications",
+                  "description": "",
+                  "item": [
+                    {
+                      "id": "2a273ac4-c5d7-40c5-b68b-0fbb6180a1e9",
+                      "name": "list Page",
+                      "request": {
+                        "name": "list Page",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "notifications"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "search",
+                              "value": "<string>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "recipient",
+                              "value": "<string>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": " (This can only be one of EMAIL,SMS,WHATSAPP,PUSH)",
+                                "type": "text/plain"
+                              },
+                              "key": "channel",
+                              "value": "EMAIL"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": " (This can only be one of HIGH,MEDIUM,LOW)",
+                                "type": "text/plain"
+                              },
+                              "key": "priority",
+                              "value": "MEDIUM"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": " (This can only be one of PENDING,QUEUED,PROCESSING,SENT,SENT_VIA_FALLBACK,FAILED,FAILED_CRITICAL,CANCELLED)",
+                                "type": "text/plain"
+                              },
+                              "key": "status",
+                              "value": "PENDING"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "from",
+                              "value": "<dateTime>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "to",
+                              "value": "<dateTime>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "page",
+                              "value": "<integer>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "size",
+                              "value": "20"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "limit",
+                              "value": "20"
+                            }
+                          ],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {},
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "3614a0c4-b33b-4a13-a0ec-35b008826a41",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "notifications"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "search",
+                                  "value": "<string>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "recipient",
+                                  "value": "<string>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": " (This can only be one of EMAIL,SMS,WHATSAPP,PUSH)",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "channel",
+                                  "value": "EMAIL"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": " (This can only be one of HIGH,MEDIUM,LOW)",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "priority",
+                                  "value": "MEDIUM"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": " (This can only be one of PENDING,QUEUED,PROCESSING,SENT,SENT_VIA_FALLBACK,FAILED,FAILED_CRITICAL,CANCELLED)",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "status",
+                                  "value": "PENDING"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "from",
+                                  "value": "<dateTime>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "to",
+                                  "value": "<dateTime>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "page",
+                                  "value": "<integer>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "size",
+                                  "value": "20"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "limit",
+                                  "value": "20"
+                                }
+                              ],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {}
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "id": "3e4986e6-86a9-4ed1-8bd8-525b8cf99119",
+                      "name": "create 1",
+                      "request": {
+                        "name": "create 1",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "notifications"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"channel\": \"PUSH\",\n  \"recipient\": \"<string>\",\n  \"templateName\": \"<string>\",\n  \"parameters\": {\n    \"key_0\": {},\n    \"key_1\": {}\n  },\n  \"priority\": \"HIGH\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "a9e75580-9aa7-4a23-bf1d-8133a58b2e19",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "notifications"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"channel\": \"PUSH\",\n  \"recipient\": \"<string>\",\n  \"templateName\": \"<string>\",\n  \"parameters\": {\n    \"key_0\": {},\n    \"key_1\": {}\n  },\n  \"priority\": \"HIGH\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{\n  \"id\": \"<uuid>\",\n  \"status\": \"QUEUED\"\n}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "name": "{id}",
+                      "description": "",
+                      "item": [
+                        {
+                          "name": "retry",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "29711c95-fe70-4c0e-8aa0-edeb5eddb16a",
+                              "name": "retry",
+                              "request": {
+                                "name": "retry",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "notifications",
+                                    ":id",
+                                    "retry"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "POST",
+                                "body": {},
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "2e5353e1-a144-4492-adf2-0637c0f02683",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "notifications",
+                                        ":id",
+                                        "retry"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<uuid>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "POST",
+                                    "body": {}
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<uuid>\",\n  \"status\": \"QUEUED\"\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "name": "cancel",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "b0d8733c-27a9-4f15-ad28-db6de8c93db5",
+                              "name": "cancel",
+                              "request": {
+                                "name": "cancel",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "notifications",
+                                    ":id",
+                                    "cancel"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PATCH",
+                                "body": {},
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "437e20da-0572-401b-b4eb-af9ead472963",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "notifications",
+                                        ":id",
+                                        "cancel"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<uuid>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "PATCH",
+                                    "body": {}
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<uuid>\",\n  \"status\": \"QUEUED\"\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "name": "status",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "fc1186d0-4b41-4a74-8c0b-e99b5da3cb67",
+                              "name": "get Status",
+                              "request": {
+                                "name": "get Status",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "notifications",
+                                    ":id",
+                                    "status"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {},
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "e587cf93-decc-45c8-a8ac-cc9a2741c0b6",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "notifications",
+                                        ":id",
+                                        "status"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<uuid>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "GET",
+                                    "body": {}
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<uuid>\",\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"<string>\",\n  \"templateName\": \"<string>\",\n  \"status\": \"SENT\",\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\",\n  \"auditTrail\": [\n    {\n      \"status\": \"PROVIDER_B_FAIL\",\n      \"details\": \"<string>\",\n      \"timestamp\": \"<dateTime>\"\n    },\n    {\n      \"status\": \"CANCELLED\",\n      \"details\": \"<string>\",\n      \"timestamp\": \"<dateTime>\"\n    }\n  ],\n  \"priority\": \"LOW\",\n  \"correlationId\": \"<uuid>\",\n  \"providerAttempts\": [\n    {\n      \"providerName\": \"<string>\",\n      \"role\": \"<string>\",\n      \"success\": \"<boolean>\",\n      \"code\": \"<string>\",\n      \"errorDetail\": \"<string>\",\n      \"latencyMillis\": \"<long>\",\n      \"timestamp\": \"<dateTime>\"\n    },\n    {\n      \"providerName\": \"<string>\",\n      \"role\": \"<string>\",\n      \"success\": \"<boolean>\",\n      \"code\": \"<string>\",\n      \"errorDetail\": \"<string>\",\n      \"latencyMillis\": \"<long>\",\n      \"timestamp\": \"<dateTime>\"\n    }\n  ]\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "metrics",
+                  "description": "",
+                  "item": [
+                    {
+                      "name": "summary",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "674d3d17-91ce-4109-8232-66771b75e1ae",
+                          "name": "summary",
+                          "request": {
+                            "name": "summary",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "metrics",
+                                "summary"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "eaa968f5-6432-463d-9c02-649415891dd9",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "metrics",
+                                    "summary"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": []
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"requestsByChannel\": [\n    {\n      \"channel\": \"<string>\",\n      \"count\": \"<long>\"\n    },\n    {\n      \"channel\": \"<string>\",\n      \"count\": \"<long>\"\n    }\n  ],\n  \"deliveryLatency\": {\n    \"count\": \"<long>\",\n    \"meanSeconds\": \"<double>\",\n    \"maxSeconds\": \"<double>\"\n  },\n  \"providerErrors\": [\n    {\n      \"provider\": \"<string>\",\n      \"errorCode\": \"<string>\",\n      \"count\": \"<long>\"\n    },\n    {\n      \"provider\": \"<string>\",\n      \"errorCode\": \"<string>\",\n      \"count\": \"<long>\"\n    }\n  ],\n  \"fallbackTransmissions\": \"<long>\",\n  \"kafkaConsumer\": {\n    \"success\": \"<long>\",\n    \"failure\": \"<long>\",\n    \"retry\": \"<long>\",\n    \"dlq\": \"<long>\"\n  }\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "dashboard",
+                  "description": "",
+                  "item": [
+                    {
+                      "name": "summary",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "9d02109f-0328-45af-a68b-85a685413efc",
+                          "name": "summary 1",
+                          "request": {
+                            "name": "summary 1",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "summary"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "97efb6ff-f318-48ef-a8e8-5137e0e07373",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "dashboard",
+                                    "summary"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": []
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"totalRequests\": {\n    \"currentValue\": \"<double>\",\n    \"previousValue\": \"<double>\",\n    \"deltaPercent\": \"<double>\",\n    \"deltaPoints\": \"<double>\"\n  },\n  \"successRate\": {\n    \"currentValue\": \"<double>\",\n    \"previousValue\": \"<double>\",\n    \"deltaPercent\": \"<double>\",\n    \"deltaPoints\": \"<double>\"\n  },\n  \"fallbackActivations\": {\n    \"currentValue\": \"<double>\",\n    \"previousValue\": \"<double>\",\n    \"deltaPercent\": \"<double>\",\n    \"deltaPoints\": \"<double>\"\n  },\n  \"avgDeliveryLatency\": {\n    \"currentValue\": \"<double>\",\n    \"previousValue\": \"<double>\",\n    \"deltaPercent\": \"<double>\",\n    \"deltaPoints\": \"<double>\"\n  }\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "circuit-breakers",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "4f8fc1fe-5868-4831-8773-d4640a92fa49",
+                          "name": "circuit Breakers",
+                          "request": {
+                            "name": "circuit Breakers",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "dashboard",
+                                "circuit-breakers"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "934ecda3-ea59-433a-aab0-93f1465e82e8",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "dashboard",
+                                    "circuit-breakers"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": []
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "[\n  {\n    \"key\": \"<string>\",\n    \"name\": \"<string>\",\n    \"channel\": \"EMAIL\",\n    \"role\": \"<string>\",\n    \"fallbackProvider\": \"<string>\",\n    \"state\": \"<string>\",\n    \"failureRate\": \"<double>\",\n    \"slowCallRate\": \"<double>\",\n    \"lastStateChange\": \"<dateTime>\",\n    \"calls24h\": \"<long>\",\n    \"callsToday\": \"<long>\",\n    \"successRate\": \"<double>\"\n  },\n  {\n    \"key\": \"<string>\",\n    \"name\": \"<string>\",\n    \"channel\": \"EMAIL\",\n    \"role\": \"<string>\",\n    \"fallbackProvider\": \"<string>\",\n    \"state\": \"<string>\",\n    \"failureRate\": \"<double>\",\n    \"slowCallRate\": \"<double>\",\n    \"lastStateChange\": \"<dateTime>\",\n    \"calls24h\": \"<long>\",\n    \"callsToday\": \"<long>\",\n    \"successRate\": \"<double>\"\n  }\n]",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "User Service",
+      "item": [
+        {
+          "name": "api",
+          "description": "",
+          "item": [
+            {
+              "name": "v1",
+              "description": "",
+              "item": [
+                {
+                  "name": "users",
+                  "description": "",
+                  "item": [
+                    {
+                      "name": "{id}",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "5b0d4470-133f-4b78-aa41-05cf8d5f5c9b",
+                          "name": "get User",
+                          "request": {
+                            "name": "get User",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                ":id"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": [
+                                {
+                                  "type": "any",
+                                  "value": "<string>",
+                                  "key": "id",
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "(Required) ",
+                                    "type": "text/plain"
+                                  }
+                                }
+                              ]
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "1873fb58-aaf8-440a-86e9-d6ef0231d141",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    ":id"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      },
+                                      "type": "any",
+                                      "value": "<string>",
+                                      "key": "id"
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"id\": \"<string>\",\n  \"username\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"enabled\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        },
+                        {
+                          "id": "1b85e9ac-47cc-401b-9482-08e03d410963",
+                          "name": "update User",
+                          "request": {
+                            "name": "update User",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                ":id"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": [
+                                {
+                                  "type": "any",
+                                  "value": "<string>",
+                                  "key": "id",
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "(Required) ",
+                                    "type": "text/plain"
+                                  }
+                                }
+                              ]
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "PUT",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            },
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "efe269e0-b075-40e4-b992-aa82c391905a",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    ":id"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      },
+                                      "type": "any",
+                                      "value": "<string>",
+                                      "key": "id"
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  },
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PUT",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\"\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                }
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"id\": \"<string>\",\n  \"username\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"enabled\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        },
+                        {
+                          "name": "roles",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "3d7a770c-6d2e-4501-81ea-ec4a439de187",
+                              "name": "set Roles",
+                              "request": {
+                                "name": "set Roles",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    ":id",
+                                    "roles"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<string>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  },
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PUT",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                },
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "6e21499c-03ea-4318-9bbf-42b0a2d915f0",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        ":id",
+                                        "roles"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<string>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                      },
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "PUT",
+                                    "body": {
+                                      "mode": "raw",
+                                      "raw": "{\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                                      "options": {
+                                        "raw": {
+                                          "headerFamily": "json",
+                                          "language": "json"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<string>\",\n  \"username\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"enabled\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "name": "password",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "522eddcd-c1f6-4f1a-b4a4-f2929544607a",
+                              "name": "reset Password",
+                              "request": {
+                                "name": "reset Password",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    ":id",
+                                    "password"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<string>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  }
+                                ],
+                                "method": "PUT",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"newPassword\": \"<string>\",\n  \"temporary\": \"<boolean>\"\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                },
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "0ee341e2-50f8-4dbc-8b01-5c54248447db",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        ":id",
+                                        "password"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<string>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                      }
+                                    ],
+                                    "method": "PUT",
+                                    "body": {
+                                      "mode": "raw",
+                                      "raw": "{\n  \"newPassword\": \"<string>\",\n  \"temporary\": \"<boolean>\"\n}",
+                                      "options": {
+                                        "raw": {
+                                          "headerFamily": "json",
+                                          "language": "json"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [],
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "name": "status",
+                          "description": "",
+                          "item": [
+                            {
+                              "id": "76bb1163-4a6e-4c0e-a1b8-498ead4a918e",
+                              "name": "set Status",
+                              "request": {
+                                "name": "set Status",
+                                "description": {},
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    ":id",
+                                    "status"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "type": "any",
+                                      "value": "<string>",
+                                      "key": "id",
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      }
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Content-Type",
+                                    "value": "application/json"
+                                  },
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "PATCH",
+                                "body": {
+                                  "mode": "raw",
+                                  "raw": "{\n  \"enabled\": \"<boolean>\"\n}",
+                                  "options": {
+                                    "raw": {
+                                      "headerFamily": "json",
+                                      "language": "json"
+                                    }
+                                  }
+                                },
+                                "auth": null
+                              },
+                              "response": [
+                                {
+                                  "id": "57b91bfc-02e8-401d-8f05-ebf5423d20ae",
+                                  "name": "OK",
+                                  "originalRequest": {
+                                    "url": {
+                                      "path": [
+                                        "api",
+                                        "v1",
+                                        "users",
+                                        ":id",
+                                        "status"
+                                      ],
+                                      "host": [
+                                        "{{baseUrl}}"
+                                      ],
+                                      "query": [],
+                                      "variable": [
+                                        {
+                                          "disabled": false,
+                                          "description": {
+                                            "content": "(Required) ",
+                                            "type": "text/plain"
+                                          },
+                                          "type": "any",
+                                          "value": "<string>",
+                                          "key": "id"
+                                        }
+                                      ]
+                                    },
+                                    "header": [
+                                      {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                      },
+                                      {
+                                        "key": "Accept",
+                                        "value": "*/*"
+                                      }
+                                    ],
+                                    "method": "PATCH",
+                                    "body": {
+                                      "mode": "raw",
+                                      "raw": "{\n  \"enabled\": \"<boolean>\"\n}",
+                                      "options": {
+                                        "raw": {
+                                          "headerFamily": "json",
+                                          "language": "json"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "status": "OK",
+                                  "code": 200,
+                                  "header": [
+                                    {
+                                      "key": "Content-Type",
+                                      "value": "*/*"
+                                    }
+                                  ],
+                                  "body": "{\n  \"id\": \"<string>\",\n  \"username\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"enabled\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                                  "cookie": [],
+                                  "_postman_previewlanguage": "text"
+                                }
+                              ],
+                              "event": [],
+                              "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "fa952a2d-e4f0-4cc7-9775-05b904c23b6c",
+                      "name": "list Users",
+                      "request": {
+                        "name": "list Users",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "users"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "page",
+                              "value": "0"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "size",
+                              "value": "20"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "search",
+                              "value": "<string>"
+                            }
+                          ],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {},
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "f4714f95-d5f5-4882-a66b-0a6bd7784f29",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "users"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "page",
+                                  "value": "0"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "size",
+                                  "value": "20"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "search",
+                                  "value": "<string>"
+                                }
+                              ],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {}
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{\n  \"content\": [\n    {\n      \"id\": \"<string>\",\n      \"username\": \"<string>\",\n      \"email\": \"<string>\",\n      \"firstName\": \"<string>\",\n      \"lastName\": \"<string>\",\n      \"enabled\": \"<boolean>\",\n      \"createdAt\": \"<dateTime>\",\n      \"roles\": [\n        \"<string>\",\n        \"<string>\"\n      ]\n    },\n    {\n      \"id\": \"<string>\",\n      \"username\": \"<string>\",\n      \"email\": \"<string>\",\n      \"firstName\": \"<string>\",\n      \"lastName\": \"<string>\",\n      \"enabled\": \"<boolean>\",\n      \"createdAt\": \"<dateTime>\",\n      \"roles\": [\n        \"<string>\",\n        \"<string>\"\n      ]\n    }\n  ],\n  \"page\": \"<integer>\",\n  \"size\": \"<integer>\",\n  \"totalElements\": \"<long>\",\n  \"totalPages\": \"<integer>\"\n}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "id": "d7326a70-5f7e-4da6-a9af-f494315094f7",
+                      "name": "create User",
+                      "request": {
+                        "name": "create User",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "users"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"username\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "f9fe3bb2-4958-4bb9-9d70-62e3fb5901e3",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "users"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"username\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{\n  \"id\": \"<string>\",\n  \"username\": \"<string>\",\n  \"email\": \"<string>\",\n  \"firstName\": \"<string>\",\n  \"lastName\": \"<string>\",\n  \"enabled\": \"<boolean>\",\n  \"createdAt\": \"<dateTime>\",\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "name": "roles",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "7e20351e-f1ee-4561-b429-296e75e1971c",
+                          "name": "get Available Roles",
+                          "request": {
+                            "name": "get Available Roles",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "users",
+                                "roles"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "df1b696e-8e65-41bd-86b8-7f50ccc9bd2d",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "users",
+                                    "roles"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": []
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "[\n  \"<string>\",\n  \"<string>\"\n]",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Audit Service",
+      "item": [
+        {
+          "name": "api",
+          "description": "",
+          "item": [
+            {
+              "name": "v1",
+              "description": "",
+              "item": [
+                {
+                  "name": "audit",
+                  "description": "",
+                  "item": [
+                    {
+                      "id": "6d2a6d8c-b4c4-4779-ac25-e329966f8dd4",
+                      "name": "search",
+                      "request": {
+                        "name": "search",
+                        "description": {},
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "audit"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": " (This can only be one of EMAIL,SMS,WHATSAPP,PUSH)",
+                                "type": "text/plain"
+                              },
+                              "key": "channel",
+                              "value": "SMS"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": " (This can only be one of PENDING,QUEUED,PROCESSING,SENT,SENT_VIA_FALLBACK,PROVIDER_A_FAIL,PROVIDER_B_FAIL,FAILED,FAILED_CRITICAL,CANCELLED)",
+                                "type": "text/plain"
+                              },
+                              "key": "status",
+                              "value": "PENDING"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "from",
+                              "value": "<dateTime>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "to",
+                              "value": "<dateTime>"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "page",
+                              "value": "0"
+                            },
+                            {
+                              "disabled": false,
+                              "description": {
+                                "content": "",
+                                "type": "text/plain"
+                              },
+                              "key": "size",
+                              "value": "20"
+                            }
+                          ],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "GET",
+                        "body": {},
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "7e2f9678-eeb7-4a39-8926-4111341d25f6",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "audit"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": " (This can only be one of EMAIL,SMS,WHATSAPP,PUSH)",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "channel",
+                                  "value": "SMS"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": " (This can only be one of PENDING,QUEUED,PROCESSING,SENT,SENT_VIA_FALLBACK,PROVIDER_A_FAIL,PROVIDER_B_FAIL,FAILED,FAILED_CRITICAL,CANCELLED)",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "status",
+                                  "value": "PENDING"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "from",
+                                  "value": "<dateTime>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "to",
+                                  "value": "<dateTime>"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "page",
+                                  "value": "0"
+                                },
+                                {
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "",
+                                    "type": "text/plain"
+                                  },
+                                  "key": "size",
+                                  "value": "20"
+                                }
+                              ],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {}
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "*/*"
+                            }
+                          ],
+                          "body": "{\n  \"content\": [\n    {\n      \"notificationId\": \"<uuid>\",\n      \"currentStatus\": \"<string>\",\n      \"channel\": \"<string>\",\n      \"priority\": \"<string>\",\n      \"createdAt\": \"<dateTime>\"\n    },\n    {\n      \"notificationId\": \"<uuid>\",\n      \"currentStatus\": \"<string>\",\n      \"channel\": \"<string>\",\n      \"priority\": \"<string>\",\n      \"createdAt\": \"<dateTime>\"\n    }\n  ],\n  \"page\": \"<integer>\",\n  \"size\": \"<integer>\",\n  \"totalElements\": \"<long>\",\n  \"totalPages\": \"<integer>\"\n}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "text"
+                        }
+                      ],
+                      "event": [],
+                      "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                      }
+                    },
+                    {
+                      "name": "{notificationId}",
+                      "description": "",
+                      "item": [
+                        {
+                          "id": "b6ace562-6fdd-4931-98d1-4eb52533b4ec",
+                          "name": "get By Notification Id",
+                          "request": {
+                            "name": "get By Notification Id",
+                            "description": {},
+                            "url": {
+                              "path": [
+                                "api",
+                                "v1",
+                                "audit",
+                                ":notificationId"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": [
+                                {
+                                  "type": "any",
+                                  "value": "<uuid>",
+                                  "key": "notificationId",
+                                  "disabled": false,
+                                  "description": {
+                                    "content": "(Required) ",
+                                    "type": "text/plain"
+                                  }
+                                }
+                              ]
+                            },
+                            "header": [
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "GET",
+                            "body": {},
+                            "auth": null
+                          },
+                          "response": [
+                            {
+                              "id": "97b310ee-e6dc-40e1-b3d7-b1c6c8e5f002",
+                              "name": "OK",
+                              "originalRequest": {
+                                "url": {
+                                  "path": [
+                                    "api",
+                                    "v1",
+                                    "audit",
+                                    ":notificationId"
+                                  ],
+                                  "host": [
+                                    "{{baseUrl}}"
+                                  ],
+                                  "query": [],
+                                  "variable": [
+                                    {
+                                      "disabled": false,
+                                      "description": {
+                                        "content": "(Required) ",
+                                        "type": "text/plain"
+                                      },
+                                      "type": "any",
+                                      "value": "<uuid>",
+                                      "key": "notificationId"
+                                    }
+                                  ]
+                                },
+                                "header": [
+                                  {
+                                    "key": "Accept",
+                                    "value": "*/*"
+                                  }
+                                ],
+                                "method": "GET",
+                                "body": {}
+                              },
+                              "status": "OK",
+                              "code": 200,
+                              "header": [
+                                {
+                                  "key": "Content-Type",
+                                  "value": "*/*"
+                                }
+                              ],
+                              "body": "{\n  \"notificationId\": \"<uuid>\",\n  \"currentStatus\": \"<string>\",\n  \"events\": [\n    {\n      \"status\": \"<string>\",\n      \"details\": \"<string>\",\n      \"createdAt\": \"<dateTime>\"\n    },\n    {\n      \"status\": \"<string>\",\n      \"details\": \"<string>\",\n      \"createdAt\": \"<dateTime>\"\n    }\n  ],\n  \"createdAt\": \"<dateTime>\",\n  \"updatedAt\": \"<dateTime>\"\n}",
+                              "cookie": [],
+                              "_postman_previewlanguage": "text"
+                            }
+                          ],
+                          "event": [],
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
