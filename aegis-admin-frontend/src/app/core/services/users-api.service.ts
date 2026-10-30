@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { RUNTIME_CONFIG } from '../config/runtime-config';
 import {
   CreateUserRequest,
   ManagedUser,
@@ -14,7 +14,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class UsersApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
+  private readonly baseUrl = inject(RUNTIME_CONFIG).apiBaseUrl.replace(/\/+$/, '');
   private readonly usersUrl = `${this.baseUrl}/api/v1/users`;
 
   list(page = 0, size = 20): Observable<UserPage> {

@@ -144,22 +144,93 @@ For local development with the default imported realm (`docker/keycloak/aegis-re
 
 ## Environment Configuration
 
-Configuration files are located in `src/environments/` and the project root:
+### Runtime URLs (issue #171)
 
-| File | Environment | Description |
+The browser fetches `config.json` relative to the application's HTML base URL **before**
+bootstrapping Angular or initializing Keycloak. The static `public/config.json` ships as `{}`,
+so `pnpm start` / `ng serve` works without additional configuration. No new dependency is required.
+
+| Property | Purpose | Environment fallback |
 | --- | --- | --- |
-| `src/environments/environment.ts` | Production / Default | Base API Gateway and Keycloak endpoint configuration |
-| `src/environments/environment.development.ts` | Development | Development overrides and local mappings |
-| `.env` / `.env.development` | Local Tooling | Environment variable declarations for CLI / Docker |
+| `apiBaseUrl` | Gateway base URL, without the `/api/v1` suffix | `http://localhost:8080` |
+| `keycloakUrl` | Keycloak server base URL | `http://localhost:8088` |
 
-### Configuration Parameters
+Example `config.json`:
 
-| Parameter | Environment Variable | Default Value | Description |
-| --- | --- | --- | --- |
-| `apiBaseUrl` | `API_BASE_URL` | `http://localhost:8080` | Aegis API Gateway base URL |
-| `keycloakUrl` | `KEYCLOAK_URL` | `http://localhost:8088` | Keycloak Identity Provider URL |
-| `keycloakRealm` | `KEYCLOAK_REALM` | `aegis` | Keycloak Realm name |
-| `keycloakClientId` | `KEYCLOAK_CLIENT_ID` | `aegis-admin-frontend` | OIDC Public Client ID |
+```json
+{
+  "apiBaseUrl": "https://gateway.example.com:9443",
+  "keycloakUrl": "https://identity.example.com"
+}
+```
+
+Both fields are optional. Runtime values take priority over `src/environments/environment.ts`
+(or `environment.development.ts` for development). Missing or invalid fields individually retain
+those defaults. URLs must be absolute HTTP(S) URLs, without embedded credentials, query strings,
+or fragments. Path prefixes are supported; whitespace and trailing slashes are removed. The API
+services append `/api/v1/...` themselves. Realm and client ID still come from the environment files.
+
+If the file is missing (404), empty (`{}`), unreachable, invalid JSON, or fails to load within
+five seconds, startup continues with environment defaults. Failures other than a missing file
+produce a console warning. A server returning the SPA HTML fallback for this file is handled as
+invalid JSON. Configuration is fetched with `cache: 'no-store'`; configure the static server/CDN
+to serve `config.json` with `Cache-Control: no-store` as well, and exclude it from offline caches.
+
+### Local development
+
+Run `pnpm start` normally. To use another gateway or Keycloak port, edit `public/config.json`
+and reload the page. For example, `{"apiBaseUrl":"http://localhost:9090"}` changes only the gateway.
+Restore `{}` before committing local overrides. The effective API URL is shared by all five API
+services and the bearer interceptor; Keycloak initialization uses the effective identity URL.
+
+### Deployment without rebuilding
+
+1. Build once with `pnpm build`.
+2. In the deployed static files, replace `dist/aegis-admin-frontend/browser/config.json`
+   beside `index.html` with the JSON for that environment. You can also mount that file into the
+   document root of the web-server container, or generate it from deployment variables using a
+   JSON serializer before serving the files. Angular does not read server environment variables directly.
+3. Reload the browser. To change hosts or ports again, replace only `config.json` and reload;
+   no recompilation or JavaScript bundle replacement is needed. Already open sessions keep their
+   configuration until reloaded.
+
+The file is public: include only these service URLs, never credentials, tokens, or secrets.
+URLs must be reachable from the user's browser, rather than using private Docker service names.
+Configure gateway CORS and Keycloak redirect URIs/web origins to permit the deployed frontend
+origin, and use HTTPS endpoints when serving the frontend over HTTPS.
+
+### Static hosting and direct page reloads
+
+When using Vercel's `serve`, run from the frontend directory:
+
+```bash
+npx serve dist/aegis-admin-frontend/browser -l 4300
+```
+
+The build includes `public/serve.json`, which `serve` reads automatically from the served
+directory. It disables clean-URL redirects, provides the SPA fallback for routes such as
+`/dashboard` (including nested routes), and disables caching of `config.json`. The rewrite
+excludes `/config.json` and `/silent-check-sso.html`, so a missing asset returns a real 404.
+Do not add `-s` / `--single`: that option prepends an unconditional SPA rewrite and overrides
+these exclusions. Restart an already running static server
+after deploying this server configuration. A browser may also have cached an earlier 301;
+clear its cache or test in a fresh private window.
+
+Other web servers must serve existing static files before applying the SPA fallback.
+In particular, `/silent-check-sso.html` must return the actual callback document with status
+200, without redirecting to `/silent-check-sso` or rewriting it to `index.html`. Otherwise the
+hidden SSO iframe boots a second Angular application instead of posting the authentication
+response to its parent. The parent's Keycloak initializer never completes and its root stays
+empty, even though the iframe can make successful API calls. This hosting dependency predates
+runtime URL configuration; do not work around it by bypassing authentication initialization.
+
+With the compiled static server running, execute `pnpm test:hosting` to check direct routing,
+the callback response and postMessage contract, uncached JSON delivery, and a real 404 when the
+JSON is absent. Run against the local `dist/aegis-admin-frontend/browser` build with its
+`config.json` present: the missing-file test temporarily moves it outside the served directory
+and restores it in a `finally` block, without changing its contents. For another server
+address, set `AEGIS_STATIC_URL` (PowerShell: `$env:AEGIS_STATIC_URL='http://localhost:4318'`).
+These HTTP checks complement `pnpm test:ci`; they do not replace a browser login and reload test.
 
 ## Authentication & Routing Flow
 
@@ -222,6 +293,7 @@ The application features a built-in Light and Dark theme system:
 aegis-admin-frontend/
 ├── public/
 │   ├── favicon.ico
+│   ├── config.json                   # Optional runtime URL overrides (defaults to {})
 │   └── silent-check-sso.html        # Keycloak silent SSO check callback
 ├── src/
 │   ├── app/
