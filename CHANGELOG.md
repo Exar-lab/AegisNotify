@@ -1,5 +1,61 @@
 # Changelog
 
+## [0.17.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.16.0...aegisnotify-v0.17.0) (2026-10-30)
+
+
+### Features
+
+* **docs:** expose OpenAPI and Swagger UI on services under the local profile ([2c1c56f](https://github.com/Exar-lab/AegisNotify/commit/2c1c56f74f005ac2dc3dfcb2a9c1525a0679094b))
+* **docs:** expose OpenAPI and Swagger UI under the local profile ([2d7f01a](https://github.com/Exar-lab/AegisNotify/commit/2d7f01a4f74f2d737df14abdde92d218de932472))
+* **frontend:** make admin API and Keycloak URLs runtime-configurable ([1e0c336](https://github.com/Exar-lab/AegisNotify/commit/1e0c336c314e5ad54881169532b217a9f159807c))
+* **frontend:** make admin API and Keycloak URLs runtime-configurable ([f3ef564](https://github.com/Exar-lab/AegisNotify/commit/f3ef56433ea3f6fbf4dbf517530a676a4372c765))
+* **gateway:** route service API docs under the local profile ([f27b470](https://github.com/Exar-lab/AegisNotify/commit/f27b470868c2a62e84eb49bb5681a5ad536b08e6))
+* **notification:** add Notification Template management CRUD + admin screen ([82df2bb](https://github.com/Exar-lab/AegisNotify/commit/82df2bbe858a57707fc513597bcd778ac31bdba4))
+* **notification:** add Notification Template management CRUD + admin screen ([553a537](https://github.com/Exar-lab/AegisNotify/commit/553a53759c3bcf1e074b5328fd27f194ae4b2ea8)), closes [#167](https://github.com/Exar-lab/AegisNotify/issues/167)
+* **user:** add role assignment and search to use cases and ports ([e78d627](https://github.com/Exar-lab/AegisNotify/commit/e78d62746ea54daa841378ff0c06cecc246e5f75))
+* **user:** add roles field to ManagedUser and RoleNotFoundException ([432eedc](https://github.com/Exar-lab/AegisNotify/commit/432eedce75c60005f70dca42ff373924cc46d323))
+* **user:** expose role assignment and catalog endpoints in UserController ([baf9099](https://github.com/Exar-lab/AegisNotify/commit/baf9099a7d3f4b5d0ad103a79200b7b07879098e))
+* **user:** implement KeycloakAdminClientAdapter role mappings and search ([47cf20d](https://github.com/Exar-lab/AegisNotify/commit/47cf20d107b8b8bbfb367c8efd75096a7f3d57e8))
+
+
+### Bug Fixes
+
+* **auth:** grant admin frontend user scopes and wire up logout button ([8d2bc39](https://github.com/Exar-lab/AegisNotify/commit/8d2bc39fe6f93f78f8b0454becaa9df2dd99e269))
+* **auth:** grant admin frontend user scopes and wire up logout button ([49a17da](https://github.com/Exar-lab/AegisNotify/commit/49a17da145dd652e946198f52aed76d6056329aa))
+* **docs:** keep CSRF protection enabled on the API docs chain ([4c4806a](https://github.com/Exar-lab/AegisNotify/commit/4c4806ad12f01158b1f7c8a888b06af690c6893e))
+* **eureka-server:** require basic auth on the Eureka registry and dashboard ([ea69619](https://github.com/Exar-lab/AegisNotify/commit/ea69619de9ed9fe4eb9f705ef28b8d14da550bae))
+* **gateway:** allow PATCH in CORS configuration ([b7b5ec9](https://github.com/Exar-lab/AegisNotify/commit/b7b5ec9028c6685ef6f24c8f9537fa82137730b1))
+* **gateway:** register with Eureka using basic-auth credentials ([a97c966](https://github.com/Exar-lab/AegisNotify/commit/a97c966fc95486e1086dbdca59e73fdc6e9cd24e)), closes [#170](https://github.com/Exar-lab/AegisNotify/issues/170)
+* **notification:** harden email regex and add assertion to smoke test ([507840b](https://github.com/Exar-lab/AegisNotify/commit/507840bb739eb1e1ee9647fc29836d0519513556))
+* **notification:** harden email regex and add assertion to smoke test ([ffa5921](https://github.com/Exar-lab/AegisNotify/commit/ffa5921ad6daa7eddbe1fbe3f4ce59c502fe21d1))
+
+
+### Refactoring
+
+* **config:** make Eureka host configurable via EUREKA_HOST ([ee35581](https://github.com/Exar-lab/AegisNotify/commit/ee355811ec023cb6c3a80b5bac23d1f196093599)), closes [#170](https://github.com/Exar-lab/AegisNotify/issues/170)
+* **docs:** extract the API docs config into a shared module ([0170724](https://github.com/Exar-lab/AegisNotify/commit/0170724c5fc20d5759ca855d1e93ec4754f8eba5))
+
+
+### Documentation
+
+* **postman:** add Postman collection generated from the live OpenAPI specs ([ff58967](https://github.com/Exar-lab/AegisNotify/commit/ff58967a433f2ec01818055520f5fb83b637683e))
+* **postman:** add Postman collection generated from the live OpenAPI specs ([a00fdc4](https://github.com/Exar-lab/AegisNotify/commit/a00fdc4c36d4ad811ec5ee49aa026f048f3fc102)), closes [#169](https://github.com/Exar-lab/AegisNotify/issues/169)
+* **readme:** document audit, gateway, config-server, and eureka architecture ([ae93411](https://github.com/Exar-lab/AegisNotify/commit/ae9341147df9bf365fb9289f0e2018c80fb765b1))
+* **readme:** document audit, gateway, config-server, and eureka architecture ([bf34c20](https://github.com/Exar-lab/AegisNotify/commit/bf34c20ba7ed8851ebfbfeeb5aa24c6a75230d5d))
+
+
+### Tests
+
+* **gateway:** add coverage for RouteScopeRules ([4ddc0a8](https://github.com/Exar-lab/AegisNotify/commit/4ddc0a8a4b0684a98440c1fa80eb70ef7ce0c72d))
+* **gateway:** add coverage for RouteScopeRules ([0f659ea](https://github.com/Exar-lab/AegisNotify/commit/0f659ea130b449249006b0617812ac3940bbf9e4)), closes [#173](https://github.com/Exar-lab/AegisNotify/issues/173)
+* **user:** add comprehensive tests for role assignment and search ([95755df](https://github.com/Exar-lab/AegisNotify/commit/95755df835edf8eda54c8cd9d649434299d369b3))
+
+
+### CI/CD
+
+* add SonarCloud static analysis scan ([fee6826](https://github.com/Exar-lab/AegisNotify/commit/fee68265d4339fb140b7f15a660a443199303479))
+* add SonarCloud static analysis scan ([bae8ed0](https://github.com/Exar-lab/AegisNotify/commit/bae8ed0db5ab43034afde04f5ea81567ddb850b2))
+
 ## [0.16.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.15.0...aegisnotify-v0.16.0) (2026-10-21)
 
 
