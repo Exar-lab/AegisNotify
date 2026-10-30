@@ -8,14 +8,17 @@ import static org.mockito.Mockito.verify;
 import com.aegisnotify.user.application.dto.NewUser;
 import com.aegisnotify.user.application.dto.PagedResult;
 import com.aegisnotify.user.application.dto.UserUpdate;
+import com.aegisnotify.user.domain.exception.RoleNotFoundException;
 import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserDirectoryUnavailableException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
 import com.aegisnotify.user.domain.model.ManagedUser;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import okhttp3.mockwebserver.SocketPolicy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +70,10 @@ class KeycloakAdminClientAdapterTest {
         .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
             + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":true,"
             + "\"createdTimestamp\":1700000000000}"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"}]"));
 
     ManagedUser user = adapter.findById("u-1");
 
@@ -76,6 +83,7 @@ class KeycloakAdminClientAdapterTest {
     assertThat(user.firstName()).isEqualTo("Jane");
     assertThat(user.lastName()).isEqualTo("Doe");
     assertThat(user.enabled()).isTrue();
+    assertThat(user.roles()).containsExactly("admin");
   }
 
   @Test
@@ -114,15 +122,46 @@ class KeycloakAdminClientAdapterTest {
         .setResponseCode(200)
         .addHeader("Content-Type", "application/json")
         .setBody("1"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"}]"));
 
     PagedResult<ManagedUser> result = adapter.findAll(0, 20);
 
     assertThat(result.content()).hasSize(1);
     assertThat(result.content().get(0).username()).isEqualTo("jdoe");
+    assertThat(result.content().get(0).roles()).containsExactly("admin");
     assertThat(result.page()).isZero();
     assertThat(result.size()).isEqualTo(20);
     assertThat(result.totalElements()).isEqualTo(1L);
     assertThat(result.totalPages()).isEqualTo(1);
+  }
+
+  @Test
+  void findAll_withSearch_passesQueryParam() throws InterruptedException {
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
+            + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":true,"
+            + "\"createdTimestamp\":1700000000000}]"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("1"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[]"));
+
+    PagedResult<ManagedUser> result = adapter.findAll(0, 20, "jdoe");
+
+    assertThat(result.content()).hasSize(1);
+    RecordedRequest usersReq = server.takeRequest();
+    RecordedRequest countReq = server.takeRequest();
+    assertThat(usersReq.getPath()).contains("search=jdoe");
+    assertThat(countReq.getPath()).contains("search=jdoe");
   }
 
   @Test
@@ -197,6 +236,10 @@ class KeycloakAdminClientAdapterTest {
         .setBody("{\"id\":\"u-new\",\"username\":\"newuser\",\"email\":\"newuser@example.com\","
             + "\"firstName\":\"New\",\"lastName\":\"User\",\"enabled\":true,"
             + "\"createdTimestamp\":1700000000000}"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[]"));
 
     ManagedUser created = adapter.create(
         new NewUser("newuser", "newuser@example.com", "New", "User"));
@@ -244,6 +287,10 @@ class KeycloakAdminClientAdapterTest {
         .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"updated@example.com\","
             + "\"firstName\":\"Janet\",\"lastName\":\"Doe\",\"enabled\":true,"
             + "\"createdTimestamp\":1700000000000}"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[]"));
 
     ManagedUser updated = adapter.update(
         "u-1", new UserUpdate("updated@example.com", "Janet", "Doe"));
@@ -270,6 +317,10 @@ class KeycloakAdminClientAdapterTest {
         .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
             + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":false,"
             + "\"createdTimestamp\":1700000000000}"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[]"));
 
     ManagedUser result = adapter.setEnabled("u-1", false);
 
@@ -287,6 +338,10 @@ class KeycloakAdminClientAdapterTest {
         .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
             + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":false,"
             + "\"createdTimestamp\":1700000000000}"));
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[]"));
 
     ManagedUser result = adapter.setEnabled("u-1", false);
 
@@ -326,5 +381,78 @@ class KeycloakAdminClientAdapterTest {
         .isInstanceOf(UserDirectoryUnavailableException.class);
 
     verify(tokenProvider).invalidate();
+  }
+
+  @Test
+  void getAvailableRoles_success_returnsRealmRoles() {
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"},{\"id\":\"r-2\",\"name\":\"operator\"}]"));
+
+    List<String> roles = adapter.getAvailableRoles();
+
+    assertThat(roles).containsExactly("admin", "operator");
+  }
+
+  @Test
+  void setRoles_removesOldRolesAndAddsNewRoles() throws InterruptedException {
+    // 1. fetch realm roles
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"},{\"id\":\"r-2\",\"name\":\"operator\"}]"));
+    // 2. fetch current user roles (has "admin")
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"}]"));
+    // 3. DELETE old role
+    server.enqueue(new MockResponse().setResponseCode(204));
+    // 4. POST new role
+    server.enqueue(new MockResponse().setResponseCode(204));
+    // 5. findById -> user
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"id\":\"u-1\",\"username\":\"jdoe\",\"email\":\"jdoe@example.com\","
+            + "\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"enabled\":true,"
+            + "\"createdTimestamp\":1700000000000}"));
+    // 6. findById -> roles
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-2\",\"name\":\"operator\"}]"));
+
+    ManagedUser updated = adapter.setRoles("u-1", List.of("operator"));
+
+    assertThat(updated.roles()).containsExactly("operator");
+
+    RecordedRequest getRealmRoles = server.takeRequest();
+    assertThat(getRealmRoles.getPath()).isEqualTo("/admin/realms/aegis/roles");
+
+    RecordedRequest getUserRoles = server.takeRequest();
+    assertThat(getUserRoles.getPath())
+        .isEqualTo("/admin/realms/aegis/users/u-1/role-mappings/realm");
+
+    RecordedRequest deleteRoles = server.takeRequest();
+    assertThat(deleteRoles.getMethod()).isEqualTo("DELETE");
+    assertThat(deleteRoles.getBody().readUtf8()).contains("\"id\":\"r-1\"");
+
+    RecordedRequest postRoles = server.takeRequest();
+    assertThat(postRoles.getMethod()).isEqualTo("POST");
+    assertThat(postRoles.getBody().readUtf8()).contains("\"id\":\"r-2\"");
+  }
+
+  @Test
+  void setRoles_unknownRole_throwsRoleNotFoundException() {
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{\"id\":\"r-1\",\"name\":\"admin\"}]"));
+
+    assertThatThrownBy(() -> adapter.setRoles("u-1", List.of("superadmin")))
+        .isInstanceOf(RoleNotFoundException.class)
+        .hasMessage("Role not found in realm: superadmin");
   }
 }

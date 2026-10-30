@@ -4,6 +4,7 @@ import com.aegisnotify.user.application.dto.NewUser;
 import com.aegisnotify.user.application.dto.PagedResult;
 import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.domain.model.ManagedUser;
+import java.util.List;
 
 /**
  * Vendor-neutral port for reading and managing users in the identity
@@ -27,12 +28,29 @@ public interface UserDirectoryPort {
   PagedResult<ManagedUser> findAll(int page, int size);
 
   /**
+   * Lists users matching an optional search term, paginated.
+   *
+   * @param page zero-based page number
+   * @param size page size
+   * @param search optional search query (may be null or blank)
+   * @return the requested page of users
+   */
+  PagedResult<ManagedUser> findAll(int page, int size, String search);
+
+  /**
    * Finds a single user by id.
    *
    * @param id the Keycloak user id
    * @return the matching user
    */
   ManagedUser findById(String id);
+
+  /**
+   * Retrieves all available roles defined in the Keycloak realm.
+   *
+   * @return list of realm role names
+   */
+  List<String> getAvailableRoles();
 
   /**
    * Creates a new, enabled user.
@@ -62,6 +80,15 @@ public interface UserDirectoryPort {
    * @return the updated user
    */
   ManagedUser setEnabled(String id, boolean enabled);
+
+  /**
+   * Sets the realm roles for a user.
+   *
+   * @param id the Keycloak user id
+   * @param roles the list of role names to assign
+   * @return the updated user
+   */
+  ManagedUser setRoles(String id, List<String> roles);
 
   /**
    * Resets a user's password.

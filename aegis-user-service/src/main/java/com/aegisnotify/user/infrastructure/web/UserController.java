@@ -6,9 +6,11 @@ import com.aegisnotify.user.application.port.in.QueryUsersUseCase;
 import com.aegisnotify.user.domain.model.ManagedUser;
 import com.aegisnotify.user.infrastructure.web.dto.CreateUserRequest;
 import com.aegisnotify.user.infrastructure.web.dto.ResetPasswordRequest;
+import com.aegisnotify.user.infrastructure.web.dto.SetUserRolesRequest;
 import com.aegisnotify.user.infrastructure.web.dto.SetUserStatusRequest;
 import com.aegisnotify.user.infrastructure.web.dto.UpdateUserRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,17 +47,29 @@ public class UserController {
   }
 
   /**
-   * Lists users, paginated.
+   * Lists users, paginated and optionally filtered by a search query.
    *
    * @param page zero-based page number (default 0)
    * @param size page size (default 20)
+   * @param search optional search query
    * @return paginated managed users
    */
   @GetMapping
   public ResponseEntity<PagedResult<ManagedUser>> listUsers(
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    return ResponseEntity.ok(queryUsersUseCase.listUsers(page, size));
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) String search) {
+    return ResponseEntity.ok(queryUsersUseCase.listUsers(page, size, search));
+  }
+
+  /**
+   * Returns the available realm roles.
+   *
+   * @return list of realm role names
+   */
+  @GetMapping("/roles")
+  public ResponseEntity<List<String>> getAvailableRoles() {
+    return ResponseEntity.ok(queryUsersUseCase.getAvailableRoles());
   }
 
   /**
@@ -93,6 +107,21 @@ public class UserController {
   public ResponseEntity<ManagedUser> updateUser(@PathVariable String id,
       @Valid @RequestBody UpdateUserRequest request) {
     ManagedUser updated = manageUsersUseCase.updateUser(id, request.toUserUpdate());
+    return ResponseEntity.ok(updated);
+  }
+
+  /**
+   * Sets the realm roles for a user.
+   *
+   * @param id the Keycloak user id
+   * @param request the desired roles payload
+   * @return the updated user, 200
+   */
+  @PutMapping("/{id}/roles")
+  public ResponseEntity<ManagedUser> setRoles(
+      @PathVariable String id,
+      @Valid @RequestBody SetUserRolesRequest request) {
+    ManagedUser updated = manageUsersUseCase.setRoles(id, request.roles());
     return ResponseEntity.ok(updated);
   }
 
