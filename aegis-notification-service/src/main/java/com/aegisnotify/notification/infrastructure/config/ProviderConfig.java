@@ -90,14 +90,14 @@ public class ProviderConfig {
    * notification.providers.email.vendor} (default {@code sendgrid}). Both
    * vendor adapters stay registered as beans so either can be selected
    * without a restart-time wiring rewrite; this bean just picks which one
-   * {@link NotificationProviderRouter} dispatches to. Qualified by name
-   * since {@link SendGridEmailProviderAdapter} and {@link
-   * MailtrapEmailProviderAdapter} are themselves {@code
-   * NotificationProviderPort} beans, which would otherwise make any
-   * unqualified {@code NotificationProviderPort} injection ambiguous.
+   * {@link NotificationProviderRouter} dispatches to. Resolved by bean name
+   * ({@code primaryEmailProvider}) at the injection site since {@link
+   * SendGridEmailProviderAdapter} and {@link MailtrapEmailProviderAdapter}
+   * are themselves {@code NotificationProviderPort} beans, which would
+   * otherwise make any unqualified {@code NotificationProviderPort}
+   * injection ambiguous.
    */
   @Bean
-  @Qualifier(PRIMARY_EMAIL_PROVIDER)
   public NotificationProviderPort primaryEmailProvider(
       @Value("${notification.providers.email.vendor:sendgrid}") String vendor,
       SendGridEmailProviderAdapter sendGridEmailProviderAdapter,
@@ -161,11 +161,10 @@ public class ProviderConfig {
   /**
    * Selects the active WHATSAPP primary adapter per {@code
    * notification.providers.whatsapp.vendor} (default {@code twilio}), the
-   * same way {@link #primaryEmailProvider} does for EMAIL; qualified by name
-   * for the same bean-ambiguity reason.
+   * same way {@link #primaryEmailProvider} does for EMAIL; resolved by bean
+   * name at the injection site for the same bean-ambiguity reason.
    */
   @Bean
-  @Qualifier(PRIMARY_WHATSAPP_PROVIDER)
   public NotificationProviderPort primaryWhatsAppProvider(
       @Value("${notification.providers.whatsapp.vendor:twilio}") String vendor,
       TwilioWhatsAppProviderAdapter twilioWhatsAppProviderAdapter,
