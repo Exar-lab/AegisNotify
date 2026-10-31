@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.17.0...aegisnotify-v0.18.0) (2026-10-31)
+
+
+### Features
+
+* **notification:** add Mailtrap and Vonage as alternate EMAIL/WHATSAPP providers ([84fdd85](https://github.com/Exar-lab/AegisNotify/commit/84fdd855253007f10a14da62633d27a8e6594235))
+* **notification:** add Mailtrap and Vonage as alternate EMAIL/WHATSAPP providers ([2dada51](https://github.com/Exar-lab/AegisNotify/commit/2dada51b7105e0e1c1ba90d0dc32bd6873a63060))
+
+
+### Bug Fixes
+
+* **notification:** address SonarCloud findings on provider vendor selectors ([b12fb36](https://github.com/Exar-lab/AegisNotify/commit/b12fb366f79f9663c37f63eb1b06d0df559b47c2))
+
 ## [0.17.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.16.0...aegisnotify-v0.17.0) (2026-10-30)
 
 
