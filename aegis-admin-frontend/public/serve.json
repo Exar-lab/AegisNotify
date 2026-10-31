@@ -1,0 +1,12 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/!(config.json|silent-check-sso.html){,/**}", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "config.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
+}

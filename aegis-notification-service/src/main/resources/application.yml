@@ -29,7 +29,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://${EUREKA_SECURITY_USER}:${EUREKA_SECURITY_PASSWORD}@localhost:8761/eureka/
+      defaultZone: http://${EUREKA_SECURITY_USER}:${EUREKA_SECURITY_PASSWORD}@${EUREKA_HOST:localhost}:8761/eureka/
   instance:
     prefer-ip-address: true
 
@@ -185,3 +185,10 @@ management:
   health:
     circuitbreakers:
       enabled: true
+
+# API docs are off by default; enabled only by the "local" profile (application-local.yml).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

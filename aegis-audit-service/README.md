@@ -54,6 +54,15 @@ See the root [README](../README.md#query-an-audit-trail) for request examples.
 - Profile `local` (`application-local.yml`) defines a development-only fallback key. Do not use it outside local development.
 - Kafka consumer: manual acknowledgement, deserialization restricted to `com.aegisnotify.audit.application.dto`, retries with a fixed 1 second backoff, then the record is published to a dead-letter topic by `DeadLetterPublishingRecoverer`.
 
+## API documentation
+
+Disabled by default. Enabled only with the Spring profile `local` (`-Dspring-boot.run.profiles=local`), where it is public (no JWT):
+
+- OpenAPI JSON: `http://localhost:<port>/v3/api-docs`
+- Swagger UI: `http://localhost:<port>/swagger-ui/index.html`
+
+Without the `local` profile these paths are not served and require authentication (401).
+
 ## Startup order and dependencies
 
 Start after:

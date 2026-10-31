@@ -15,6 +15,7 @@ import com.aegisnotify.user.application.dto.PagedResult;
 import com.aegisnotify.user.application.dto.UserUpdate;
 import com.aegisnotify.user.application.port.in.ManageUsersUseCase;
 import com.aegisnotify.user.application.port.in.QueryUsersUseCase;
+import com.aegisnotify.user.domain.exception.RoleNotFoundException;
 import com.aegisnotify.user.domain.exception.UserAlreadyExistsException;
 import com.aegisnotify.user.domain.exception.UserNotFoundException;
 import com.aegisnotify.user.domain.model.ManagedUser;
@@ -42,11 +43,11 @@ class UserControllerTest {
 
   private static final ManagedUser SAMPLE_USER = new ManagedUser(
       "u-1", "jdoe", "jdoe@example.com", "Jane", "Doe", true,
-      Instant.parse("2026-01-01T00:00:00Z"));
+      Instant.parse("2026-01-01T00:00:00Z"), List.of("admin"));
 
   private static final ManagedUser DISABLED_USER = new ManagedUser(
       "u-1", "jdoe", "jdoe@example.com", "Jane", "Doe", false,
-      Instant.parse("2026-01-01T00:00:00Z"));
+      Instant.parse("2026-01-01T00:00:00Z"), List.of());
 
   @Autowired
   private MockMvc mockMvc;
@@ -59,7 +60,7 @@ class UserControllerTest {
 
   @Test
   void listUsers_withUserReadScope_returns200() throws Exception {
-    when(queryUsersUseCase.listUsers(0, 20))
+    when(queryUsersUseCase.listUsers(0, 20, null))
         .thenReturn(new PagedResult<>(List.of(SAMPLE_USER), 0, 20, 1, 1));
 
     mockMvc.perform(get("/api/v1/users")
@@ -68,6 +69,18 @@ class UserControllerTest {
         .andExpect(jsonPath("$.content.length()").value(1))
         .andExpect(jsonPath("$.content[0].username").value("jdoe"))
         .andExpect(jsonPath("$.totalElements").value(1));
+  }
+
+  @Test
+  void listUsers_withSearchParam_returnsFilteredResults() throws Exception {
+    when(queryUsersUseCase.listUsers(0, 20, "jdoe"))
+        .thenReturn(new PagedResult<>(List.of(SAMPLE_USER), 0, 20, 1, 1));
+
+    mockMvc.perform(get("/api/v1/users?search=jdoe")
+            .with(jwt().authorities(() -> "SCOPE_user:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content.length()").value(1))
+        .andExpect(jsonPath("$.content[0].username").value("jdoe"));
   }
 
   @Test
@@ -82,6 +95,26 @@ class UserControllerTest {
   void listUsers_noToken_returns401NotForbidden() throws Exception {
     mockMvc.perform(get("/api/v1/users"))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void getAvailableRoles_withUserReadScope_returns200() throws Exception {
+    when(queryUsersUseCase.getAvailableRoles()).thenReturn(List.of("admin", "operator"));
+
+    mockMvc.perform(get("/api/v1/users/roles")
+            .with(jwt().authorities(() -> "SCOPE_user:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0]").value("admin"))
+        .andExpect(jsonPath("$[1]").value("operator"));
+  }
+
+  @Test
+  void getAvailableRoles_withOnlyUserAdminScope_returns403() throws Exception {
+    // D3: user:admin must NOT implicitly grant user:read on read endpoints.
+    mockMvc.perform(get("/api/v1/users/roles")
+            .with(jwt().authorities(() -> "SCOPE_user:admin")))
+        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -208,6 +241,75 @@ class UserControllerTest {
             .content("{\"email\":\"jdoe@example.com\",\"firstName\":\"Jane\","
                 + "\"lastName\":\"Doe\"}"))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void setRoles_withUserAdminScope_returns200() throws Exception {
+    ManagedUser userWithRoles = new ManagedUser(
+        "u-1", "jdoe", "jdoe@example.com", "Jane", "Doe", true,
+        Instant.parse("2026-01-01T00:00:00Z"), List.of("admin", "operator"));
+    when(manageUsersUseCase.setRoles("u-1", List.of("admin", "operator")))
+        .thenReturn(userWithRoles);
+
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .with(jwt().authorities(() -> "SCOPE_user:admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[\"admin\",\"operator\"]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value("u-1"))
+        .andExpect(jsonPath("$.roles.length()").value(2))
+        .andExpect(jsonPath("$.roles[0]").value("admin"))
+        .andExpect(jsonPath("$.roles[1]").value("operator"));
+  }
+
+  @Test
+  void setRoles_withOnlyUserReadScope_returns403() throws Exception {
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .with(jwt().authorities(() -> "SCOPE_user:read"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[\"admin\"]}"))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void setRoles_noToken_returns401() throws Exception {
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[\"admin\"]}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void setRoles_unknownRole_returns400() throws Exception {
+    when(manageUsersUseCase.setRoles("u-1", List.of("unknown-role")))
+        .thenThrow(new RoleNotFoundException("unknown-role"));
+
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .with(jwt().authorities(() -> "SCOPE_user:admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[\"unknown-role\"]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Role not found in realm: unknown-role"));
+  }
+
+  @Test
+  void setRoles_invalidPayload_returns400() throws Exception {
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .with(jwt().authorities(() -> "SCOPE_user:admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[\"\"]}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void setRoles_emptyList_returns200() throws Exception {
+    when(manageUsersUseCase.setRoles("u-1", List.of())).thenReturn(SAMPLE_USER);
+
+    mockMvc.perform(put("/api/v1/users/{id}/roles", "u-1")
+            .with(jwt().authorities(() -> "SCOPE_user:admin"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"roles\":[]}"))
+        .andExpect(status().isOk());
   }
 
   @Test

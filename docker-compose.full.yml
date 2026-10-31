@@ -1,19 +1,30 @@
-# Additional local development infrastructure for AegisNotify, layered on
-# top of docker-compose.yml (issue #38).
+# Full local stack for AegisNotify: infrastructure + the six Spring Boot
+# services (issues #38, #170). Brings everything up on its own:
 #
-# This file does NOT redefine services already declared in docker-compose.yml
-# (Keycloak) — Docker Compose merges files passed together with `-f`, so
-# duplicating that service here would risk the two definitions drifting out
-# of sync over time. Run both files together:
+#   docker compose -f docker-compose.full.yml up -d --build
 #
-#   docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
+# Keycloak is NOT redefined here: it is pulled in from docker-compose.yml via
+# `include:` so the two definitions cannot drift apart, and there is no need
+# to also pass docker-compose.yml with `-f`.
 #
-# Scope note: this slice adds PostgreSQL, MongoDB, and Kafka, matching
-# aegis-notification-service's default DB_URL/DB_USERNAME/DB_PASSWORD,
-# aegis-audit-service's default MONGODB_URI, and the Kafka version pinned
-# in KafkaMessageBrokerAdapterIT.java (see each service's
-# src/main/resources/application.yml or test file). The six Spring Boot
-# app containers (Dockerfiles: issue #39) remain a follow-up slice.
+# To run only the infrastructure (e.g. while running the services on the host
+# with Maven), name the services explicitly:
+#
+#   docker compose -f docker-compose.full.yml up -d keycloak postgres mongo kafka redis
+#
+# Startup order is gated by health checks:
+#   postgres / mongo / kafka / redis / keycloak
+#     -> aegis-eureka-server
+#       -> aegis-config-server
+#         -> gateway, notification, audit, user services
+#
+# The admin frontend runs on the host (`pnpm start`, http://localhost:4200).
+# It reaches the gateway at localhost:8080 and Keycloak at localhost:8088,
+# both published below / in docker-compose.yml, and 4200 is the gateway's
+# default CORS_ALLOWED_ORIGINS — so no overrides are needed.
+#
+# All credentials below are local-development defaults (overridable from
+# `.env`, see .env.example) — never reuse them outside a developer machine.
 #
 # MongoDB note: no authentication is configured here, matching
 # aegis-audit-service's default MONGODB_URI (mongodb://localhost:27017/...),
@@ -30,7 +41,37 @@
 # Zookeeper — the test only imports org.testcontainers.containers.KafkaContainer,
 # which runs KRaft mode by default for images that support it (cp-kafka
 # 7.x does). This slice follows the code, not the issue text: a single
-# Kafka container in KRaft mode, no separate Zookeeper service.
+# Kafka container in KRaft mode, no separate Zookeeper service. It exposes two
+# listeners: PLAINTEXT (localhost:9092) for services run on the host, and
+# INTERNAL (kafka:29092) for the containers on the compose network.
+#
+# Config Server note: it runs with the `native` profile, serving files from
+# docker/config-repo instead of cloning CONFIG_REPO_URI, so the stack needs no
+# external Git repository. Clients import it as `optional:`, so an empty
+# directory simply means every service uses its own application.yml.
+include:
+  - docker-compose.yml
+
+x-eureka-client-env: &eureka-client-env
+  EUREKA_HOST: aegis-eureka-server
+  EUREKA_SECURITY_USER: ${EUREKA_SECURITY_USER:-eureka}
+  EUREKA_SECURITY_PASSWORD: ${EUREKA_SECURITY_PASSWORD:-eureka}
+
+x-app-env: &app-env
+  <<: *eureka-client-env
+  SPRING_CLOUD_CONFIG_URI: http://aegis-config-server:8888
+  SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USER:-config}
+  SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:-config}
+  JWKS_URI: http://keycloak:8080/realms/aegis/protocol/openid-connect/certs
+
+# Shared by every app container: the eclipse-temurin alpine runtime image ships
+# busybox wget, and /actuator/health is unauthenticated on all six services.
+x-app-healthcheck: &app-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 60s
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -68,12 +109,12 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       # Fixed cluster ID for this single-node dev instance (any valid
@@ -89,6 +130,166 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: aegis-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  aegis-eureka-server:
+    build:
+      context: .
+      dockerfile: aegis-eureka-server/Dockerfile
+    image: aegis-eureka-server:local
+    container_name: aegis-eureka-server
+    environment:
+      EUREKA_SECURITY_USER: ${EUREKA_SECURITY_USER:-eureka}
+      EUREKA_SECURITY_PASSWORD: ${EUREKA_SECURITY_PASSWORD:-eureka}
+    ports:
+      - "127.0.0.1:8761:8761"
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+
+  aegis-config-server:
+    build:
+      context: .
+      dockerfile: aegis-config-server/Dockerfile
+    image: aegis-config-server:local
+    container_name: aegis-config-server
+    environment:
+      <<: *eureka-client-env
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
+      CONFIG_SERVER_USER: ${CONFIG_SERVER_USER:-config}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:-config}
+    volumes:
+      - ./docker/config-repo:/config-repo:ro
+    ports:
+      - "127.0.0.1:8888:8888"
+    depends_on:
+      aegis-eureka-server:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
+
+  aegis-api-gateway:
+    build:
+      context: .
+      dockerfile: aegis-api-gateway/Dockerfile
+    image: aegis-api-gateway:local
+    container_name: aegis-api-gateway
+    environment:
+      <<: *app-env
+      REDIS_HOST: redis
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+
+  aegis-notification-service:
+    build:
+      context: .
+      dockerfile: aegis-notification-service/Dockerfile
+    image: aegis-notification-service:local
+    container_name: aegis-notification-service
+    environment:
+      <<: *app-env
+      # `local` drops Kafka topic replication to 1 for the single broker.
+      SPRING_PROFILES_ACTIVE: local
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-aegisnotify}
+      DB_USERNAME: ${POSTGRES_USER:-aegis}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-aegis}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      NOTIFICATION_KAFKA_RELAY_ENABLED: "true"
+      NOTIFICATION_KAFKA_CONSUMER_ENABLED: "true"
+      # ProviderConfig fails fast on blank primary credentials. These
+      # placeholders let the service start; real sends fail against the
+      # vendor APIs until real values are set in `.env`.
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-local-placeholder}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-local-placeholder}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-local-placeholder}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-local-placeholder}
+      FCM_ACCESS_TOKEN: ${FCM_ACCESS_TOKEN:-local-placeholder}
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+
+  aegis-audit-service:
+    build:
+      context: .
+      dockerfile: aegis-audit-service/Dockerfile
+    image: aegis-audit-service:local
+    container_name: aegis-audit-service
+    environment:
+      <<: *app-env
+      # `local` supplies the development-only AUDIT_ENCRYPTION_KEY fallback.
+      SPRING_PROFILES_ACTIVE: local
+      MONGODB_URI: mongodb://mongo:27017/aegisnotify-audit
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "127.0.0.1:8083:8083"
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+
+  aegis-user-service:
+    build:
+      context: .
+      dockerfile: aegis-user-service/Dockerfile
+    image: aegis-user-service:local
+    container_name: aegis-user-service
+    environment:
+      <<: *app-env
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_REALM: aegis
+      # Matches the aegis-user-service client secret in docker/keycloak/aegis-realm.json.
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-local-dev-only-secret}
+    ports:
+      - "127.0.0.1:8084:8084"
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
 
 volumes:
   aegis-postgres-data:

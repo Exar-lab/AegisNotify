@@ -60,6 +60,13 @@ export class TopbarComponent {
   }
 
   /**
+   * Logs the current user out of the Keycloak session.
+   */
+  async logout(): Promise<void> {
+    await this.authService.logout();
+  }
+
+  /**
    * Dynamically determines the current feature name based on the active route.
    */
   readonly currentFeature = toSignal(

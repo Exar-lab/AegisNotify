@@ -80,8 +80,8 @@ Primero abrí Docker Desktop y esperá a que el motor esté disponible:
 
 ```powershell
 docker version
-docker compose -f docker-compose.yml -f docker-compose.full.yml up -d
-docker compose -f docker-compose.yml -f docker-compose.full.yml ps
+docker compose -f docker-compose.full.yml up -d keycloak postgres mongo kafka redis
+docker compose -f docker-compose.full.yml ps
 ```
 
 Ejecutá cada aplicación Java en su propia terminal y dejala abierta. Configurá
