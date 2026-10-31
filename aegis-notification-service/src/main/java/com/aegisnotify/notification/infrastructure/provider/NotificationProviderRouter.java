@@ -1,6 +1,7 @@
 package com.aegisnotify.notification.infrastructure.provider;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
+import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.domain.enums.Channel;
 import java.util.EnumMap;
 import java.util.Map;
@@ -9,23 +10,28 @@ import java.util.Map;
  * Dispatches notification delivery to the channel-specific primary provider
  * adapter.
  *
- * <p>The concrete channel adapters ({@code SendGridEmailProviderAdapter},
- * {@code TwilioSmsProviderAdapter}, {@code TwilioWhatsAppProviderAdapter},
- * {@code FirebasePushProviderAdapter}) are plain classes injected here by
- * concrete type and indexed by {@link Channel} for dispatch. This class is a
- * plain dispatch collaborator, not a {@code NotificationProviderPort}
- * implementation — {@link ResilientNotificationProviderAdapter} is the sole
- * port implementation, wrapping this primary dispatcher with circuit
- * breaking and secondary-provider failover.</p>
+ * <p>The concrete channel adapters ({@code SendGridEmailProviderAdapter} or
+ * {@code MailtrapEmailProviderAdapter} for {@link Channel#EMAIL}, {@code
+ * TwilioWhatsAppProviderAdapter} or {@code VonageWhatsAppProviderAdapter}
+ * for {@link Channel#WHATSAPP}, depending on the configured vendor, plus
+ * {@code TwilioSmsProviderAdapter} and {@code FirebasePushProviderAdapter})
+ * are injected here and indexed by {@link Channel} for dispatch. The email
+ * and WhatsApp adapters are injected as {@link NotificationProviderPort}
+ * since they are vendor-selectable; the other channels are still injected
+ * by concrete type. This class is a plain dispatch collaborator, not a {@code
+ * NotificationProviderPort} implementation — {@link
+ * ResilientNotificationProviderAdapter} is the sole port implementation,
+ * wrapping this primary dispatcher with circuit breaking and
+ * secondary-provider failover.</p>
  */
 public class NotificationProviderRouter {
 
   private final Map<Channel, ChannelSender> adaptersByChannel;
 
   public NotificationProviderRouter(
-      SendGridEmailProviderAdapter emailAdapter,
+      NotificationProviderPort emailAdapter,
       TwilioSmsProviderAdapter smsAdapter,
-      TwilioWhatsAppProviderAdapter whatsAppAdapter,
+      NotificationProviderPort whatsAppAdapter,
       FirebasePushProviderAdapter pushAdapter) {
     this.adaptersByChannel = new EnumMap<>(Channel.class);
     adaptersByChannel.put(Channel.EMAIL, emailAdapter::send);
