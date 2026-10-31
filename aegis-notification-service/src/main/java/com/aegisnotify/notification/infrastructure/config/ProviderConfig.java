@@ -4,36 +4,53 @@ import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.infrastructure.provider.FirebasePushProviderAdapter;
+import com.aegisnotify.notification.infrastructure.provider.MailtrapEmailProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.NotificationProviderRouter;
 import com.aegisnotify.notification.infrastructure.provider.ResilientNotificationProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.SendGridEmailProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.TwilioSmsProviderAdapter;
 import com.aegisnotify.notification.infrastructure.provider.TwilioWhatsAppProviderAdapter;
+import com.aegisnotify.notification.infrastructure.provider.VonageWhatsAppProviderAdapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.retry.RetryRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.EnumMap;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.reactive.function.client.WebClient;
 
 /**
- * Wires the notification provider adapters (SendGrid, Twilio, FCM) as Spring
- * beans, each backed by its own {@link WebClient} pointed at the vendor's
- * base URL, plus the {@link ResilientNotificationProviderAdapter} that
- * circuit-breaks and fails over between a primary and secondary account per
- * channel. Primary credentials fail fast at startup if blank, matching the
- * {@code AesGcmEncryptionAdapter} convention in aegis-audit-service — a
- * silently blank API key would otherwise only surface as a per-notification
- * 401 from the vendor in production. Secondary credentials are optional: an
- * unconfigured secondary degrades to always reporting delivery failure,
- * which correctly routes to {@code FAILED_CRITICAL} rather than blocking
- * startup for deployments with no secondary account provisioned yet.
+ * Wires the notification provider adapters (SendGrid or Mailtrap for EMAIL,
+ * Twilio or Vonage for WHATSAPP, Twilio for SMS, FCM) as Spring beans, each
+ * backed by its own {@link WebClient} pointed at the vendor's base URL, plus
+ * the {@link ResilientNotificationProviderAdapter} that circuit-breaks and
+ * fails over between a primary and secondary account per channel. EMAIL's
+ * vendor is selected by {@code notification.providers.email.vendor} (default
+ * {@code sendgrid}) and WHATSAPP's by {@code
+ * notification.providers.whatsapp.vendor} (default {@code twilio}), for both
+ * the primary and secondary slot; credential validation for vendor adapters
+ * applies only to whichever one is selected. Other channels' primary credentials
+ * fail fast at startup if blank, matching the {@code AesGcmEncryptionAdapter}
+ * convention in aegis-audit-service — a silently blank API key would
+ * otherwise only surface as a per-notification 401 from the vendor in
+ * production. Secondary credentials are optional: an unconfigured secondary
+ * degrades to always reporting delivery failure, which correctly routes to
+ * {@code FAILED_CRITICAL} rather than blocking startup for deployments with
+ * no secondary account provisioned yet.
  */
 @Configuration
 public class ProviderConfig {
+
+  private static final String EMAIL_VENDOR_SENDGRID = "sendgrid";
+  private static final String EMAIL_VENDOR_MAILTRAP = "mailtrap";
+  private static final String PRIMARY_EMAIL_PROVIDER = "primaryEmailProvider";
+  private static final String WHATSAPP_VENDOR_VONAGE = "vonage";
+  private static final String PRIMARY_WHATSAPP_PROVIDER = "primaryWhatsAppProvider";
+  private static final String VONAGE_SANDBOX_BASE_URL = "https://messages-sandbox.nexmo.com";
 
   private static final NotificationProviderPort NO_SECONDARY_PROVIDER =
       (channel, recipient, renderedContent, subject) -> new ProviderResult(
@@ -42,13 +59,53 @@ public class ProviderConfig {
 
   @Bean
   public SendGridEmailProviderAdapter sendGridEmailProviderAdapter(
+      @Value("${notification.providers.email.vendor:sendgrid}") String vendor,
       @Value("${notification.providers.email.base-url}") String baseUrl,
       @Value("${notification.providers.email.api-key}") String apiKey,
       @Value("${notification.providers.email.from-address}") String fromAddress,
       MeterRegistry meterRegistry) {
-    requireNonBlank(apiKey, "notification.providers.email.api-key");
+    if (EMAIL_VENDOR_SENDGRID.equalsIgnoreCase(vendor)) {
+      requireNonBlank(apiKey, "notification.providers.email.api-key");
+    }
     return new SendGridEmailProviderAdapter(
         WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
+  }
+
+  @Bean
+  public MailtrapEmailProviderAdapter mailtrapEmailProviderAdapter(
+      @Value("${notification.providers.email.vendor:sendgrid}") String vendor,
+      @Value("${notification.providers.email.base-url}") String baseUrl,
+      @Value("${notification.providers.email.api-key}") String apiKey,
+      @Value("${notification.providers.email.from-address}") String fromAddress,
+      MeterRegistry meterRegistry) {
+    if (EMAIL_VENDOR_MAILTRAP.equalsIgnoreCase(vendor)) {
+      requireNonBlank(apiKey, "notification.providers.email.api-key");
+    }
+    return new MailtrapEmailProviderAdapter(
+        WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
+  }
+
+  /**
+   * Selects the active EMAIL primary adapter per {@code
+   * notification.providers.email.vendor} (default {@code sendgrid}). Both
+   * vendor adapters stay registered as beans so either can be selected
+   * without a restart-time wiring rewrite; this bean just picks which one
+   * {@link NotificationProviderRouter} dispatches to. Qualified by name
+   * since {@link SendGridEmailProviderAdapter} and {@link
+   * MailtrapEmailProviderAdapter} are themselves {@code
+   * NotificationProviderPort} beans, which would otherwise make any
+   * unqualified {@code NotificationProviderPort} injection ambiguous.
+   */
+  @Bean
+  @Qualifier(PRIMARY_EMAIL_PROVIDER)
+  public NotificationProviderPort primaryEmailProvider(
+      @Value("${notification.providers.email.vendor:sendgrid}") String vendor,
+      SendGridEmailProviderAdapter sendGridEmailProviderAdapter,
+      MailtrapEmailProviderAdapter mailtrapEmailProviderAdapter) {
+    if (EMAIL_VENDOR_MAILTRAP.equalsIgnoreCase(vendor)) {
+      return mailtrapEmailProviderAdapter;
+    }
+    return sendGridEmailProviderAdapter;
   }
 
   @Bean
@@ -67,16 +124,56 @@ public class ProviderConfig {
 
   @Bean
   public TwilioWhatsAppProviderAdapter twilioWhatsAppProviderAdapter(
+      @Value("${notification.providers.whatsapp.vendor:twilio}") String vendor,
       @Value("${notification.providers.whatsapp.base-url}") String baseUrl,
       @Value("${notification.providers.whatsapp.account-sid}") String accountSid,
       @Value("${notification.providers.whatsapp.auth-token}") String authToken,
       @Value("${notification.providers.whatsapp.from-number}") String fromNumber,
+      @Value("${notification.providers.whatsapp.content-sid:}") String contentSid,
       MeterRegistry meterRegistry) {
-    requireNonBlank(accountSid, "notification.providers.whatsapp.account-sid");
-    requireNonBlank(authToken, "notification.providers.whatsapp.auth-token");
+    if (!isVonageWhatsAppVendor(vendor)) {
+      requireNonBlank(accountSid, "notification.providers.whatsapp.account-sid");
+      requireNonBlank(authToken, "notification.providers.whatsapp.auth-token");
+    }
     return new TwilioWhatsAppProviderAdapter(
         buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
-        meterRegistry);
+        contentSid, meterRegistry);
+  }
+
+  @Bean
+  public VonageWhatsAppProviderAdapter vonageWhatsAppProviderAdapter(
+      @Value("${notification.providers.whatsapp.vendor:twilio}") String vendor,
+      @Value("${notification.providers.whatsapp.vonage.base-url:" + VONAGE_SANDBOX_BASE_URL
+          + "}") String baseUrl,
+      @Value("${notification.providers.whatsapp.vonage.api-key:}") String apiKey,
+      @Value("${notification.providers.whatsapp.vonage.api-secret:}") String apiSecret,
+      @Value("${notification.providers.whatsapp.vonage.from-number:}") String fromNumber,
+      MeterRegistry meterRegistry) {
+    if (isVonageWhatsAppVendor(vendor)) {
+      requireNonBlank(apiKey, "notification.providers.whatsapp.vonage.api-key");
+      requireNonBlank(apiSecret, "notification.providers.whatsapp.vonage.api-secret");
+      requireNonBlank(fromNumber, "notification.providers.whatsapp.vonage.from-number");
+    }
+    return new VonageWhatsAppProviderAdapter(
+        buildBasicAuthWebClient(baseUrl, apiKey, apiSecret), fromNumber, meterRegistry);
+  }
+
+  /**
+   * Selects the active WHATSAPP primary adapter per {@code
+   * notification.providers.whatsapp.vendor} (default {@code twilio}), the
+   * same way {@link #primaryEmailProvider} does for EMAIL; qualified by name
+   * for the same bean-ambiguity reason.
+   */
+  @Bean
+  @Qualifier(PRIMARY_WHATSAPP_PROVIDER)
+  public NotificationProviderPort primaryWhatsAppProvider(
+      @Value("${notification.providers.whatsapp.vendor:twilio}") String vendor,
+      TwilioWhatsAppProviderAdapter twilioWhatsAppProviderAdapter,
+      VonageWhatsAppProviderAdapter vonageWhatsAppProviderAdapter) {
+    if (isVonageWhatsAppVendor(vendor)) {
+      return vonageWhatsAppProviderAdapter;
+    }
+    return twilioWhatsAppProviderAdapter;
   }
 
   @Bean
@@ -93,17 +190,18 @@ public class ProviderConfig {
 
   @Bean
   public NotificationProviderRouter notificationProviderRouter(
-      SendGridEmailProviderAdapter sendGridEmailProviderAdapter,
+      @Qualifier(PRIMARY_EMAIL_PROVIDER) NotificationProviderPort primaryEmailProvider,
       TwilioSmsProviderAdapter twilioSmsProviderAdapter,
-      TwilioWhatsAppProviderAdapter twilioWhatsAppProviderAdapter,
+      @Qualifier(PRIMARY_WHATSAPP_PROVIDER) NotificationProviderPort primaryWhatsAppProvider,
       FirebasePushProviderAdapter firebasePushProviderAdapter) {
     return new NotificationProviderRouter(
-        sendGridEmailProviderAdapter, twilioSmsProviderAdapter,
-        twilioWhatsAppProviderAdapter, firebasePushProviderAdapter);
+        primaryEmailProvider, twilioSmsProviderAdapter,
+        primaryWhatsAppProvider, firebasePushProviderAdapter);
   }
 
   @Bean
   public Map<Channel, NotificationProviderPort> secondaryProvidersByChannel(
+      @Value("${notification.providers.email.vendor:sendgrid}") String emailVendor,
       @Value("${notification.providers.email.secondary.base-url}") String emailBaseUrl,
       @Value("${notification.providers.email.secondary.api-key}") String emailApiKey,
       @Value("${notification.providers.email.secondary.from-address}") String emailFromAddress,
@@ -115,24 +213,48 @@ public class ProviderConfig {
       @Value("${notification.providers.whatsapp.secondary.account-sid}") String whatsAppAccountSid,
       @Value("${notification.providers.whatsapp.secondary.auth-token}") String whatsAppAuthToken,
       @Value("${notification.providers.whatsapp.secondary.from-number}") String whatsAppFromNumber,
+      @Value("${notification.providers.whatsapp.secondary.content-sid:}") String whatsAppContentSid,
+      @Value("${notification.providers.whatsapp.vendor:twilio}") String whatsAppVendor,
+      @Value("${notification.providers.whatsapp.secondary.vonage.base-url:"
+          + VONAGE_SANDBOX_BASE_URL + "}") String whatsAppVonageBaseUrl,
+      @Value("${notification.providers.whatsapp.secondary.vonage.api-key:}")
+          String whatsAppVonageApiKey,
+      @Value("${notification.providers.whatsapp.secondary.vonage.api-secret:}")
+          String whatsAppVonageApiSecret,
+      @Value("${notification.providers.whatsapp.secondary.vonage.from-number:}")
+          String whatsAppVonageFromNumber,
       @Value("${notification.providers.push.secondary.base-url}") String pushBaseUrl,
       @Value("${notification.providers.push.secondary.project-id}") String pushProjectId,
       @Value("${notification.providers.push.secondary.access-token}") String pushAccessToken,
       MeterRegistry meterRegistry) {
     Map<Channel, NotificationProviderPort> secondary = new EnumMap<>(Channel.class);
     secondary.put(Channel.EMAIL,
-        secondaryEmail(emailBaseUrl, emailApiKey, emailFromAddress, meterRegistry));
+        secondaryEmail(emailVendor, emailBaseUrl, emailApiKey, emailFromAddress, meterRegistry));
     secondary.put(Channel.SMS,
         secondarySms(smsBaseUrl, smsAccountSid, smsAuthToken, smsFromNumber, meterRegistry));
-    secondary.put(Channel.WHATSAPP,
-        secondaryWhatsApp(whatsAppBaseUrl, whatsAppAccountSid, whatsAppAuthToken,
-            whatsAppFromNumber, meterRegistry));
+    secondary.put(Channel.WHATSAPP, isVonageWhatsAppVendor(whatsAppVendor)
+        ? secondaryVonageWhatsApp(whatsAppVonageBaseUrl, whatsAppVonageApiKey,
+            whatsAppVonageApiSecret, whatsAppVonageFromNumber, meterRegistry)
+        : secondaryWhatsApp(whatsAppBaseUrl, whatsAppAccountSid, whatsAppAuthToken,
+            whatsAppFromNumber, whatsAppContentSid, meterRegistry));
     secondary.put(Channel.PUSH,
         secondaryPush(pushBaseUrl, pushProjectId, pushAccessToken, meterRegistry));
     return Map.copyOf(secondary);
   }
 
+  /**
+   * {@code @Primary}: {@link SendGridEmailProviderAdapter}, {@link
+   * MailtrapEmailProviderAdapter}, {@link TwilioWhatsAppProviderAdapter} and
+   * {@link VonageWhatsAppProviderAdapter} are now also {@code
+   * NotificationProviderPort} beans (so each can be selected as its
+   * channel's primary), which makes an unqualified {@code
+   * NotificationProviderPort} injection — such as {@code
+   * ProcessNotificationService}'s constructor — ambiguous without a
+   * tie-breaker. This is the sole port implementation consumers should
+   * resolve to.
+   */
   @Bean
+  @Primary
   public ResilientNotificationProviderAdapter resilientNotificationProviderAdapter(
       NotificationProviderRouter notificationProviderRouter,
       Map<Channel, NotificationProviderPort> secondaryProvidersByChannel,
@@ -144,10 +266,15 @@ public class ProviderConfig {
         retryRegistry, meterRegistry);
   }
 
-  private NotificationProviderPort secondaryEmail(String baseUrl, String apiKey,
+  private NotificationProviderPort secondaryEmail(String vendor, String baseUrl, String apiKey,
       String fromAddress, MeterRegistry meterRegistry) {
     if (apiKey == null || apiKey.isBlank()) {
       return NO_SECONDARY_PROVIDER;
+    }
+    if (EMAIL_VENDOR_MAILTRAP.equalsIgnoreCase(vendor)) {
+      MailtrapEmailProviderAdapter adapter = new MailtrapEmailProviderAdapter(
+          WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
+      return adapter::send;
     }
     SendGridEmailProviderAdapter adapter = new SendGridEmailProviderAdapter(
         WebClient.builder().baseUrl(baseUrl).build(), apiKey, fromAddress, meterRegistry);
@@ -166,14 +293,28 @@ public class ProviderConfig {
   }
 
   private NotificationProviderPort secondaryWhatsApp(String baseUrl, String accountSid,
-      String authToken, String fromNumber, MeterRegistry meterRegistry) {
+      String authToken, String fromNumber, String contentSid, MeterRegistry meterRegistry) {
     if (accountSid == null || accountSid.isBlank() || authToken == null || authToken.isBlank()) {
       return NO_SECONDARY_PROVIDER;
     }
     TwilioWhatsAppProviderAdapter adapter = new TwilioWhatsAppProviderAdapter(
         buildBasicAuthWebClient(baseUrl, accountSid, authToken), accountSid, fromNumber,
-        meterRegistry);
+        contentSid, meterRegistry);
     return adapter::send;
+  }
+
+  private NotificationProviderPort secondaryVonageWhatsApp(String baseUrl, String apiKey,
+      String apiSecret, String fromNumber, MeterRegistry meterRegistry) {
+    if (apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) {
+      return NO_SECONDARY_PROVIDER;
+    }
+    VonageWhatsAppProviderAdapter adapter = new VonageWhatsAppProviderAdapter(
+        buildBasicAuthWebClient(baseUrl, apiKey, apiSecret), fromNumber, meterRegistry);
+    return adapter::send;
+  }
+
+  private static boolean isVonageWhatsAppVendor(String vendor) {
+    return WHATSAPP_VENDOR_VONAGE.equalsIgnoreCase(vendor);
   }
 
   private NotificationProviderPort secondaryPush(String baseUrl, String projectId,

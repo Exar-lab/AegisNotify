@@ -55,6 +55,20 @@ class NotificationProviderRouterTest {
   }
 
   @Test
+  void dispatchesWhatsAppChannelToAnyVendorPort() {
+    VonageWhatsAppProviderAdapter vonageAdapter = mock(VonageWhatsAppProviderAdapter.class);
+    NotificationProviderRouter vonageRouter = new NotificationProviderRouter(
+        emailAdapter, smsAdapter, vonageAdapter, pushAdapter);
+    ProviderResult expected = new ProviderResult(ProviderResult.Outcome.SENT, "Vonage", null);
+    when(vonageAdapter.send(Channel.WHATSAPP, "to", "body", "subject")).thenReturn(expected);
+
+    ProviderResult result = vonageRouter.send(Channel.WHATSAPP, "to", "body", "subject");
+
+    assertThat(result).isEqualTo(expected);
+    verify(vonageAdapter).send(Channel.WHATSAPP, "to", "body", "subject");
+  }
+
+  @Test
   void dispatchesPushChannelToFirebasePushAdapter() {
     ProviderResult expected = new ProviderResult(ProviderResult.Outcome.SENT, "FCM", null);
     when(pushAdapter.send(Channel.PUSH, "to", "body", "subject")).thenReturn(expected);

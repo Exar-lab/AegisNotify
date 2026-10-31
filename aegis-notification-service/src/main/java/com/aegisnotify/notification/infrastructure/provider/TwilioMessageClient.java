@@ -47,7 +47,22 @@ class TwilioMessageClient {
     form.add("To", to);
     form.add("From", from);
     form.add("Body", body);
+    return post(form);
+  }
 
+  ProviderResult sendTemplated(String to, String from, String contentSid,
+      String contentVariablesJson) {
+    MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+    form.add("To", to);
+    form.add("From", from);
+    form.add("ContentSid", contentSid);
+    if (contentVariablesJson != null && !contentVariablesJson.isBlank()) {
+      form.add("ContentVariables", contentVariablesJson);
+    }
+    return post(form);
+  }
+
+  private ProviderResult post(MultiValueMap<String, String> form) {
     Timer.Sample sample = metrics.startTimer();
     try {
       var response = webClient.post()

@@ -2,6 +2,7 @@ package com.aegisnotify.notification.infrastructure.provider;
 
 import com.aegisnotify.notification.application.dto.ProviderResult;
 import com.aegisnotify.notification.application.dto.ProviderResult.Outcome;
+import com.aegisnotify.notification.application.port.out.NotificationProviderPort;
 import com.aegisnotify.notification.domain.enums.Channel;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -22,7 +23,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
  * — those outcomes belong to a resilience/failover layer, not to an
  * individual adapter.</p>
  */
-public class SendGridEmailProviderAdapter {
+public class SendGridEmailProviderAdapter implements NotificationProviderPort {
 
   private static final Logger log = LoggerFactory.getLogger(SendGridEmailProviderAdapter.class);
   private static final String PROVIDER_NAME = "SendGrid";
@@ -41,6 +42,7 @@ public class SendGridEmailProviderAdapter {
     this.metrics = new ProviderMetrics(meterRegistry);
   }
 
+  @Override
   public ProviderResult send(Channel channel, String recipient, String renderedContent,
       String subject) {
     SendGridMailRequest request = new SendGridMailRequest(
