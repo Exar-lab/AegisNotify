@@ -1,0 +1,428 @@
+<app-users-shield />
+
+<div class="users-page page">
+  <nav class="breadcrumb" aria-label="Breadcrumbs">
+    <a routerLink="/dashboard">Dashboard</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">Users</span>
+  </nav>
+
+  <header>
+    <div>
+      <h1 class="page-title">Users</h1>
+      <p class="page-lede">Manage system users, access roles, and credentials</p>
+    </div>
+    <button type="button" class="primary-btn" (click)="openCreate()">Create user</button>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <svg
+        class="search-icon"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+      <input
+        type="search"
+        [formControl]="searchControl"
+        placeholder="Search users by name, username, or email…"
+        aria-label="Search users"
+      />
+      @if (search()) {
+        <button
+          type="button"
+          class="clear-btn"
+          (click)="clearSearch()"
+          aria-label="Clear search query"
+        >
+          ✕
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (actionError()) {
+    <p class="form-error" role="alert">{{ actionError() }}</p>
+  }
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <section class="panel" aria-label="Users list" aria-busy="true">
+        <div class="message" role="status">Loading users…</div>
+      </section>
+    }
+    @case ('error') {
+      <section class="panel" aria-label="Users list">
+        <div class="message" role="alert">
+          <h2>Couldn't load users</h2>
+          <p>Please check the connection and try again.</p>
+          <button type="button" class="secondary" (click)="load()">Retry</button>
+        </div>
+      </section>
+    }
+    @case ('ready') {
+      <section class="panel" aria-label="Users list">
+        @if (result(); as data) {
+          <div class="table-header">
+            <h2>User directory</h2>
+            <span aria-live="polite">{{ data.totalElements | number }} users</span>
+          </div>
+
+          @if (data.content.length === 0) {
+            <div class="message" role="status">
+              <h2>No users found</h2>
+              <p>
+                @if (search()) {
+                  No users match "{{ search() }}".
+                } @else {
+                  No users have been registered yet.
+                }
+              </p>
+            </div>
+          } @else {
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">
+                  System user accounts
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Username</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Roles</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created at</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (user of data.content; track user.id) {
+                    <tr>
+                      <td class="identifier">{{ user.username }}</td>
+                      <td class="wrap">{{ user.email }}</td>
+                      <td>{{ fullName(user) }}</td>
+                      <td>
+                        <div class="roles-cell">
+                          @for (role of user.roles; track role) {
+                            <span class="role-pill">{{ role }}</span>
+                          } @empty {
+                            <span class="muted-text">—</span>
+                          }
+                        </div>
+                      </td>
+                      <td>
+                        <span class="badge" [attr.data-tone]="user.enabled ? 'success' : 'danger'">
+                          {{ user.enabled ? 'Enabled' : 'Disabled' }}
+                        </span>
+                      </td>
+                      <td>
+                        <time [attr.datetime]="user.createdAt">
+                          {{ user.createdAt | date: 'medium' }}
+                        </time>
+                      </td>
+                      <td class="actions">
+                        <button type="button" class="secondary action-btn" (click)="openEdit(user)">
+                          Edit
+                        </button>
+                        <button type="button" class="secondary action-btn" (click)="openRoles(user)">
+                          Roles
+                        </button>
+                        <button
+                          type="button"
+                          class="secondary action-btn"
+                          (click)="openPassword(user)"
+                        >
+                          Reset password
+                        </button>
+                        <button
+                          type="button"
+                          class="secondary action-btn"
+                          (click)="toggleStatus(user)"
+                          [disabled]="busyId() === user.id"
+                        >
+                          {{ user.enabled ? 'Disable' : 'Enable' }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <footer>
+            <span>
+              Showing {{ data.content.length ? data.page * data.size + 1 : 0 }}–{{
+                data.page * data.size + data.content.length
+              }}
+              of {{ data.totalElements | number }}
+            </span>
+            <nav aria-label="Pagination">
+              <button
+                type="button"
+                class="secondary"
+                (click)="go(data.page - 1)"
+                [disabled]="data.page === 0"
+              >
+                Previous
+              </button>
+              <span>Page {{ data.page + 1 }} of {{ totalPages() }}</span>
+              <button
+                type="button"
+                class="secondary"
+                (click)="go(data.page + 1)"
+                [disabled]="data.page + 1 >= totalPages()"
+              >
+                Next
+              </button>
+            </nav>
+          </footer>
+        }
+      </section>
+    }
+  }
+</div>
+
+<!-- ======================== MODAL: CREATE USER ======================== -->
+@if (isCreateOpen()) {
+  <div class="modal-backdrop" (click)="closeCreate()">
+    <div
+      class="modal-card panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <h2 id="create-title">Create user</h2>
+        <button type="button" class="close-btn" (click)="closeCreate()" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()">
+        <div class="modal-body">
+          <label>
+            Username
+            <input
+              type="text"
+              formControlName="username"
+              autocomplete="off"
+              maxlength="255"
+              placeholder="e.g. jdoe"
+            />
+          </label>
+          <label>
+            Email address
+            <input
+              type="email"
+              formControlName="email"
+              maxlength="320"
+              placeholder="jdoe@example.com"
+            />
+          </label>
+          <label>
+            First name
+            <input type="text" formControlName="firstName" maxlength="255" placeholder="Jane" />
+          </label>
+          <label>
+            Last name
+            <input type="text" formControlName="lastName" maxlength="255" placeholder="Doe" />
+          </label>
+
+          @if (createForm.touched && createForm.invalid) {
+            <p class="form-error" role="alert">
+              All fields are required and email must be valid.
+            </p>
+          }
+          @if (formError()) {
+            <p class="form-error" role="alert">{{ formError() }}</p>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="secondary" (click)="closeCreate()">Cancel</button>
+          <button type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Creating…' : 'Create user' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ======================== MODAL: EDIT USER ======================== -->
+@if (isEditOpen()) {
+  <div class="modal-backdrop" (click)="closeEdit()">
+    <div
+      class="modal-card panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="edit-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <h2 id="edit-title">Edit user</h2>
+        <button type="button" class="close-btn" (click)="closeEdit()" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()">
+        <div class="modal-body">
+          <div class="form-group static-field">
+            <span class="field-label">Username</span>
+            <span class="static-value identifier">{{ selectedUser()?.username }}</span>
+          </div>
+
+          <label>
+            Email address
+            <input type="email" formControlName="email" maxlength="320" />
+          </label>
+          <label>
+            First name
+            <input type="text" formControlName="firstName" maxlength="255" />
+          </label>
+          <label>
+            Last name
+            <input type="text" formControlName="lastName" maxlength="255" />
+          </label>
+
+          @if (editForm.touched && editForm.invalid) {
+            <p class="form-error" role="alert">All fields are required and email must be valid.</p>
+          }
+          @if (formError()) {
+            <p class="form-error" role="alert">{{ formError() }}</p>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="secondary" (click)="closeEdit()">Cancel</button>
+          <button type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ======================== MODAL: ASSIGN ROLES ======================== -->
+@if (isRolesOpen()) {
+  <div class="modal-backdrop" (click)="closeRoles()">
+    <div
+      class="modal-card panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="roles-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <h2 id="roles-title">Assign roles</h2>
+          <p class="modal-subtitle">User: {{ selectedUser()?.username }}</p>
+        </div>
+        <button type="button" class="close-btn" (click)="closeRoles()" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="roles-hint">Select the Realm roles granted to this account:</p>
+
+        <div class="roles-checklist">
+          @for (role of availableRoles(); track role) {
+            <label class="checkbox-row">
+              <input
+                type="checkbox"
+                [checked]="isRoleSelected(role)"
+                (change)="toggleRole(role)"
+              />
+              <span class="role-name">{{ role }}</span>
+            </label>
+          } @empty {
+            <p class="muted-text">No available realm roles found in Keycloak.</p>
+          }
+        </div>
+
+        @if (formError()) {
+          <p class="form-error" role="alert">{{ formError() }}</p>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="secondary" (click)="closeRoles()">Cancel</button>
+        <button type="button" (click)="submitRoles()" [disabled]="submitting()">
+          {{ submitting() ? 'Saving…' : 'Save roles' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ======================== MODAL: RESET PASSWORD ======================== -->
+@if (isPasswordOpen()) {
+  <div class="modal-backdrop" (click)="closePassword()">
+    <div
+      class="modal-card panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="password-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <h2 id="password-title">Reset password</h2>
+          <p class="modal-subtitle">User: {{ selectedUser()?.username }}</p>
+        </div>
+        <button type="button" class="close-btn" (click)="closePassword()" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+
+      <form [formGroup]="passwordForm" (ngSubmit)="submitPassword()">
+        <div class="modal-body">
+          <label>
+            New password
+            <input
+              type="password"
+              formControlName="newPassword"
+              autocomplete="new-password"
+              placeholder="Minimum 8 characters"
+            />
+          </label>
+
+          <label class="checkbox-row temporary-row">
+            <input type="checkbox" formControlName="temporary" />
+            <span>Temporary password (require change on next login)</span>
+          </label>
+
+          @if (passwordForm.get('newPassword')?.touched && passwordForm.get('newPassword')?.invalid) {
+            <p class="form-error" role="alert">Password must be at least 8 characters.</p>
+          }
+          @if (formError()) {
+            <p class="form-error" role="alert">{{ formError() }}</p>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="secondary" (click)="closePassword()">Cancel</button>
+          <button type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Resetting…' : 'Reset password' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

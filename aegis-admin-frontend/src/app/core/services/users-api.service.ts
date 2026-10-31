@@ -17,8 +17,11 @@ export class UsersApiService {
   private readonly baseUrl = inject(RUNTIME_CONFIG).apiBaseUrl.replace(/\/+$/, '');
   private readonly usersUrl = `${this.baseUrl}/api/v1/users`;
 
-  list(page = 0, size = 20): Observable<UserPage> {
-    const params = new HttpParams().set('page', page).set('size', size);
+  list(page = 0, size = 20, search?: string): Observable<UserPage> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (search && search.trim()) {
+      params = params.set('search', search.trim());
+    }
     return this.http.get<UserPage>(this.usersUrl, { params });
   }
 
@@ -41,5 +44,13 @@ export class UsersApiService {
 
   resetPassword(id: string, body: ResetPasswordRequest): Observable<void> {
     return this.http.put<void>(`${this.usersUrl}/${encodeURIComponent(id)}/password`, body);
+  }
+
+  getRoles(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.usersUrl}/roles`);
+  }
+
+  setRoles(id: string, roles: string[]): Observable<ManagedUser> {
+    return this.http.put<ManagedUser>(`${this.usersUrl}/${encodeURIComponent(id)}/roles`, { roles });
   }
 }

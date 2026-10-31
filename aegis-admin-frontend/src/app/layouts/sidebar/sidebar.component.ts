@@ -34,6 +34,7 @@ export class SidebarComponent {
     { label: 'Providers', route: '/providers', icon: 'providers' },
     { label: 'Metrics', route: '/metrics', icon: 'metrics' },
     { label: 'Templates', route: '/templates', icon: 'templates' },
+    { label: 'Users', route: '/users', icon: 'users' },
     { label: 'Settings', route: '/settings', icon: 'settings' },
   ];
 
@@ -46,4 +47,3 @@ export class SidebarComponent {
     });
   }
 }
-

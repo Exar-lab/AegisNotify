@@ -6,6 +6,7 @@ export interface ManagedUser {
   lastName: string;
   enabled: boolean;
   createdAt: string;
+  roles: string[];
 }
 
 /** Mirrors aegis-user-service PagedResult (page is zero-based). */
@@ -37,4 +38,8 @@ export interface SetUserStatusRequest {
 export interface ResetPasswordRequest {
   newPassword: string;
   temporary?: boolean;
+}
+
+export interface SetUserRolesRequest {
+  roles: string[];
 }
