@@ -133,6 +133,7 @@ class AggregationFlushTransactionsTest {
     assertEquals("user@example.com", savedEvent.getPayload().get("recipient"));
     assertEquals("welcome", savedEvent.getPayload().get("templateName"));
     assertEquals("MEDIUM", savedEvent.getPayload().get("priority"));
+    assertEquals(Boolean.TRUE, savedEvent.getPayload().get("skipAggregation"));
 
     verify(aggregationBufferRepository).resolve(claimed.getId());
   }
@@ -248,6 +249,7 @@ class AggregationFlushTransactionsTest {
     assertEquals(leaderNotificationId.toString(), savedEvent.getPayload().get("id"));
     assertEquals("EMAIL", savedEvent.getPayload().get("channel"));
     assertEquals("welcome", savedEvent.getPayload().get("templateName"));
+    assertEquals(Boolean.TRUE, savedEvent.getPayload().get("skipAggregation"));
 
     ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
     verify(notificationRepository, times(3)).save(notificationCaptor.capture());

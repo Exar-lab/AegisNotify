@@ -10,6 +10,8 @@ import com.aegisnotify.notification.application.port.out.AggregationSummarizerPo
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.infrastructure.summarizer.AnthropicMessagesSummarizerAdapter;
+import com.aegisnotify.notification.infrastructure.summarizer.GroqChatCompletionsSummarizerAdapter;
+import com.aegisnotify.notification.infrastructure.summarizer.GroqSummarizerProperties;
 import com.aegisnotify.notification.infrastructure.summarizer.SummarizerProperties;
 import com.aegisnotify.notification.infrastructure.summarizer.UnavailableSummarizerAdapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -24,6 +26,9 @@ import org.junit.jupiter.api.Test;
  * construction is sufficient to prove the mapping is correct.
  */
 class AggregationConfigTest {
+
+  private static final String ANTHROPIC = "anthropic";
+  private static final String GROQ = "groq";
 
   @Test
   void aggregationSettings_mapsAllPropertiesOntoDomainValueObject() {
@@ -89,7 +94,8 @@ class AggregationConfigTest {
         Duration.ofSeconds(2), 2000);
 
     AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
-        aggregationProperties, summarizerProperties, CircuitBreakerRegistry.ofDefaults());
+        aggregationProperties, summarizerProperties, ANTHROPIC, new GroqSummarizerProperties(),
+        CircuitBreakerRegistry.ofDefaults());
 
     assertInstanceOf(UnavailableSummarizerAdapter.class, port);
   }
@@ -104,7 +110,8 @@ class AggregationConfigTest {
         Duration.ofSeconds(2), 2000);
 
     AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
-        aggregationProperties, summarizerProperties, CircuitBreakerRegistry.ofDefaults());
+        aggregationProperties, summarizerProperties, ANTHROPIC, new GroqSummarizerProperties(),
+        CircuitBreakerRegistry.ofDefaults());
 
     assertInstanceOf(UnavailableSummarizerAdapter.class, port);
   }
@@ -119,7 +126,8 @@ class AggregationConfigTest {
         Duration.ofSeconds(2), 2000);
 
     AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
-        aggregationProperties, summarizerProperties, CircuitBreakerRegistry.ofDefaults());
+        aggregationProperties, summarizerProperties, ANTHROPIC, new GroqSummarizerProperties(),
+        CircuitBreakerRegistry.ofDefaults());
 
     assertInstanceOf(AnthropicMessagesSummarizerAdapter.class, port);
   }
@@ -137,7 +145,8 @@ class AggregationConfigTest {
 
     assertThrows(IllegalStateException.class,
         () -> new AggregationConfig().aggregationSummarizerPort(
-            aggregationProperties, summarizerProperties, registry));
+            aggregationProperties, summarizerProperties, ANTHROPIC,
+            new GroqSummarizerProperties(), registry));
   }
 
   /**
@@ -159,6 +168,115 @@ class AggregationConfigTest {
 
     assertThrows(IllegalStateException.class,
         () -> new AggregationConfig().aggregationSummarizerPort(
-            aggregationProperties, summarizerProperties, registry));
+            aggregationProperties, summarizerProperties, ANTHROPIC,
+            new GroqSummarizerProperties(), registry));
+  }
+
+  private static NotificationAggregationProperties enabledAggregation() {
+    return new NotificationAggregationProperties(
+        true, Duration.ofMinutes(5), Duration.ofSeconds(10), true, 20,
+        Duration.ofMinutes(2), 3);
+  }
+
+  private static SummarizerProperties summarizerWithAnthropicKey(String apiKey, Duration timeout) {
+    return new SummarizerProperties(
+        "https://api.anthropic.com", apiKey, "claude-sonnet-4-5", "2023-06-01", 512,
+        timeout, 2000);
+  }
+
+  private static GroqSummarizerProperties groqWithKey(String apiKey) {
+    return new GroqSummarizerProperties(
+        "https://api.groq.com/openai", apiKey, "llama-3.3-70b-versatile");
+  }
+
+  @Test
+  void aggregationSummarizerPort_groqVendorWithGroqKey_returnsGroqAdapter() {
+    AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
+        enabledAggregation(), summarizerWithAnthropicKey("", Duration.ofSeconds(2)), GROQ,
+        groqWithKey("a-groq-key"), CircuitBreakerRegistry.ofDefaults());
+
+    assertInstanceOf(GroqChatCompletionsSummarizerAdapter.class, port);
+  }
+
+  @Test
+  void aggregationSummarizerPort_groqVendorIsCaseInsensitive() {
+    AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
+        enabledAggregation(), summarizerWithAnthropicKey("", Duration.ofSeconds(2)), "GROQ",
+        groqWithKey("a-groq-key"), CircuitBreakerRegistry.ofDefaults());
+
+    assertInstanceOf(GroqChatCompletionsSummarizerAdapter.class, port);
+  }
+
+  /** Groq selected: only the Groq key counts — an Anthropic key alone must not wire anything. */
+  @Test
+  void aggregationSummarizerPort_groqVendorWithoutGroqKey_returnsUnavailableAdapter() {
+    AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
+        enabledAggregation(), summarizerWithAnthropicKey("a-real-key", Duration.ofSeconds(2)),
+        GROQ, groqWithKey(""), CircuitBreakerRegistry.ofDefaults());
+
+    assertInstanceOf(UnavailableSummarizerAdapter.class, port);
+  }
+
+  /** Anthropic selected (default): a Groq key alone must not wire anything. */
+  @Test
+  void aggregationSummarizerPort_anthropicVendorWithOnlyGroqKey_returnsUnavailableAdapter() {
+    AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
+        enabledAggregation(), summarizerWithAnthropicKey("", Duration.ofSeconds(2)), ANTHROPIC,
+        groqWithKey("a-groq-key"), CircuitBreakerRegistry.ofDefaults());
+
+    assertInstanceOf(UnavailableSummarizerAdapter.class, port);
+  }
+
+  @Test
+  void aggregationSummarizerPort_groqVendorAggregationDisabled_returnsUnavailableAdapter() {
+    NotificationAggregationProperties disabled = new NotificationAggregationProperties(
+        false, Duration.ofMinutes(5), Duration.ofSeconds(10), true, 20,
+        Duration.ofMinutes(2), 3);
+
+    AggregationSummarizerPort port = new AggregationConfig().aggregationSummarizerPort(
+        disabled, summarizerWithAnthropicKey("", Duration.ofSeconds(2)), GROQ,
+        groqWithKey("a-groq-key"), CircuitBreakerRegistry.ofDefaults());
+
+    assertInstanceOf(UnavailableSummarizerAdapter.class, port);
+  }
+
+  /** D8 applies regardless of vendor. */
+  @Test
+  void aggregationSummarizerPort_groqVendorTimeoutNotLessThanWindow_throwsAtStartup() {
+    NotificationAggregationProperties aggregationProperties = new NotificationAggregationProperties(
+        true, Duration.ofSeconds(10), Duration.ofSeconds(10), true, 20,
+        Duration.ofMinutes(2), 3);
+    SummarizerProperties summarizerProperties =
+        summarizerWithAnthropicKey("", Duration.ofSeconds(10));
+    GroqSummarizerProperties groqProperties = groqWithKey("a-groq-key");
+    CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
+
+    assertThrows(IllegalStateException.class,
+        () -> new AggregationConfig().aggregationSummarizerPort(
+            aggregationProperties, summarizerProperties, GROQ, groqProperties, registry));
+  }
+
+  /** The claim-lease invariant (duplicate-delivery guard) applies regardless of vendor. */
+  @Test
+  void aggregationSummarizerPort_groqVendorTimeoutNotLessThanClaimLease_throwsAtStartup() {
+    SummarizerProperties summarizerProperties =
+        summarizerWithAnthropicKey("", Duration.ofMinutes(3));
+    NotificationAggregationProperties aggregationProperties = enabledAggregation();
+    GroqSummarizerProperties groqProperties = groqWithKey("a-groq-key");
+    CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
+
+    assertThrows(IllegalStateException.class,
+        () -> new AggregationConfig().aggregationSummarizerPort(
+            aggregationProperties, summarizerProperties, GROQ, groqProperties, registry));
+  }
+
+  @Test
+  void groqSummarizerProperties_blankValues_fallBackToDefaultsAndReportNoKey() {
+    GroqSummarizerProperties properties = new GroqSummarizerProperties(" ", null, "");
+
+    assertEquals("https://api.groq.com/openai", properties.baseUrl());
+    assertEquals("llama-3.3-70b-versatile", properties.model());
+    assertEquals("", properties.apiKey());
+    assertTrue(!properties.hasApiKey());
   }
 }

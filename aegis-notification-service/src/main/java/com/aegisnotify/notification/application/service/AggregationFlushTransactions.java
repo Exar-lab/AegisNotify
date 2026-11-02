@@ -155,6 +155,25 @@ public class AggregationFlushTransactions {
     }
   }
 
+  /**
+   * Bug fix (discovered testing the Groq summarizer live, issue #86
+   * follow-up): a notification resolved out of the aggregation buffer —
+   * individually via {@link #flushIndividually} or as the leader via {@link
+   * #flushAggregate} — gets a brand-new outbox event here so the normal
+   * Kafka relay can still pick it up. The domain's aggregation-eligibility
+   * check has no notion of "already went through the hold/resolve cycle once": it
+   * only inspects the event's channel/priority/templateName, which are
+   * unchanged. Without {@code skipAggregation}, that fresh event looked
+   * identical to a brand-new notification to the relay's aggregation gate
+   * and got held AGAIN on the very next poll — forever, since every
+   * resolution path (including the next hold) writes another fresh event
+   * with the same unchanged shape. {@code skipAggregation} marks this event
+   * as already past that decision, so {@code PublishOutboxEventService}
+   * publishes it unconditionally instead of re-evaluating it. Notifications
+   * created fresh via {@code CreateNotificationService} (and retried via
+   * {@code RetryFailedNotificationService}, where re-entering aggregation on
+   * a genuinely new delivery attempt is correct) never set this flag.
+   */
   private OutboxEvent buildOutboxEvent(Notification notification) {
     Map<String, Object> payload = new HashMap<>();
     payload.put("id", notification.getId().toString());
@@ -163,6 +182,7 @@ public class AggregationFlushTransactions {
     payload.put("templateName", notification.getTemplateName());
     payload.put("parameters", notification.getParameters());
     payload.put("priority", notification.getPriority().name());
+    payload.put("skipAggregation", true);
     return OutboxEvent.create(notification.getId(), payload);
   }
 
