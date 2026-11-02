@@ -260,4 +260,30 @@ class PublishOutboxEventServiceTest {
     verify(transactions).publishOne(event);
     verify(transactions, never()).holdForAggregation(any());
   }
+
+  /**
+   * Regression test for the infinite re-hold loop discovered testing the
+   * Groq summarizer live: a notification already resolved out of the
+   * aggregation buffer (individually or as an aggregate leader) gets a
+   * fresh outbox event with unchanged channel/priority/templateName — which
+   * would otherwise look identical to a brand-new notification and get held
+   * AGAIN, forever. {@code skipAggregation: true} on the payload must bypass
+   * the hold even though priority/channel/template alone would qualify.
+   */
+  @Test
+  void publishPending_skipAggregationFlagSet_publishesImmediately_neverReHeld() {
+    UUID notificationId = UUID.randomUUID();
+    OutboxEvent event = OutboxEvent.create(notificationId, Map.of(
+        "id", notificationId.toString(), "priority", "MEDIUM", "channel", "EMAIL",
+        "templateName", "welcome", "skipAggregation", true));
+
+    when(outboxEventRepository.findPendingEvents()).thenReturn(List.of(event));
+
+    service = newService(aggregationSettings(true));
+    int count = service.publishPending();
+
+    assertEquals(1, count);
+    verify(transactions).publishOne(event);
+    verify(transactions, never()).holdForAggregation(any());
+  }
 }

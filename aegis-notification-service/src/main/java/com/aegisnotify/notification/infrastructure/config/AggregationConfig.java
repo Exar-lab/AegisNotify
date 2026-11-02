@@ -3,11 +3,14 @@ package com.aegisnotify.notification.infrastructure.config;
 import com.aegisnotify.notification.application.port.out.AggregationSummarizerPort;
 import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.infrastructure.summarizer.AnthropicMessagesSummarizerAdapter;
+import com.aegisnotify.notification.infrastructure.summarizer.GroqChatCompletionsSummarizerAdapter;
+import com.aegisnotify.notification.infrastructure.summarizer.GroqSummarizerProperties;
 import com.aegisnotify.notification.infrastructure.summarizer.SummarizerProperties;
 import com.aegisnotify.notification.infrastructure.summarizer.UnavailableSummarizerAdapter;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -34,6 +37,9 @@ import org.springframework.web.reactive.function.client.WebClient;
  */
 @Configuration(proxyBeanMethods = false)
 public class AggregationConfig {
+
+  private static final String SUMMARIZER_VENDOR_ANTHROPIC = "anthropic";
+  private static final String SUMMARIZER_VENDOR_GROQ = "groq";
 
   @Bean
   public AggregationSettings aggregationSettings(NotificationAggregationProperties properties) {
@@ -79,18 +85,36 @@ public class AggregationConfig {
    * lease-expired and re-claim + re-process it while the first call is
    * still in flight — producing two independent outbox writes, i.e.
    * duplicate delivery, for one notification.</p>
+   *
+   * <p>The vendor is selected by {@code
+   * notification.aggregation.summarizer.vendor} ({@code anthropic} by
+   * default, or {@code groq}), mirroring {@code ProviderConfig}'s EMAIL /
+   * WHATSAPP selectors: only the selected vendor's API key is checked, and a
+   * missing key degrades to {@link UnavailableSummarizerAdapter}. Both
+   * timeout invariants above apply unconditionally to whichever vendor is
+   * selected — they bound the summarizer call itself, not any vendor's API.</p>
    */
   @Bean
   public AggregationSummarizerPort aggregationSummarizerPort(
       NotificationAggregationProperties aggregationProperties,
       SummarizerProperties summarizerProperties,
+      @Value("${notification.aggregation.summarizer.vendor:" + SUMMARIZER_VENDOR_ANTHROPIC + "}")
+          String vendor,
+      GroqSummarizerProperties groqProperties,
       CircuitBreakerRegistry circuitBreakerRegistry) {
-    if (!aggregationProperties.enabled() || !summarizerProperties.hasApiKey()) {
+    boolean groqSelected = SUMMARIZER_VENDOR_GROQ.equalsIgnoreCase(vendor);
+    boolean selectedVendorHasApiKey = groqSelected
+        ? groqProperties.hasApiKey() : summarizerProperties.hasApiKey();
+    if (!aggregationProperties.enabled() || !selectedVendorHasApiKey) {
       return new UnavailableSummarizerAdapter();
     }
     requireTimeoutLessThanWindow(summarizerProperties.timeout(), aggregationProperties.window());
     requireTimeoutLessThanClaimLease(
         summarizerProperties.timeout(), aggregationProperties.claimLease());
+    if (groqSelected) {
+      return new GroqChatCompletionsSummarizerAdapter(
+          WebClient.builder(), summarizerProperties, groqProperties, circuitBreakerRegistry);
+    }
     return new AnthropicMessagesSummarizerAdapter(
         WebClient.builder(), summarizerProperties, circuitBreakerRegistry);
   }

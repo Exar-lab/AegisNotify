@@ -29,6 +29,14 @@ import org.springframework.stereotype.Service;
  * PublishOutboxEventTransactions#holdForAggregation}, which inserts a
  * buffer row and marks the outbox row {@code PROCESSED} in the same
  * transaction — never publishing to the broker.</p>
+ *
+ * <p>An event whose payload carries {@code skipAggregation: true} is never
+ * held, regardless of what {@link AggregationPolicy} would otherwise say —
+ * see the {@code skipAggregation} javadoc on {@code
+ * AggregationFlushTransactions}'s private {@code buildOutboxEvent} for why
+ * this guard exists (bug fix: without it, a notification already resolved
+ * out of the aggregation buffer gets re-held on every subsequent poll,
+ * forever).</p>
  */
 @Service
 public class PublishOutboxEventService implements PublishOutboxEventUseCase {
@@ -77,6 +85,17 @@ public class PublishOutboxEventService implements PublishOutboxEventUseCase {
     }
 
     Map<String, Object> payload = event.getPayload();
+
+    // Bug fix: an event already resolved out of the aggregation buffer once
+    // (individually or as an aggregate leader) is marked skipAggregation by
+    // AggregationFlushTransactions precisely so it is never re-evaluated
+    // here — its channel/priority/templateName are unchanged from the
+    // original event, so without this guard it would look identical to a
+    // brand-new notification and get held again on every poll, forever.
+    if (Boolean.TRUE.equals(payload.get("skipAggregation"))) {
+      return false;
+    }
+
     String channelValue = (String) payload.get("channel");
     if (channelValue == null) {
       return false;

@@ -62,6 +62,8 @@ notification:
     excluded-templates: ${NOTIFICATION_AGGREGATION_EXCLUDED_TEMPLATES:}
     excluded-channels: ${NOTIFICATION_AGGREGATION_EXCLUDED_CHANNELS:}
     summarizer:
+      # Summarizer vendor: anthropic (default) or groq.
+      vendor: ${AGGREGATION_LLM_VENDOR:anthropic}
       base-url: ${AGGREGATION_LLM_BASE_URL:https://api.anthropic.com}
       api-key: ${AGGREGATION_LLM_API_KEY:}
       model: ${AGGREGATION_LLM_MODEL:claude-sonnet-4-5}
@@ -69,6 +71,10 @@ notification:
       max-tokens: ${AGGREGATION_LLM_MAX_TOKENS:512}
       timeout: ${AGGREGATION_LLM_TIMEOUT:PT10S}
       max-output-chars: ${AGGREGATION_LLM_MAX_OUTPUT_CHARS:2000}
+      groq:
+        base-url: ${AGGREGATION_LLM_GROQ_BASE_URL:https://api.groq.com/openai}
+        api-key: ${AGGREGATION_LLM_GROQ_API_KEY:}
+        model: ${AGGREGATION_LLM_GROQ_MODEL:llama-3.3-70b-versatile}
   kafka:
     relay:
       enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}
