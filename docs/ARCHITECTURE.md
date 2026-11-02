@@ -3,7 +3,8 @@
 This document covers the internal design of AegisNotify: system topology, the notification
 processing flow, the lifecycle state machine, the hexagonal layering, persistence, Kafka
 interfaces, and resilience behavior. For a practical "how do I run and call this" overview, see
-the [README](../README.md).
+the [README](../README.md). For the reasoning behind the main design choices, see the
+[Architecture Decision Records](adr/README.md).
 
 ## System topology
 
