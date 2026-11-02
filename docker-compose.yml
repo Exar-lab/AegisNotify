@@ -21,5 +21,6 @@ services:
       - "8088:8080"
     volumes:
       - ./docker/keycloak:/opt/keycloak/data/import:ro
+      - ./docker/keycloak/themes/aegis:/opt/keycloak/themes/aegis:ro
     # No healthcheck: nothing in this compose file depends_on Keycloak (A9),
     # and the base image ships no curl/wget to probe with.

@@ -3,6 +3,7 @@
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
+  "loginTheme": "aegis",
   "clientScopes": [
     {
       "name": "notification:write",

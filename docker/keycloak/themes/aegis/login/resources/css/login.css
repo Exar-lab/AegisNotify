@@ -1,0 +1,149 @@
+/* AegisNotify branded login theme (Keycloak 26 / keycloak.v2 base, PatternFly 5).
+   Mirrors aegis-admin-frontend/src/styles.scss's dark surface + single pink
+   accent design tokens, so the login page reads as the same product. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap');
+
+:root {
+  --aegis-bg: #0e0f12;
+  --aegis-surface: #15161a;
+  --aegis-border: #26282e;
+  --aegis-text: #f2f2f0;
+  --aegis-text-secondary: #9a9ea5;
+  --aegis-accent: #f4094c;
+  --aegis-accent-hover: #ff4d80;
+}
+
+body#keycloak-bg,
+.login-pf body {
+  background: var(--aegis-bg) !important;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.pf-v5-c-login {
+  background: var(--aegis-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+.pf-v5-c-login::before,
+.pf-v5-c-login::after {
+  content: '';
+  position: fixed;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 9, 76, 0.18) 0%, rgba(244, 9, 76, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.pf-v5-c-login::before { top: -180px; left: -180px; }
+.pf-v5-c-login::after { bottom: -180px; right: -180px; }
+
+.pf-v5-c-login__header {
+  position: relative;
+  z-index: 1;
+}
+
+#kc-header-wrapper {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 22px !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  color: var(--aegis-text) !important;
+}
+
+.aegis-brand-icon {
+  display: inline-flex;
+  color: var(--aegis-accent);
+  flex-shrink: 0;
+}
+
+.pf-v5-c-login__main {
+  position: relative;
+  z-index: 1;
+  background: var(--aegis-surface) !important;
+  border: 1px solid var(--aegis-border) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 20px 48px -16px rgba(0, 0, 0, 0.6) !important;
+}
+
+.pf-v5-c-login__main-header {
+  text-align: center;
+}
+
+#kc-page-title {
+  color: var(--aegis-text) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+}
+
+.pf-v5-c-form__label-text,
+.pf-v5-c-form__label {
+  color: var(--aegis-text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+.pf-v5-c-form-control,
+.pf-v5-c-form-control input {
+  background: var(--aegis-bg) !important;
+  border: 1px solid var(--aegis-border) !important;
+  color: var(--aegis-text) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.pf-v5-c-form-control:focus-within {
+  border-color: var(--aegis-accent) !important;
+  box-shadow: 0 0 0 3px rgba(244, 9, 76, 0.18) !important;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  background: var(--aegis-accent) !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  transition: background-color 150ms ease;
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+  background: var(--aegis-accent-hover) !important;
+}
+
+a,
+.pf-v5-c-login__main a {
+  color: var(--aegis-accent) !important;
+  text-decoration: none;
+}
+a:hover { color: var(--aegis-accent-hover) !important; }
+
+.pf-v5-c-check__label {
+  color: var(--aegis-text-secondary) !important;
+}
+
+.pf-v5-c-alert {
+  border-radius: 10px !important;
+  background: rgba(244, 9, 76, 0.1) !important;
+  border: 1px solid rgba(244, 9, 76, 0.35) !important;
+}
+.pf-v5-c-alert__title,
+.pf-v5-c-alert__description {
+  color: #ff8fa8 !important;
+}
+
+#kc-registration-container,
+.pf-v5-c-login__main-footer-band,
+.pf-v5-c-login__footer {
+  color: var(--aegis-text-secondary) !important;
+}
+
+#login-select-toggle {
+  background: var(--aegis-bg) !important;
+  color: var(--aegis-text) !important;
+  border: 1px solid var(--aegis-border) !important;
+  border-radius: 10px !important;
+}
