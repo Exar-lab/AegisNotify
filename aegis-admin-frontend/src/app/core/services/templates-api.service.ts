@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { RUNTIME_CONFIG } from '../config/runtime-config';
 import {
   CreateTemplateRequest,
+  RenderTemplateRequest,
+  RenderTemplateResponse,
   SetTemplateStatusRequest,
   TemplateResponse,
   UpdateTemplateRequest,
@@ -37,5 +39,10 @@ export class TemplatesApiService {
       `${this.templatesUrl}/${encodeURIComponent(id)}/status`,
       body,
     );
+  }
+
+  /** Renders an active template with the given parameters (preview only, requires `notification:write`). */
+  render(body: RenderTemplateRequest): Observable<RenderTemplateResponse> {
+    return this.http.post<RenderTemplateResponse>(`${this.templatesUrl}/render`, body);
   }
 }

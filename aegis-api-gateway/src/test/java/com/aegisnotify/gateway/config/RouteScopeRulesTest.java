@@ -71,6 +71,7 @@ class RouteScopeRulesTest {
         Arguments.of(HttpMethod.GET, "/api/v1/templates", "notification:read"),
         Arguments.of(HttpMethod.GET, "/api/v1/templates/abc-123", "notification:read"),
         Arguments.of(HttpMethod.POST, "/api/v1/templates", "notification:write"),
+        Arguments.of(HttpMethod.POST, "/api/v1/templates/render", "notification:write"),
         Arguments.of(HttpMethod.PUT, "/api/v1/templates/abc-123", "notification:write"),
         Arguments.of(
             HttpMethod.PATCH, "/api/v1/templates/abc-123/status", "notification:write"),
