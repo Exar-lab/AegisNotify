@@ -46,7 +46,7 @@ Maven is not required: the repository ships the wrapper.
 | `docs/` | Architecture, ADRs, runbooks, security, user manual, Postman | n/a | n/a |
 
 Keycloak runs on port 8088. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the pieces interact and
-[`security/keycloak.md`](security/keycloak.md) for the identity setup.
+`docs/security/keycloak.md` (once PR #219 merges) for the identity setup.
 
 ## Build
 
