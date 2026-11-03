@@ -1,6 +1,8 @@
 # OAuth2 Scopes
 
 Human-readable contract for the OAuth2 scopes AegisNotify enforces (issue #74).
+For the realm, clients, roles and token flow see [`keycloak.md`](keycloak.md); for the login
+page see [`login-theme.md`](login-theme.md).
 
 Every scope literal in this table is duplicated as a hardcoded assertion in a
 `SecurityScopesTest` canary in each service that enforces it (design decision

@@ -53,7 +53,7 @@ is published by `docker-compose.yml` as `8088:8080`.
 
 | File | Purpose |
 | --- | --- |
-| `docker-compose.yml` | Keycloak only. Mounts `docker/keycloak` for the realm import and `docker/keycloak/themes/aegis` as the `aegis` login theme. Has no health check. |
+| `docker-compose.yml` | Keycloak only. Mounts `docker/keycloak` for the realm import and `docker/keycloak/themes/aegis` as the `aegis` login theme (see [`security/keycloak.md`](security/keycloak.md) and [`security/login-theme.md`](security/login-theme.md)). Has no health check. |
 | `docker-compose.full.yml` | Full stack. Pulls Keycloak in with `include: docker-compose.yml` (do not also pass `-f docker-compose.yml`), and adds PostgreSQL, MongoDB, Kafka, Redis, and the six Spring Boot services. Defines no Compose profiles. |
 
 Service images are built from the repository root (`context: .`) using each module's `Dockerfile`:
