@@ -21,6 +21,16 @@ spring:
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
+        - id: notification-cancel
+          uri: http://127.0.0.1:0
+          predicates:
+            - Path=/api/v1/notifications/*/cancel
+            - Method=PATCH
+        - id: notification-retry
+          uri: http://127.0.0.1:0
+          predicates:
+            - Path=/api/v1/notifications/*/retry
+            - Method=POST
         - id: dashboard-summary
           uri: http://127.0.0.1:0
           predicates:
