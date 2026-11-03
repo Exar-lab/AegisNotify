@@ -4,6 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { RUNTIME_CONFIG } from '../config/runtime-config';
 import { NotificationDetail } from '../models/notification-detail.models';
+import { CreateNotificationRequest, CreatedNotification } from '../models/notification-create.models';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationsApiService {
@@ -16,6 +17,11 @@ export class NotificationsApiService {
       if (value !== '') params = params.set(key, value);
     }
     return this.http.get<NotificationPage>(`${this.baseUrl}/api/v1/notifications`, { params });
+  }
+
+  /** Submits a notification; the backend answers 202 with the new id. Requires `notification:write`. */
+  create(body: CreateNotificationRequest): Observable<CreatedNotification> {
+    return this.http.post<CreatedNotification>(`${this.baseUrl}/api/v1/notifications`, body);
   }
 
   getStatus(id: string): Observable<NotificationDetail> {
