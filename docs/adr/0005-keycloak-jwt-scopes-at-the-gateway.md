@@ -50,10 +50,6 @@ an identity provider other than Keycloak.
 
 - The scope literals live in code, in the realm export, and in `scopes.md`; drift between them is a
   bug the tests only partly catch (`scopes.md` says so).
-- `docs/security/scopes.md` is partly stale: it describes `aegis-user-service` as "not yet built"
-  and the user-scope rules as forward-looking, but the service was scaffolded on 2026-08-31 and
-  `RouteScopeRules` now maps `/api/v1/users/**`. `docs/ARCHITECTURE.md` also says the user routes
-  are not proxied. Those documents should be reconciled separately; this ADR follows `RouteScopeRules`.
 - Gateway and services must stay in sync on every new route.
 
 ## Related
