@@ -1,8 +1,13 @@
 <app-shield-tokens />
 <div class="notifications-page page">
   <header>
-    <h1 class="page-title" data-shield-avoid>Notifications</h1>
-    <p class="page-lede" data-shield-avoid>Search, filter, and audit every notification sent.</p>
+    <div>
+      <h1 class="page-title" data-shield-avoid>Notifications</h1>
+      <p class="page-lede" data-shield-avoid>Search, filter, and audit every notification sent.</p>
+    </div>
+    @if (canCompose) {
+      <a class="button" routerLink="/notifications/new">New notification</a>
+    }
   </header>
   <form class="filters panel" (ngSubmit)="apply()">
     <label class="search"

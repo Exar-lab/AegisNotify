@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AdminShellComponent } from './layouts/admin-shell/admin-shell.component';
 import { authGuard } from './core/auth/auth.guard';
+import { NOTIFICATION_WRITE_SCOPE, scopeGuard } from './core/auth/scope.guard';
 
 /**
  * Global application route definitions.
@@ -29,6 +30,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/notifications/pages/notifications.page').then(
             (m) => m.NotificationsPage,
+          ),
+      },
+      {
+        // Must stay before `notifications/:id` so "new" is not captured as an id.
+        path: 'notifications/new',
+        canActivate: [scopeGuard(NOTIFICATION_WRITE_SCOPE)],
+        loadComponent: () =>
+          import('./features/notifications/pages/notification-composer.page').then(
+            (m) => m.NotificationComposerPage,
           ),
       },
       {

@@ -1,0 +1,82 @@
+@use '../../templates/pages/templates-shared';
+
+.composer-page {
+  display: grid;
+  gap: 32px;
+}
+.breadcrumb {
+  display: flex;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.breadcrumb a,
+.breadcrumb [aria-hidden='true'] {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.breadcrumb [aria-current='page'] {
+  color: var(--text-primary);
+}
+a:not(.button) {
+  color: var(--color-accent-ink);
+  text-decoration: none;
+}
+a:not(.button):hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.composer-form {
+  display: grid;
+  gap: 20px;
+  padding: 24px 28px;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 160px;
+}
+fieldset {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  min-width: 0;
+}
+legend {
+  padding: 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.hint {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
+.field-error {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--status-offline);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .composer-form {
+    padding: 20px 16px;
+  }
+}
