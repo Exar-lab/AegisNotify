@@ -230,6 +230,8 @@ create:
 - `notifications` for current notification state and provider outcome
 - `outbox_events` for transactional message publication
 - `notification_logs` for the notification service's local lifecycle history
+- `aggregation_buffer` (plus `notifications.aggregation_id` and `aggregate_body`) for the optional
+  aggregation feature; see [`aggregation.md`](aggregation.md)
 
 JPA validates the schema at startup (`ddl-auto: validate`); Flyway owns schema changes.
 
