@@ -183,8 +183,9 @@ Useful narrower commands while iterating:
 # One test method
 ./mvnw test -Dtest=ClassName#methodName
 
-# Architecture tests only
-./mvnw test -Dtest=ArchitectureTest
+# Architecture tests only (the flag lets modules without that test, such as
+# aegis-api-docs-support, pass instead of failing with "No tests matching pattern")
+./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
 Testcontainers-based integration tests require Docker to be running; without it, tests like
