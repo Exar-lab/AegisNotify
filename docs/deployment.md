@@ -484,10 +484,5 @@ Details and examples: [`aegis-admin-frontend/README.md`](../aegis-admin-frontend
 - Root `README.md` and `aegis-api-gateway/README.md` list the `CORS_ALLOWED_ORIGINS` default as
   `http://localhost:3000`; the code (`SecurityConfig`) and `docker-compose.full.yml` use
   `http://localhost:4200`.
-- `aegis-audit-service/README.md` says the gateway defines no audit route; the gateway
-  `application.yml` defines `audit-read` for `GET /api/v1/audit/**`.
-- The README "Current implementation status" says the outbox `MessageBrokerPort` Kafka adapter and
-  relay trigger are missing, while `KafkaMessageBrokerAdapter` exists and Compose enables
-  `NOTIFICATION_KAFKA_RELAY_ENABLED`. Verify the end-to-end flow before relying on it.
 - The `aegis-api-gateway/README.md` startup list says the notification service is the only routed
   target; the gateway also routes to the user and audit services.
