@@ -49,7 +49,7 @@ Every endpoint except the actuator health, info, and Prometheus endpoints needs 
 | `notification:read` | Poll status, list notifications, list templates |
 
 Scopes are not hierarchical. Full tables are in [security/scopes.md](security/scopes.md) and the realm
-setup is in `docs/security/keycloak.md` (see PR #219).
+setup is in [security/keycloak.md](security/keycloak.md).
 
 **Local development.** The imported realm provides the public client `aegis-dev-cli` and user `aegis-dev`
 (password `dev123`); the request in the quick start uses them. They exist only for local use.
@@ -184,8 +184,8 @@ Twilio, Firebase Cloud Messaging). With placeholders the request is accepted but
 Checked: the JSON shape, the field limits above, the recipient format for the channel, and that an active
 template with that name exists. **Not checked:** that `parameters` covers every placeholder in the template.
 Rendering happens later, during processing. To verify a template and its parameters before you send,
-use the render preview endpoint if your deployment has it (`POST /api/v1/templates/render`, added in
-PR #218).
+use the render preview endpoint (`POST /api/v1/templates/render`, scope `notification:write`), which
+returns the rendered subject and body without sending anything.
 
 ## Poll the status
 
@@ -328,5 +328,6 @@ Breaking and notable changes to the public API surface. Release-level history is
 - **Added** gateway routes for `PATCH /api/v1/notifications/{id}/cancel` and
   `POST /api/v1/notifications/{id}/retry`. The endpoints already existed on the notification service, but
   were not reachable through the gateway (PR #215).
-- **Pending** `POST /api/v1/templates/render` (scope `notification:write`) returns the rendered subject and
-  body for a template and parameters (PR #218, not yet merged).
+- **Added** `POST /api/v1/templates/render` (scope `notification:write`), which returns the rendered
+  subject and body for a template and parameters. Unknown template: `404`; parameters that cannot render the
+  template: `422` (PR #218).
