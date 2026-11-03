@@ -39,7 +39,7 @@ public class SecurityConfig {
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_READ))
             .requestMatchers(HttpMethod.GET, "/api/v1/templates", "/api/v1/templates/*")
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_READ))
-            .requestMatchers(HttpMethod.POST, "/api/v1/templates")
+            .requestMatchers(HttpMethod.POST, "/api/v1/templates", "/api/v1/templates/render")
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_WRITE))
             .requestMatchers(HttpMethod.PUT, "/api/v1/templates/*")
             .hasAuthority(SecurityScopes.authority(SecurityScopes.NOTIFICATION_WRITE))
