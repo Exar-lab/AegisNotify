@@ -17,11 +17,11 @@ declare these same five scopes, byte-for-byte, as `clientScopes` with
 
 | Scope | Enforced by | Endpoint(s) | Status |
 |---|---|---|---|
-| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry` | Active |
-| `notification:read` | `aegis-notification-service`, `aegis-api-gateway` | `GET /api/v1/notifications/{id}/status`, `GET /api/v1/notifications` (filtered list) | Active |
+| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry`, `POST /api/v1/templates`, `PUT /api/v1/templates/{id}`, `PATCH /api/v1/templates/{id}/status` | Active |
+| `notification:read` | `aegis-notification-service`, `aegis-api-gateway` | `GET /api/v1/notifications/{id}/status`, `GET /api/v1/notifications` (filtered list), `GET /api/v1/dashboard/**`, `GET /api/v1/metrics/**`, `GET /api/v1/templates`, `GET /api/v1/templates/{id}` | Active |
 | `audit:read` | `aegis-audit-service`, `aegis-api-gateway` | `/api/v1/audit/**` | Active |
-| `user:read` | `aegis-user-service` (not yet built), `aegis-api-gateway` | `GET /api/v1/users`, `GET /api/v1/users/{id}` | Forward-looking — gateway rule reserved, `aegis-user-service` ships in a later slice |
-| `user:admin` | `aegis-user-service` (not yet built), `aegis-api-gateway` | `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/password` | Forward-looking — gateway rule reserved, `aegis-user-service` ships in a later slice |
+| `user:read` | `aegis-user-service`, `aegis-api-gateway` | `GET /api/v1/users`, `GET /api/v1/users/roles`, `GET /api/v1/users/{id}` | Active |
+| `user:admin` | `aegis-user-service`, `aegis-api-gateway` | `POST /api/v1/users`, `PUT /api/v1/users/{id}`, `PUT /api/v1/users/{id}/roles`, `PATCH /api/v1/users/{id}/status`, `PUT /api/v1/users/{id}/password` | Active |
 
 ## Rules
 
@@ -37,7 +37,7 @@ declare these same five scopes, byte-for-byte, as `clientScopes` with
   in its 403 body (`{"error","message","requiredScope","path","timestamp"}`),
   and never includes token claims, user identity, or realm internals.
   Downstream services (`aegis-notification-service`, `aegis-audit-service`,
-  and eventually `aegis-user-service`) keep Spring Security's opaque default
+  and `aegis-user-service`) keep Spring Security's opaque default
   403 body — this is intentional (design decision A2), not an oversight.
 - **Malformed/expired tokens return 401, not 403.** Scope checks only run
   after successful JWT authentication.

@@ -12,14 +12,15 @@ messages through channel-specific providers, and recording a searchable audit tr
 
 The repository is organized as six Spring Boot services and applies Hexagonal (Ports and
 Adapters) Architecture to the notification, audit, and user domains. Email, SMS, WhatsApp, and
-push provider adapters are present. The complete asynchronous delivery path is still under active
-development; see [Current implementation status](#current-implementation-status) and
+push provider adapters are present. The outbox relay and the Kafka consumer are disabled by
+default; see [Current implementation status](#current-implementation-status) and
 [Project scope](#project-scope) before trying to run the full platform.
 
 > [!IMPORTANT]
-> The repository contains the core services and most processing behavior, but it is not yet a
-> one-command runnable platform. The notification outbox still lacks its Kafka publishing adapter
-> and runtime trigger; see [Current implementation status](#current-implementation-status).
+> The asynchronous delivery path (outbox, Kafka, provider delivery) only runs when
+> `NOTIFICATION_KAFKA_RELAY_ENABLED` and `NOTIFICATION_KAFKA_CONSUMER_ENABLED` are both `true`.
+> Both default to `false`; `docker-compose.full.yml` enables them. See
+> [Current implementation status](#current-implementation-status).
 
 ## Navigate
 
@@ -48,11 +49,14 @@ DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
 | Priority-based Kafka consumer and dead-letter topics | Implemented, disabled by default |
 | MongoDB-backed audit ingestion and search | Implemented |
 | Local Keycloak realm with JWT scopes | Implemented (`docker-compose.yml`) |
-| User management against Keycloak (read, create, update, disable, reset password) | Implemented; not yet proxied through the API Gateway |
+| User management against Keycloak (read, create, update, disable, reset password) | Implemented; proxied through the API Gateway (`/api/v1/users/**`) |
 | JWT validation at the gateway and resource services | Implemented, including per-route scope enforcement at the gateway |
 | Eureka discovery and Git-backed Config Server | Implemented |
 | Prometheus actuator endpoints and Kafka consumer counters | Implemented |
-| Transactional outbox relay to Kafka | Application use case implemented; runtime trigger and outbound broker adapter are not yet implemented |
+| Transactional outbox relay to Kafka | Implemented, disabled by default (`NOTIFICATION_KAFKA_RELAY_ENABLED`): `OutboxWorkerScheduler` polls the outbox and `KafkaMessageBrokerAdapter` publishes to the priority topics |
+| Template management API (`/api/v1/templates`) | Implemented |
+| Cancel and manual retry of notifications | Implemented (`PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry`) |
+| Admin frontend (Angular) | Implemented under [`aegis-admin-frontend`](aegis-admin-frontend/) |
 | Provider circuit breakers and secondary-account failover | Implemented and unit-tested; production and end-to-end validation remain |
 | RabbitMQ transport | Not implemented |
 | One-command full-stack local environment | Implemented: `docker compose -f docker-compose.full.yml up -d --build` starts the infrastructure and all six services (see [Running the full stack in Docker](#running-the-full-stack-in-docker)) |
@@ -84,9 +88,9 @@ ready-to-deploy product.
 ### Out of scope (for now, and possibly permanently)
 
 - **Multi-tenancy.** The platform assumes a single tenant/realm.
-- **A notification composition UI or template editor.** Templates are managed directly in
-  PostgreSQL; there is no admin UI. Static mockups exist under [`design/`](design/) but no UI code
-  has been written yet.
+- **An end-user notification composition product.** Templates are managed through
+  `/api/v1/templates` and the operator-facing admin frontend
+  ([`aegis-admin-frontend`](aegis-admin-frontend/)).
 - **RabbitMQ, or any broker other than Kafka.** The domain model and outbound port are broker-
   agnostic in principle, but only a Kafka adapter exists.
 - **Horizontal scaling, multi-region, or high-availability operational concerns.** This is a
@@ -171,8 +175,9 @@ of 3 and 2) — this is already wired into the run commands in step 6 (Start the
 
 ### 4. Provision a template
 
-The notification service has no template management endpoint or seed migration yet — insert at
-least one active template directly before submitting a notification:
+The notification service has no seed migration — create at least one active template before
+submitting a notification. Either call `POST /api/v1/templates` (requires `notification:write`;
+see step 7 for obtaining a token) or insert one directly:
 
 ```bash
 docker exec -it aegis-postgres psql -U aegis -d aegisnotify -c "
@@ -184,9 +189,9 @@ VALUES (
 ```
 
 Adjust column names if they've drifted from
-[`db/migration/V1__create_schema.sql`](db/migration/V1__create_schema.sql) — check that migration
-for the authoritative `templates` schema before running this against a newer version of the
-project than this guide was written against.
+[`V1__create_schema.sql`](aegis-notification-service/src/main/resources/db/migration/V1__create_schema.sql)
+— check the migrations in that directory for the authoritative `templates` schema before running
+this against a newer version of the project than this guide was written against.
 
 ### 5. Set provider and encryption environment variables
 
@@ -199,6 +204,7 @@ export TWILIO_SMS_FROM_NUMBER=+15551234567
 export TWILIO_WHATSAPP_FROM_NUMBER=+15551234567
 export FCM_PROJECT_ID=your-firebase-project
 export FCM_ACCESS_TOKEN=your-fcm-access-token
+export NOTIFICATION_KAFKA_RELAY_ENABLED=true
 export NOTIFICATION_KAFKA_CONSUMER_ENABLED=true
 ```
 
@@ -234,9 +240,10 @@ In separate terminals, in this order:
   If you rotate it in the Keycloak admin console (`http://localhost:8088`, `admin` / `admin` by
   default) under the `aegis` realm's client credentials, update the environment variable — and, for
   the value to survive a realm re-import, `docker/keycloak/aegis-realm.json` — to match.
-- Even with every dependency above running, the complete submit-to-delivery flow (HTTP submit →
-  outbox → Kafka → provider delivery) is still blocked by the missing outbox broker adapter and
-  relay trigger — see [Current implementation status](#current-implementation-status).
+- The submit-to-delivery flow (HTTP submit → outbox → Kafka → provider delivery) needs both
+  `NOTIFICATION_KAFKA_RELAY_ENABLED=true` and `NOTIFICATION_KAFKA_CONSUMER_ENABLED=true` (step 5);
+  without the relay, notifications stay `PENDING` in the outbox. The gateway also needs Redis for
+  its submit rate limiter (step 3 starts it).
 
 ### 7. Get a token and call the API
 
@@ -305,9 +312,9 @@ Per-module details (responsibility, security posture, startup order):
 | [`aegis-api-gateway`](aegis-api-gateway/) | 8080 | Reactive entry point, JWT validation, per-route scope enforcement, CORS, and Eureka load-balanced routing |
 | [`aegis-eureka-server`](aegis-eureka-server/) | 8761 | Netflix Eureka service registry |
 | [`aegis-config-server`](aegis-config-server/) | 8888 | HTTP Basic-protected, Git-backed Spring Cloud Config server |
-| [`aegis-notification-service`](aegis-notification-service/) | 8082 | Notification API, domain lifecycle, PostgreSQL persistence, outbox use case, Kafka consumer, and provider delivery |
+| [`aegis-notification-service`](aegis-notification-service/) | 8082 | Notification and template APIs, domain lifecycle, PostgreSQL persistence, outbox relay, Kafka consumer, and provider delivery |
 | [`aegis-audit-service`](aegis-audit-service/) | 8083 | Kafka audit ingestion, recipient encryption, MongoDB persistence, and audit queries |
-| [`aegis-user-service`](aegis-user-service/) | 8084 | User administration against the Keycloak Admin API (list/create/update/disable/reset password); not yet proxied through the gateway |
+| [`aegis-user-service`](aegis-user-service/) | 8084 | User administration against the Keycloak Admin API (list/create/update/disable/reset password, realm roles); proxied through the gateway |
 
 ## HTTP API
 
@@ -376,7 +383,7 @@ timestamps, and its PostgreSQL-backed notification log.
 
 ```bash
 curl -H "Authorization: Bearer $ACCESS_TOKEN" \
-  http://localhost:8083/api/v1/audit/2a415e3e-a684-4ad7-897d-490c7c75be91
+  http://localhost:8080/api/v1/audit/2a415e3e-a684-4ad7-897d-490c7c75be91
 ```
 
 ### Search audit trails
@@ -392,19 +399,22 @@ curl -G -H "Authorization: Bearer $ACCESS_TOKEN" \
   --data-urlencode "status=SENT" \
   --data-urlencode "page=0" \
   --data-urlencode "size=20" \
-  http://localhost:8083/api/v1/audit
+  http://localhost:8080/api/v1/audit
 ```
 
 ### Manage users
 
-Not yet proxied through the gateway — call `aegis-user-service` directly on port `8084`.
+Proxied through the gateway (`/api/v1/users/**`); `aegis-user-service` is also reachable directly
+on port `8084`.
 
-`GET /api/v1/users` (`user:read`), `GET /api/v1/users/{id}` (`user:read`), `POST /api/v1/users`
-(`user:admin`), `PUT /api/v1/users/{id}` (`user:admin`), `PATCH /api/v1/users/{id}/status`
-(`user:admin`), `PUT /api/v1/users/{id}/password` (`user:admin`).
+`GET /api/v1/users` (`user:read`), `GET /api/v1/users/roles` (`user:read`),
+`GET /api/v1/users/{id}` (`user:read`), `POST /api/v1/users` (`user:admin`),
+`PUT /api/v1/users/{id}` (`user:admin`), `PUT /api/v1/users/{id}/roles` (`user:admin`),
+`PATCH /api/v1/users/{id}/status` (`user:admin`), `PUT /api/v1/users/{id}/password`
+(`user:admin`).
 
 ```bash
-curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8084/api/v1/users
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:8080/api/v1/users
 ```
 
 There is no delete endpoint by design — disabling a user via the `status` endpoint is the only
@@ -447,12 +457,14 @@ The most important environment variables are:
 | `CONFIG_REPO_URI` | None | Config Server Git backend |
 | `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | API Gateway |
+| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | API Gateway (submit rate limiter) |
 | `SENDGRID_API_KEY` / `SENDGRID_FROM_ADDRESS` | Empty / `noreply@aegisnotify.com` | Email provider |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Empty | SMS and WhatsApp providers |
 | `TWILIO_SMS_FROM_NUMBER` / `TWILIO_WHATSAPP_FROM_NUMBER` | Empty | SMS and WhatsApp providers |
 | `FCM_PROJECT_ID` / `FCM_ACCESS_TOKEN` | Empty | Push provider |
 | `NOTIFICATION_KAFKA_CONSUMER_ENABLED` | `false` | Notification Kafka listener |
-| `NOTIFICATION_KAFKA_RELAY_ENABLED` | `false` | Reserved for the unfinished outbox relay runtime |
+| `NOTIFICATION_KAFKA_RELAY_ENABLED` | `false` | Notification outbox relay (`OutboxWorkerScheduler`) |
+| `NOTIFICATION_KAFKA_RELAY_POLL_INTERVAL` | `PT5S` | Notification outbox relay |
 | `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` | `admin` / `admin` | Keycloak container admin console login |
 
 Secondary provider variables follow the same names with a `_SECONDARY_` segment, for example
@@ -481,25 +493,20 @@ the full checklist CI enforces on every pull request.
 
 ## Current implementation status
 
-This repository is an active portfolio project, currently version `0.7.0`.
+This repository is an active portfolio project, currently version `0.17.0` (latest release).
 
 Stable, source-backed building blocks include the domain models, HTTP contracts, PostgreSQL/Flyway
-and MongoDB persistence, audit encryption, Kafka consumers and error handling, provider HTTP
-adapters, service discovery, gateway routing with per-route scope enforcement, JWT validation,
-Keycloak-backed user administration, metrics, and architecture tests.
+and MongoDB persistence, audit encryption, the outbox relay (`OutboxWorkerScheduler`) with its Kafka
+broker and dead-letter adapters, Kafka consumers and error handling, provider HTTP adapters, service
+discovery, gateway routing (including the user and audit routes) with per-route scope enforcement,
+JWT validation, Keycloak-backed user administration, the template management API, notification
+cancel and manual retry endpoints, the admin frontend, metrics, and architecture tests.
 
-The following work remains before the documented asynchronous platform is complete:
+The following work remains:
 
-- Implement `MessageBrokerPort` for publishing notification outbox events to Kafka.
-- Implement `DeadLetterQueuePort` for application-driven critical failures.
-- Add a runtime trigger that invokes `PublishOutboxEventUseCase` and honors
-  `notification.kafka.relay.enabled`.
-- Make the outbox publisher use configured topic names instead of hard-coded defaults.
-- Add template provisioning through a migration, administrative API, or operational process.
-- Expose or intentionally remove the currently internal cancellation, manual retry, and manual DLT
-  use cases.
-- Proxy `aegis-user-service` routes through the API Gateway (the scope rules already exist there,
-  forward-looking).
+- Add a seed migration for templates (templates are created through the API or directly in
+  PostgreSQL).
+- Expose or intentionally remove the currently internal manual DLT use case (`SendToDlqUseCase`).
 - Validate Resilience4j and secondary-provider behavior in an end-to-end provider environment and
   define production thresholds and operational procedures.
 
