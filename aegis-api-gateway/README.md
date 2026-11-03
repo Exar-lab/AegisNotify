@@ -33,6 +33,8 @@ Audit (8083) and user (8084) endpoints are not proxied; call those services dire
 | `GET /api/v1/notifications`, `GET /api/v1/notifications/*/status` | `notification:read` |
 | `PATCH /api/v1/notifications/*/cancel` | `notification:write` |
 | `POST /api/v1/notifications/*/retry` | `notification:write` |
+| `GET /api/v1/templates`, `GET /api/v1/templates/*` | `notification:read` |
+| `POST /api/v1/templates`, `POST /api/v1/templates/render`, `PUT /api/v1/templates/*`, `PATCH /api/v1/templates/*/status` | `notification:write` |
 | `/api/v1/audit/**` | `audit:read` |
 | `GET /api/v1/users/**` | `user:read` |
 | `POST /api/v1/users`, `PUT /api/v1/users/**`, `PATCH /api/v1/users/**` | `user:admin` |
