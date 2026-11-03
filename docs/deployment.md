@@ -3,8 +3,7 @@
 This guide explains how to bring up the full AegisNotify stack from scratch, what infrastructure
 it needs, and every environment variable and key property each service reads. It was written from
 the Compose files, `application*.yml` files, Dockerfiles, and frontend sources in this repository
-(issue #196). Where the code and another document disagree, this guide states what the code does
-(see [Known documentation drift](#known-documentation-drift)).
+(issue #196). Where the code and another document disagree, this guide states what the code does.
 
 ## Navigate
 
@@ -18,7 +17,6 @@ the Compose files, `application*.yml` files, Dockerfiles, and frontend sources i
 - [Admin frontend runtime configuration](#admin-frontend-runtime-configuration)
 - [Secrets handling](#secrets-handling)
 - [Dev-only defaults to change in production](#dev-only-defaults-to-change-in-production)
-- [Known documentation drift](#known-documentation-drift)
 
 ## Topology and ports
 
@@ -478,11 +476,3 @@ Details and examples: [`aegis-admin-frontend/README.md`](../aegis-admin-frontend
 | `AEGIS_DEMO_METRICS_ENABLED` | notification service | Keep `false` so metrics reflect real traffic |
 | Keycloak redirect URIs / web origins `http://localhost:4200`, `CORS_ALLOWED_ORIGINS` default | realm file, gateway | Must match the real frontend origin |
 | Vonage sandbox URL | `VONAGE_*_BASE_URL` defaults | Sandbox endpoint |
-
-## Known documentation drift
-
-- Root `README.md` and `aegis-api-gateway/README.md` list the `CORS_ALLOWED_ORIGINS` default as
-  `http://localhost:3000`; the code (`SecurityConfig`) and `docker-compose.full.yml` use
-  `http://localhost:4200`.
-- The `aegis-api-gateway/README.md` startup list says the notification service is the only routed
-  target; the gateway also routes to the user and audit services.

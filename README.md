@@ -462,7 +462,7 @@ The most important environment variables are:
 | `CONFIG_SERVER_USER` / `CONFIG_SERVER_PASSWORD` | None | Config Server |
 | `CONFIG_REPO_URI` | None | Config Server Git backend |
 | `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | API Gateway |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | API Gateway |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | API Gateway (submit rate limiter) |
 | `SENDGRID_API_KEY` / `SENDGRID_FROM_ADDRESS` | Empty / `noreply@aegisnotify.com` | Email provider |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Empty | SMS and WhatsApp providers |

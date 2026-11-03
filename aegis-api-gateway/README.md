@@ -20,8 +20,14 @@ Routes defined in `application.yml`:
 |----------|-----------|--------|
 | `notification-submit` | `POST /api/v1/notifications` | `lb://aegis-notification-service` |
 | `notification-status` | `GET /api/v1/notifications/*/status` | `lb://aegis-notification-service` |
+| `notification-list` | `GET /api/v1/notifications` | `lb://aegis-notification-service` |
+| `dashboard-summary` | `GET /api/v1/dashboard/**` | `lb://aegis-notification-service` |
+| `metrics-summary` | `GET /api/v1/metrics/**` | `lb://aegis-notification-service` |
+| `templates-api` | `/api/v1/templates/**` | `lb://aegis-notification-service` |
+| `users-api` | `/api/v1/users/**` | `lb://aegis-user-service` |
+| `audit-read` | `GET /api/v1/audit/**` | `lb://aegis-audit-service` |
 
-Audit (8083) and user (8084) endpoints are not proxied; call those services directly. See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+`POST /api/v1/notifications` also applies a Redis-backed `RequestRateLimiter`. See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
 
 ## Scope rules
 
@@ -43,7 +49,7 @@ Audit (8083) and user (8084) endpoints are not proxied; call those services dire
 |----------|--------------|---------|-------------|
 | `server.port` | — | 8080 | HTTP port |
 | `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | `JWKS_URI` | Keycloak `localhost:8088`, realm `aegis` | JWT signing keys |
-| `spring.cloud.gateway.globalcors` allowed origins | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins; methods GET, POST, PUT, DELETE, OPTIONS |
+| Allowed CORS origin (`SecurityConfig`) | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Single CORS origin; methods GET, POST, PUT, DELETE, OPTIONS |
 | `spring.config.import` | — | `optional:configserver:http://localhost:8888` | Config Server, no credentials configured |
 | `eureka.client.register-with-eureka` / `fetch-registry` | — | `true` / `true` | Uses the default Eureka URL |
 
@@ -71,8 +77,9 @@ Start last, after the services it routes to:
 
 1. Eureka Server (8761); the gateway registers and fetches the registry.
 2. Keycloak (8088, JWKS endpoint).
-3. `aegis-notification-service` (8082), the only routed target.
-4. Optionally Config Server (8888); the import is optional.
+3. The routed services: `aegis-notification-service` (8082), `aegis-user-service` (8084) and `aegis-audit-service` (8083).
+4. Redis, used by the rate limiter on `POST /api/v1/notifications`.
+5. Optionally Config Server (8888); the import is optional.
 
 ## Run
 
@@ -83,8 +90,6 @@ Start last, after the services it routes to:
 
 ## Known limitations
 
-- No rate limiting is configured in this checkout.
-- Only the two notification routes above are defined; scope rules for audit and user paths exist but have no matching route.
 - The Config Server import carries no credentials, while the Config Server requires HTTP Basic.
 
 ## Dependencies
