@@ -58,4 +58,15 @@ describe('TemplatesApiService', () => {
 
     http.match(() => true).forEach((req) => req.flush(template));
   });
+
+  it('renders a template preview via POST /api/v1/templates/render', () => {
+    const rendered = { name: 'welcome', subject: 'Hi', body: 'Hello Ada' };
+    service
+      .render({ templateName: 'welcome', parameters: { name: 'Ada' } })
+      .subscribe((data) => expect(data).toEqual(rendered));
+    const req = http.expectOne(`${url}/render`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ templateName: 'welcome', parameters: { name: 'Ada' } });
+    req.flush(rendered);
+  });
 });

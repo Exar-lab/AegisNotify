@@ -1,218 +1,172 @@
-# Developer guide
+# Developer Guide
 
-From a fresh clone to a merged pull request (issue #201). [`CONTRIBUTING.md`](../CONTRIBUTING.md) holds the
-rules; this page holds the commands and the reasoning behind them.
+End-to-end path from a fresh clone to a merged pull request (issue #201). Rules and checklist
+live in [`CONTRIBUTING.md`](../CONTRIBUTING.md); this page holds the commands and the "how".
 
-- [Prerequisites](#prerequisites)
-- [Repository layout](#repository-layout)
-- [Build](#build)
-- [Run the stack locally](#run-the-stack-locally)
-- [Run the admin frontend](#run-the-admin-frontend)
-- [Test](#test)
-- [Architecture rules](#architecture-rules)
-- [From issue to merged PR](#from-issue-to-merged-pr)
-- [Commits and releases](#commits-and-releases)
-- [What CI runs](#what-ci-runs)
-
-## Prerequisites
+## 1. Prerequisites
 
 | Tool | Version | Needed for |
 |---|---|---|
 | JDK | 21 | All backend modules |
-| Docker + Docker Compose | recent | Keycloak, PostgreSQL, MongoDB, Kafka, Redis, and Testcontainers tests |
-| Node.js | 22 (CI version; the frontend README says 20+) | Admin frontend |
-| pnpm | 11 (`pnpm@11.22.0` in `package.json`) | Admin frontend |
-| `jq` | any | Extracting tokens in the examples |
+| Docker + Docker Compose | recent | Keycloak, PostgreSQL, MongoDB, Kafka, Redis; Testcontainers tests |
+| Node.js | 22 | `aegis-admin-frontend` (same as CI) |
+| pnpm | 11 (`pnpm@11.22.0`, pinned in `package.json`) | `aegis-admin-frontend` |
+| `jq` | any | Extracting the token in the README walkthrough |
 
-Maven is not required: the repository ships the wrapper.
+Maven is not required: use the wrapper (`./mvnw`, `mvnw.cmd` on Windows). `mvnw` is committed
+without the executable bit, so on Linux and macOS run `chmod +x mvnw` once after cloning (CI does
+the same) or call it as `sh mvnw`. The first run downloads Maven, so it needs access to Maven
+Central.
 
-> **`./mvnw: Permission denied`.** The wrapper is committed without the executable bit, and CI works around
-> it with `chmod +x ./mvnw`. Locally run `chmod +x mvnw` once, or invoke it as `sh ./mvnw ...`. On Windows
-> use `.\mvnw.cmd`.
+## 2. Modules
 
-## Repository layout
+Defined in the root [`pom.xml`](../pom.xml) (one reactor), plus the frontend (not part of Maven):
 
-| Path | What it is | Port | Architecture |
-|---|---|---|---|
-| `aegis-api-gateway` | Spring Cloud Gateway, JWT validation, per-route scope rules, rate limiting (needs Redis) | 8080 | thin |
-| `aegis-notification-service` | Ingress API, outbox, consumers, template rendering, providers | 8082 | hexagonal |
-| `aegis-audit-service` | Audit trail (MongoDB) | 8083 | hexagonal |
-| `aegis-user-service` | User management through the Keycloak Admin API | 8084 | hexagonal |
-| `aegis-eureka-server` | Service discovery | 8761 | thin |
-| `aegis-config-server` | Centralized configuration (optional locally) | 8888 | thin |
-| `aegis-api-docs-support` | Shared OpenAPI support library | n/a | library |
-| `aegis-admin-frontend` | Angular admin console (pnpm, not part of the Maven reactor) | 4200 | n/a |
-| `docker/` | Keycloak realm and login theme, compose support files | n/a | n/a |
-| `docs/` | Architecture, ADRs, runbooks, security, user manual, Postman | n/a | n/a |
-
-Keycloak runs on port 8088. See [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the pieces interact and
-`docs/security/keycloak.md` (once PR #219 merges) for the identity setup.
-
-## Build
-
-From the repository root:
-
-```bash
-./mvnw clean package -DskipTests      # build everything, skip tests
-./mvnw -pl aegis-notification-service -am package -DskipTests   # one module plus what it needs
-```
-
-## Run the stack locally
-
-The [README quick start](../README.md#installation) is the authoritative step-by-step. In short:
-
-```bash
-docker compose up -d keycloak
-docker compose -f docker-compose.full.yml up -d postgres mongo kafka redis
-```
-
-Name the infrastructure services explicitly: a bare `docker compose -f docker-compose.full.yml up -d` also
-starts the application containers, which clash with the ports of services you run from Maven.
-
-Then, in separate terminals and in this order:
-
-```bash
-./mvnw -pl aegis-eureka-server spring-boot:run
-./mvnw -pl aegis-config-server spring-boot:run
-./mvnw -pl aegis-notification-service spring-boot:run -Dspring-boot.run.profiles=local
-./mvnw -pl aegis-audit-service spring-boot:run -Dspring-boot.run.profiles=local
-./mvnw -pl aegis-user-service spring-boot:run
-./mvnw -pl aegis-api-gateway spring-boot:run
-```
-
-Things that trip people up (details and variable names are in the README):
-
-- The notification service needs provider credentials in the environment. Placeholders let it start, but
-  real sends fail. Notifications stay `PENDING` unless `NOTIFICATION_KAFKA_RELAY_ENABLED=true` and
-  `NOTIFICATION_KAFKA_CONSUMER_ENABLED=true`.
-- `aegis-user-service` requires `KEYCLOAK_ADMIN_CLIENT_SECRET`; the imported realm ships a local value.
-- There is no seed template. Create one before submitting a notification.
-- To run everything in containers instead, see "Running the full stack in Docker" in the README.
-
-## Run the admin frontend
-
-```bash
-cd aegis-admin-frontend
-pnpm install
-pnpm start          # http://localhost:4200
-```
-
-It expects Keycloak on `http://localhost:8088` (realm `aegis`, client `aegis-admin-frontend`) and the
-gateway on `8080`. Sign in with the seeded local user documented in the README.
-
-## Test
-
-### Backend
-
-| Goal | Command |
-|---|---|
-| Everything, as CI does | `./mvnw clean verify -Dcheckstyle.skip=true` (after the Checkstyle step below) |
-| Checkstyle only | `./mvnw validate -Dmaven.test.skip=true` |
-| One module and its dependencies | `./mvnw -pl aegis-notification-service -am test` |
-| One class | `./mvnw test -Dtest=ClassName` |
-| One method | `./mvnw test -Dtest=ClassName#methodName` |
-| Architecture tests, all modules | `./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false` |
-| Architecture tests, one module | `./mvnw -pl aegis-notification-service test -Dtest=ArchitectureTest` |
-
-The kinds of test in use:
-
-- **Unit and web-layer tests**: JUnit 5 with Spring Boot Test.
-- **Integration tests (`*IT`)**: Testcontainers with real PostgreSQL, Kafka, or MongoDB, mainly in
-  `aegis-notification-service` (for example `KafkaNotificationConsumerIT`,
-  `NotificationRepositoryAdapterIT`). **Docker must be running**; without it they fail with `Could not
-  find a valid Docker environment` rather than being skipped. The gateway's `RateLimiterIntegrationTest`
-  also needs Docker.
-- **Architecture tests**: an `ArchitectureTest` (ArchUnit) in each of the six Java service modules. Select
-  them with `-Dtest=ArchitectureTest`; a pattern such as `*ArchTest*` matches nothing and silently runs no
-  tests.
-- **Scope canaries**: a `SecurityScopesTest` per service that pins scope literals to
-  [`security/scopes.md`](security/scopes.md).
-
-A new behavior needs a test that fails without the change; a bug fix needs a test that reproduces the bug.
-Do not mock the thing you are verifying (for example, do not mock the database in a test about a query).
-
-### Frontend
-
-From `aegis-admin-frontend`:
-
-| Goal | Command |
-|---|---|
-| Unit tests, single run (what CI runs) | `pnpm test:ci` |
-| Unit tests, watch mode | `pnpm test` |
-| Production build (also type-checks) | `pnpm build` |
-| Static hosting tests | `pnpm test:hosting` |
-
-CI runs `pnpm install --frozen-lockfile`, `pnpm build`, then `pnpm test:ci`. Commit `pnpm-lock.yaml`
-changes together with `package.json`.
-
-## Architecture rules
-
-`aegis-notification-service`, `aegis-audit-service`, and `aegis-user-service` follow hexagonal layering,
-enforced by ArchUnit:
-
-- `domain/` depends on neither `application/` nor `infrastructure/`, and has no Spring or persistence
-  types.
-- `application/` does not depend on `infrastructure/`.
-- `infrastructure/` adapters implement ports declared in `application/`.
-
-A new outbound integration means: declare a port in `application/port/out`, implement it under
-`infrastructure/`, and wire it in Spring configuration. Read
-[`ARCHITECTURE.md`](ARCHITECTURE.md#hexagonal-layering) and the ADRs in [`adr/`](adr/README.md) before
-touching these layers. A change that violates a rule fails CI; do not suppress the test.
-
-## From issue to merged PR
-
-1. **Open an issue** using one of the templates (bug report, feature request, maintenance task). Blank
-   issues are disabled. Each template carries the checkbox "I understand this issue needs
-   `status:approved` before a PR can be opened".
-2. **Wait for `status:approved`.** A maintainer applies the label once the direction is agreed. This is a
-   convention: no workflow in `.github/workflows` enforces it, but PRs for unapproved issues are likely to
-   be asked to wait.
-3. **Branch from `main`**, named `type/<issue-number>-short-description`, for example
-   `docs/201-contributor-guide` or `fix/214-gateway-cancel-retry-routes`. One change per branch.
-4. **Write the test first** where the change has behavior, then the code.
-5. **Run the checks locally** (see [Test](#test)). Backend changes: Checkstyle, then `clean verify` with
-   Docker running. Frontend changes: `pnpm build` and `pnpm test:ci`.
-6. **Open the PR against `main`**, with `Closes #<issue>` in the description and an explanation of why, not
-   just what. State what you did not verify (for example, "not exercised end to end").
-7. **Stacked PRs.** The frontend CI deliberately has no `branches:` filter so a PR that targets another
-   feature branch still gets CI. If you stack, retarget to `main` once the parent merges, and expect to
-   resolve conflicts in shared files such as READMEs.
-8. **Merge** once CI is green and the review is resolved.
-
-## Commits and releases
-
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
-`<type>(<scope>): <description>`, with `!` or a `BREAKING CHANGE:` footer for breaking changes.
-
-[release-please](https://github.com/googleapis/release-please) runs on every push to `main`
-(`.github/workflows/release-please.yml`, config in `release-please-config.json`). It reads the commits that
-land on `main` and maintains a release PR that bumps the version in `pom.xml` and
-`aegis-eureka-server/pom.xml` and updates [`CHANGELOG.md`](../CHANGELOG.md). Merging that PR cuts the
-release. The current version is tracked in `.release-please-manifest.json`.
-
-How types map to the changelog:
-
-| Type | Changelog section |
-|---|---|
-| `feat` | Features |
-| `fix` | Bug Fixes |
-| `perf` | Performance |
-| `refactor` | Refactoring |
-| `docs` | Documentation |
-| `test` | Tests |
-| `ci` | CI/CD |
-| `chore` | hidden |
-
-A commit that does not follow the format still merges, but lands in the changelog wrongly or not at all.
-
-## What CI runs
-
-| Workflow | Triggers | Does |
+| Module | Port | Notes |
 |---|---|---|
-| `ci.yml` | push and PR to `main` | Checkstyle, `./mvnw clean verify`, SonarCloud scan, Docker image build (pushed only from `main`) |
-| `ci-frontend.yml` | push to `main`, any PR, only when `aegis-admin-frontend/**` changes | `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm test:ci` |
-| `release-please.yml` | push to `main` | Maintains the release PR |
-| `claude-code-review.yml`, `claude.yml` | PR events and mentions | Automated review assistance |
+| `aegis-api-docs-support` | - | Shared OpenAPI support library |
+| `aegis-eureka-server` | 8761 | Service discovery. Thin module |
+| `aegis-config-server` | 8888 | Config server. Thin module |
+| `aegis-notification-service` | 8082 | Hexagonal; Testcontainers ITs (PostgreSQL, Kafka) |
+| `aegis-audit-service` | 8083 | Hexagonal; Testcontainers ITs (MongoDB) |
+| `aegis-api-gateway` | 8080 | Edge, JWT validation, route scopes |
+| `aegis-user-service` | 8084 | Hexagonal; Keycloak Admin API |
+| `aegis-admin-frontend` | 4200 | Angular 22, pnpm, Vitest |
 
-A PR with a red required check cannot merge. Review rules are summarized in [`AGENTS.md`](../AGENTS.md).
+Ports are the defaults from each module's `application.yml`.
+
+## 3. Local setup
+
+```bash
+git clone https://github.com/Exar-lab/AegisNotify.git
+cd AegisNotify
+cp .env.example .env        # optional for local compose; .env is gitignored
+./mvnw clean package -DskipTests
+```
+
+To run the system, follow the README ([Installation](../README.md#installation)): Keycloak first
+(`docker compose up -d keycloak`, see [`security/keycloak.md`](security/keycloak.md)), then the
+infrastructure containers, then the services with Maven. To run everything in containers, use
+`docker-compose.full.yml` ([`deployment.md`](deployment.md)).
+
+Run one service with a profile (`local` profiles exist for the notification, audit and user services):
+
+```bash
+./mvnw -pl aegis-notification-service spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+## 4. Build, test and run commands
+
+### Backend (per module)
+
+| Goal | Command |
+|---|---|
+| Build without tests | `./mvnw clean package -DskipTests` |
+| Checkstyle only (what CI runs first) | `./mvnw validate -Dmaven.test.skip=true` |
+| Everything CI runs | `./mvnw clean verify -Dcheckstyle.skip=true` (after the Checkstyle step above) |
+| One module (+ upstream modules) | `./mvnw -pl aegis-user-service -am test` |
+| One test class | `./mvnw test -Dtest=ClassName` |
+| One test method | `./mvnw test -Dtest=ClassName#methodName` |
+| Architecture tests only | `./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false` (every backend service module has one; the flag is needed because `aegis-api-docs-support` has none and would otherwise fail with "No tests matching pattern". `CLAUDE.md` mentions `*ArchTest*`, which does not match this class name) |
+
+### Frontend (`aegis-admin-frontend`)
+
+Run from the `aegis-admin-frontend` directory.
+
+| Goal | Command |
+|---|---|
+| Install | `pnpm install --frozen-lockfile` |
+| Dev server (http://localhost:4200) | `pnpm start` |
+| Production build | `pnpm build` |
+| Unit tests, watch mode | `pnpm test` |
+| Unit tests, as CI | `pnpm test:ci` |
+| Static hosting test | `pnpm test:hosting` (not a unit test: it needs the built app served on port 4300, e.g. `pnpm build` then `npx serve dist/aegis-admin-frontend/browser -l 4300`; override the URL with `AEGIS_STATIC_URL`) |
+
+The frontend logs in through Keycloak (`aegis-admin-frontend` client), so start Keycloak before
+`pnpm start`.
+
+## 5. Testing approach
+
+- **Unit and web-layer tests**: JUnit 5 + Spring Boot Test. Fast, no Docker.
+- **Integration tests** (`*IT.java`): Testcontainers with real PostgreSQL, Kafka or MongoDB, in
+  `aegis-notification-service` and `aegis-audit-service`. Docker must be running, otherwise they
+  fail (not skip) with `Could not find a valid Docker environment`.
+- **Architecture tests**: ArchUnit `ArchitectureTest` in each service module. They fail the build
+  on layering violations (see below).
+- **Scope canaries**: `SecurityScopesTest` per service pins the scope literals documented in
+  [`security/scopes.md`](security/scopes.md).
+- **Frontend**: Vitest + JSDOM through `ng test`.
+- A new behaviour needs a test that fails without the change; a bug fix needs one that reproduces
+  the bug. Do not mock the thing under test (for example, the database in a query test).
+
+## 6. Architecture rules
+
+For `aegis-notification-service`, `aegis-audit-service` and `aegis-user-service`
+(`domain/` → `application/` → `infrastructure/`), enforced by ArchUnit:
+
+- `domain` depends on neither `application` nor `infrastructure`, and has no Spring or
+  persistence imports.
+- `application` does not depend on `infrastructure`.
+- Infrastructure adapters implement ports defined in `application` (outbound ports in
+  `application/port/out`).
+
+Also: Google Java Style (Checkstyle), no wildcard imports, constructor injection, SLF4J instead
+of `System.out`, no commented-out code. Details in
+[`ARCHITECTURE.md`](ARCHITECTURE.md#hexagonal-layering).
+
+## 7. Workflow: issue to merged PR
+
+1. **Open an issue** with a template under `.github/ISSUE_TEMPLATE/` (bug, feature or maintenance
+   task; blank issues are disabled). New issues get `status:needs-review`.
+2. **Wait for `status:approved`.** The templates state that an issue needs `status:approved`
+   before a PR can be opened. A maintainer applies it. Do not start a PR for an unapproved issue.
+3. **Branch off `main`**, named `type/<issue-number>-short-description`
+   (for example `docs/208-gateway-readme`, `feat/212-notification-composer`).
+4. **Commit with Conventional Commits** (section 8).
+5. **Run the checks locally** (section 4): Checkstyle, then `./mvnw clean verify` with Docker
+   running; for frontend changes also `pnpm build` and `pnpm test:ci`.
+6. **Open a PR to `main`** linking the issue (`Closes #N`), explaining why, and ticking the
+   checklist in `CONTRIBUTING.md`.
+7. **CI** must be green: backend `CI` (Checkstyle, `verify`, Docker image builds for the six
+   services, SonarCloud when a token is configured) and, if `aegis-admin-frontend/**` changed,
+   `CI Frontend` (`pnpm build`, `pnpm test:ci`).
+8. Address review comments, then a maintainer merges.
+
+## 8. Commit and PR conventions
+
+```text
+<type>(<scope>): <description>
+```
+
+Types: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `ci`, `chore`. Scope is the module or
+concern (`notification`, `gateway`, `security`, `frontend`, `readme`). Mark breaking changes with
+`!` or a `BREAKING CHANGE:` footer. The issue title follows the same shape
+(`feat(scope): ...`).
+
+## 9. Releases (release-please)
+
+Releases are automated by `.github/workflows/release-please.yml` on every push to `main`, using
+`release-please-config.json` and `.release-please-manifest.json`:
+
+- It reads the commit messages on `main` and opens (or updates) a **release PR** that bumps the
+  version and writes `CHANGELOG.md`. The version lives in the root `pom.xml` and
+  `aegis-eureka-server/pom.xml`; the manifest holds the current version.
+- Merging the release PR creates the tag and GitHub release. Do not edit `CHANGELOG.md` or the
+  version by hand.
+- Changelog sections: `feat` → Features, `fix` → Bug Fixes, `perf`, `refactor`, `docs`, `test`,
+  `ci`. `chore` commits are hidden from the changelog.
+- A commit that does not follow Conventional Commits is ignored or mangled in the changelog, which
+  is why commit format is a hard rule.
+- Pushes to `main` also build and publish the six service images to GHCR from the CI workflow;
+  pull requests only build them.
+
+## 10. Where things are documented
+
+| Topic | File |
+|---|---|
+| Overview, quick start, configuration | [`README.md`](../README.md) |
+| Architecture deep dive | [`ARCHITECTURE.md`](ARCHITECTURE.md), [`adr/`](adr/) |
+| Keycloak, scopes, login theme | [`security/`](security/) |
+| Docker and deployment | [`deployment.md`](deployment.md) |
+| Operations runbooks | [`runbooks/`](runbooks/) |
+| Frontend | [`../aegis-admin-frontend/README.md`](../aegis-admin-frontend/README.md) |
