@@ -87,6 +87,31 @@
           </fieldset>
         }
 
+        @if (form.controls.templateName.value) {
+          <section class="preview" aria-label="Preview" aria-live="polite">
+            <h2 class="preview-title">Preview</h2>
+            @switch (previewState().kind) {
+              @case ('loading') {
+                <p class="hint" role="status">Rendering preview…</p>
+              }
+              @case ('error') {
+                <p class="form-error" role="alert">{{ previewError() }}</p>
+              }
+              @case ('ready') {
+                @if (previewReady(); as preview) {
+                  @if (preview.subject) {
+                    <p class="preview-subject">{{ preview.subject }}</p>
+                  }
+                  <pre class="preview-body">{{ preview.body }}</pre>
+                }
+              }
+              @default {
+                <p class="hint">Fill in all parameters to preview the message.</p>
+              }
+            }
+          </section>
+        }
+
         @if (formError()) {
           <p class="form-error" role="alert">{{ formError() }}</p>
         }

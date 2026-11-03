@@ -13,11 +13,14 @@ Once `docker/keycloak/aegis-realm.json` ships (issue #74 slice 2), it MUST
 declare these same five scopes, byte-for-byte, as `clientScopes` with
 `attributes."include.in.token.scope": "true"`.
 
+For how the realm, clients, roles, and login theme are set up, see [Keycloak realm, clients, and login
+theme](keycloak.md).
+
 ## Scope Table
 
 | Scope | Enforced by | Endpoint(s) | Status |
 |---|---|---|---|
-| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry`, `POST /api/v1/templates`, `PUT /api/v1/templates/{id}`, `PATCH /api/v1/templates/{id}/status` | Active |
+| `notification:write` | `aegis-notification-service`, `aegis-api-gateway` | `POST /api/v1/notifications`, `PATCH /api/v1/notifications/{id}/cancel`, `POST /api/v1/notifications/{id}/retry`, `POST /api/v1/templates`, `POST /api/v1/templates/render`, `PUT /api/v1/templates/{id}`, `PATCH /api/v1/templates/{id}/status` | Active |
 | `notification:read` | `aegis-notification-service`, `aegis-api-gateway` | `GET /api/v1/notifications/{id}/status`, `GET /api/v1/notifications` (filtered list), `GET /api/v1/dashboard/**`, `GET /api/v1/metrics/**`, `GET /api/v1/templates`, `GET /api/v1/templates/{id}` | Active |
 | `audit:read` | `aegis-audit-service`, `aegis-api-gateway` | `/api/v1/audit/**` | Active |
 | `user:read` | `aegis-user-service`, `aegis-api-gateway` | `GET /api/v1/users`, `GET /api/v1/users/roles`, `GET /api/v1/users/{id}` | Active |

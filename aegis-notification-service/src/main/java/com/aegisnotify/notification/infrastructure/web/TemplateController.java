@@ -4,9 +4,12 @@ import com.aegisnotify.notification.application.dto.TemplateResponse;
 import com.aegisnotify.notification.application.port.in.CreateTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.GetTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.ListTemplatesUseCase;
+import com.aegisnotify.notification.application.port.in.RenderTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.SetTemplateStatusUseCase;
 import com.aegisnotify.notification.application.port.in.UpdateTemplateUseCase;
 import com.aegisnotify.notification.infrastructure.web.dto.CreateTemplateRequest;
+import com.aegisnotify.notification.infrastructure.web.dto.RenderTemplateRequest;
+import com.aegisnotify.notification.infrastructure.web.dto.RenderedTemplateHttpResponse;
 import com.aegisnotify.notification.infrastructure.web.dto.SetTemplateStatusRequest;
 import com.aegisnotify.notification.infrastructure.web.dto.UpdateTemplateRequest;
 import jakarta.validation.Valid;
@@ -41,18 +44,21 @@ public class TemplateController {
   private final CreateTemplateUseCase createTemplateUseCase;
   private final UpdateTemplateUseCase updateTemplateUseCase;
   private final SetTemplateStatusUseCase setTemplateStatusUseCase;
+  private final RenderTemplateUseCase renderTemplateUseCase;
 
   public TemplateController(
       ListTemplatesUseCase listTemplatesUseCase,
       GetTemplateUseCase getTemplateUseCase,
       CreateTemplateUseCase createTemplateUseCase,
       UpdateTemplateUseCase updateTemplateUseCase,
-      SetTemplateStatusUseCase setTemplateStatusUseCase) {
+      SetTemplateStatusUseCase setTemplateStatusUseCase,
+      RenderTemplateUseCase renderTemplateUseCase) {
     this.listTemplatesUseCase = listTemplatesUseCase;
     this.getTemplateUseCase = getTemplateUseCase;
     this.createTemplateUseCase = createTemplateUseCase;
     this.updateTemplateUseCase = updateTemplateUseCase;
     this.setTemplateStatusUseCase = setTemplateStatusUseCase;
+    this.renderTemplateUseCase = renderTemplateUseCase;
   }
 
   /**
@@ -115,5 +121,21 @@ public class TemplateController {
   public ResponseEntity<TemplateResponse> setStatus(@PathVariable UUID id,
       @Valid @RequestBody SetTemplateStatusRequest request) {
     return ResponseEntity.ok(setTemplateStatusUseCase.setStatus(id, request.active()));
+  }
+
+  /**
+   * Renders an active template with the given parameters (preview; nothing
+   * is sent). Requires {@code notification:write}, since it is only used
+   * while composing a notification.
+   *
+   * @param request the template name and parameters
+   * @return the rendered subject and body, 200; 404 if the template is
+   *     unknown or inactive; 422 if rendering fails (e.g. missing variables)
+   */
+  @PostMapping("/render")
+  public ResponseEntity<RenderedTemplateHttpResponse> render(
+      @Valid @RequestBody RenderTemplateRequest request) {
+    return ResponseEntity.ok(RenderedTemplateHttpResponse.from(
+        renderTemplateUseCase.render(request.toCommand())));
   }
 }
