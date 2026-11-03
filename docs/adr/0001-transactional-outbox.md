@@ -50,8 +50,6 @@ No alternative is recorded in the repository. The project documentation (`CLAUDE
 - Publication latency is bounded below by the relay poll interval.
 - The relay is disabled by default (`NOTIFICATION_KAFKA_RELAY_ENABLED=false`). Between `2026-06-20`
   and `2026-09-01` the outbox had no scheduled publisher (`4ece5bf`).
-- `docs/ARCHITECTURE.md` still contains passages describing the runtime trigger as not
-  implemented; those predate or lag the scheduler and should be reconciled separately.
 
 ## Related
 

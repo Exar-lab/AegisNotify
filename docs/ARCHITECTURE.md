@@ -15,8 +15,8 @@ connections below identify runtime dependencies that must be supplied outside th
 flowchart LR
     Client[API client] --> Gateway[API Gateway]
     Gateway --> Notification[Notification Service]
-    Client --> Audit[Audit Service]
-    Client --> User[User Service]
+    Gateway --> Audit[Audit Service]
+    Gateway --> User[User Service]
 
     Gateway --> Eureka[Eureka Server]
     Notification --> Eureka
@@ -38,18 +38,18 @@ flowchart LR
     User -.-> IdP
 ```
 
-The gateway routes notification submission, status, and audit read requests, and enforces the
-OAuth2 scope required for each route before proxying (`RouteScopeRules`). `GET /api/v1/audit/**`
-is now proxied to `aegis-audit-service`, scope-gated on `audit:read`. The user endpoint is still
-called directly, on port `8084` — `aegis-user-service` routes are defined in the gateway's scope
-rule table but not yet proxied. The gateway also depends on Redis (`REDIS_HOST`/`REDIS_PORT`) to
+The gateway routes notification (submit, status, list, cancel, retry), dashboard, metrics, and
+template requests to `aegis-notification-service`, `GET /api/v1/audit/**` to
+`aegis-audit-service`, and `/api/v1/users/**` to `aegis-user-service` (`application.yml` routes). It
+enforces the OAuth2 scope required for each route before proxying (`RouteScopeRules`). The gateway
+also depends on Redis (`REDIS_HOST`/`REDIS_PORT`) to
 back a per-JWT-subject token-bucket rate limiter on `POST /api/v1/notifications`; if Redis is
 unreachable, the limiter degrades open (traffic is allowed through) rather than blocking
 submissions, and the degradation is observable at `/actuator/health`. Config Server use is
 optional, but its Git
-backend and credentials must be supplied when enabled. Keycloak (`docker-compose.yml`) is the only
-piece of infrastructure this repository starts for you; PostgreSQL, Kafka, and MongoDB are run
-separately (see the [README](../README.md#installation)).
+backend and credentials must be supplied when enabled. `docker-compose.yml` starts only Keycloak;
+`docker-compose.full.yml` starts PostgreSQL, MongoDB, Kafka, Redis, Keycloak, and all six services
+(see the [README](../README.md#installation)).
 
 ## Hexagonal layering
 
@@ -115,8 +115,8 @@ sequenceDiagram
     Gateway->>Service: Forward request
     Service->>DB: Save notification, log, and outbox event
     Service-->>Client: 202 Accepted (PENDING)
-    Note over DB,Kafka: Runtime outbox trigger and broker adapter are not implemented
-    Service-->>Kafka: Publish outbox event (planned runtime link)
+    Note over DB,Kafka: Outbox relay (OutboxWorkerScheduler) runs only when notification.kafka.relay.enabled=true
+    Service-->>Kafka: Publish outbox event (relay)
     Kafka->>Service: Consume notification event
     Service->>Provider: Deliver outside DB transaction
     Provider-->>Service: Primary or fallback result
@@ -131,8 +131,10 @@ sequenceDiagram
 2. The notification service verifies that the requested template exists and is active.
 3. A notification, its initial log entry, and an outbox event are stored in one PostgreSQL
    transaction. The API returns `202 Accepted` with the notification ID and `PENDING` status.
-4. `PublishOutboxEventService` maps `HIGH`, `MEDIUM`, and `LOW` priority events to separate Kafka
-   topics, marks the outbox event processed, and advances the notification to `QUEUED`.
+4. When the relay is enabled, `OutboxWorkerScheduler` calls `PublishOutboxEventService`, which maps
+   `HIGH`, `MEDIUM`, and `LOW` priority events to separate Kafka topics through
+   `KafkaMessageBrokerAdapter`, marks the outbox event processed, and advances the notification to
+   `QUEUED`.
 5. When enabled, `KafkaNotificationConsumer` consumes the priority topics with manual
    acknowledgment and delegates processing to the application layer.
 6. The template is rendered, the notification becomes `PROCESSING`, and the channel provider is
@@ -143,9 +145,10 @@ sequenceDiagram
    database transaction commits. The audit service encrypts the recipient and atomically appends
    each event to a MongoDB audit-trail document.
 
-Steps 4 through 7 describe implemented application and consumer behavior, but the repository
-does not yet contain the runtime outbox trigger or the concrete outbound broker/DLT adapters
-needed to connect the entire path.
+Steps 4 through 7 are implemented, including the Kafka broker and dead-letter adapters
+(`KafkaMessageBrokerAdapter`, `KafkaDeadLetterQueueAdapter`). The relay (step 4) and the consumer
+(step 5) are each disabled by default and must be enabled with
+`NOTIFICATION_KAFKA_RELAY_ENABLED=true` and `NOTIFICATION_KAFKA_CONSUMER_ENABLED=true`.
 
 ## Notification lifecycle
 
@@ -163,14 +166,14 @@ stateDiagram-v2
     FAILED --> PENDING: manual retry
 ```
 
-Cancellation, manual retry, and manual DLT application use cases exist in source code, but they
-are not exposed by the current HTTP controller. `CANCELLED` is present in the domain model; the
-initial notification-table Flyway constraint does not yet include it, so cancellation persistence
-requires further migration work.
+Cancellation (`PATCH /api/v1/notifications/{id}/cancel`) and manual retry
+(`POST /api/v1/notifications/{id}/retry`) are exposed by `NotificationController`. `CANCELLED` is
+allowed by the notification-table constraint since migration `V4`. The manual DLT application use
+case (`SendToDlqUseCase`) exists in source code but is not exposed by any controller.
 
 > [!NOTE]
-> The diagram shows domain-supported transitions. The current HTTP surface supports submission
-> and status queries, not cancellation, retry, or manual DLT operations.
+> The diagram shows domain-supported transitions. The HTTP surface supports submission, status
+> queries, listing, cancellation, and retry, but not manual DLT operations.
 
 ## Kafka interfaces
 
@@ -198,10 +201,11 @@ The consumer uses manual acknowledgment, `auto.offset.reset=earliest`, two retri
 one-second fixed backoff, and then publishes to the corresponding `-dlt` topic. Micrometer
 counters record successful deliveries, failures, retries, and DLT publication by source topic.
 
-`NOTIFICATION_KAFKA_RELAY_ENABLED` exists in configuration, but no runtime component currently
-uses it to schedule or invoke the outbox publisher. Also note that `PublishOutboxEventService`
-currently maps priorities to the three default topic names directly rather than reading renamed
-topic values from configuration.
+The outbox relay is also disabled by default. Enable it with `NOTIFICATION_KAFKA_RELAY_ENABLED=true`
+(poll interval `NOTIFICATION_KAFKA_RELAY_POLL_INTERVAL`, default `PT5S`); `OutboxWorkerScheduler`
+then invokes the outbox publisher on that schedule. The publisher maps priorities to the three
+default topic names, and `KafkaMessageBrokerConfig.topicAliases` translates them to the configured
+`notification.kafka.topics.*` names before publishing.
 
 ### Audit topic
 
@@ -286,6 +290,8 @@ included in the repository.
 
 ```text
 AegisNotify/
+├── aegis-admin-frontend/        # Angular admin UI (not a Maven module)
+├── aegis-api-docs-support/      # Shared OpenAPI / Swagger UI auto-configuration (library jar)
 ├── aegis-api-gateway/           # Reactive routing, JWT validation, and per-route scope enforcement
 ├── aegis-audit-service/         # Kafka-to-MongoDB audit trail service
 ├── aegis-config-server/         # Git-backed Spring Cloud Config server
@@ -294,5 +300,5 @@ AegisNotify/
 ├── aegis-user-service/          # User administration against the Keycloak Admin API
 ├── mvnw                          # Unix Maven wrapper
 ├── mvnw.cmd                      # Windows Maven wrapper
-└── pom.xml                       # Parent build and six-module reactor
+└── pom.xml                       # Parent build and seven-module reactor
 ```
