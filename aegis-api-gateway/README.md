@@ -9,7 +9,7 @@ Responsibility:
 - Validate bearer JWTs (OAuth2 resource server).
 - Enforce per-route OAuth2 scopes.
 - Route requests to services discovered through Eureka (`lb://`).
-- Relay the incoming token to downstream services (default filter `TokenRelay`).
+- Forward the caller's `Authorization` header unchanged to downstream services. No `TokenRelay` filter is applied: this gateway authenticates callers as a resource server, for which that filter is a no-op (see `TokenRelayPropagationTest`).
 - Apply CORS policy.
 
 ## Routes
@@ -95,6 +95,6 @@ Start last, after the services it routes to:
 ## Dependencies
 
 - Spring Cloud Gateway (WebFlux)
-- Spring Security OAuth2 Resource Server, OAuth2 Client (TokenRelay)
+- Spring Security OAuth2 Resource Server (the OAuth2 Client starter is also in the `pom.xml`, but `TokenRelay` is not used)
 - Spring Cloud Netflix Eureka Client and Config client
 - Spring Boot Starter Actuator
