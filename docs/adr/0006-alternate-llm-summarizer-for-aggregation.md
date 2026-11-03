@@ -67,4 +67,5 @@ the buffer was re-held on every outbox poll indefinitely. Resolved events now ca
 ## Related
 
 - [ADR-0001](0001-transactional-outbox.md) (relay and hold guard), [ADR-0002](0002-resilience4j-circuit-breakers-per-provider.md)
+- [Aggregation and summarizer guide](../aggregation.md) (configuration, failure behavior, schema).
 - Issue #86; PR #193.
