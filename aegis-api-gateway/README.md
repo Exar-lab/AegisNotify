@@ -22,6 +22,8 @@ Routes defined in `application.yml`:
 |----------|-----------|--------|
 | `notification-submit` | `POST /api/v1/notifications` (rate limited) | `lb://aegis-notification-service` |
 | `notification-status` | `GET /api/v1/notifications/*/status` | `lb://aegis-notification-service` |
+| `notification-cancel` | `PATCH /api/v1/notifications/*/cancel` | `lb://aegis-notification-service` |
+| `notification-retry` | `POST /api/v1/notifications/*/retry` | `lb://aegis-notification-service` |
 | `notification-list` | `GET /api/v1/notifications` | `lb://aegis-notification-service` |
 | `dashboard-summary` | `GET /api/v1/dashboard/**` | `lb://aegis-notification-service` |
 | `metrics-summary` | `GET /api/v1/metrics/**` | `lb://aegis-notification-service` |
@@ -29,7 +31,7 @@ Routes defined in `application.yml`:
 | `users-api` | `/api/v1/users/**` (any method) | `lb://aegis-user-service` |
 | `audit-read` | `GET /api/v1/audit/**` | `lb://aegis-audit-service` |
 
-Audit and user endpoints are proxied. Notification cancel and retry (`PATCH .../cancel`, `POST .../retry`) have scope rules but no route in `application.yml`; see [Known limitations](#known-limitations). See also [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+Notification, audit and user endpoints are proxied. See also [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
 
 ## Scope rules
 
@@ -108,7 +110,6 @@ Start last, after the services it routes to:
 
 ## Known limitations
 
-- `PATCH /api/v1/notifications/*/cancel` and `POST /api/v1/notifications/*/retry` have scope rules in `RouteScopeRules` but no matching route in `application.yml`, so the gateway does not proxy them.
 - Rate limiting applies only to `POST /api/v1/notifications`.
 - The Config Server import carries no credentials, while the Config Server requires HTTP Basic.
 
