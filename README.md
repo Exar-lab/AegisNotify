@@ -35,7 +35,9 @@ default; see [Current implementation status](#current-implementation-status) and
 
 For system diagrams, the notification lifecycle, Kafka interfaces, persistence, and resilience
 details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+[`CONTRIBUTING.md`](CONTRIBUTING.md). For incident procedures (open circuits, provider failover,
+DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
+[`docs/runbooks/`](docs/runbooks/README.md).
 
 ## At a glance
 
