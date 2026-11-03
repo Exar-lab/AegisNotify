@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, ParamMap, convertToParamMap, provideRouter } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationsPage } from './notifications.page';
 
 describe('NotificationsPage', () => {
@@ -74,6 +75,41 @@ describe('NotificationsPage', () => {
       .flush({ content: [], totalElements: 0, page: 0, size: 20 });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No notifications found');
+  });
+  describe('New notification button', () => {
+    function render(granted: boolean) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [NotificationsPage],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: ActivatedRoute, useValue: route },
+          {
+            provide: AuthService,
+            useValue: { hasScope: (scope: string) => granted && scope === 'notification:write' },
+          },
+        ],
+      });
+      http = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(NotificationsPage);
+      fixture.detectChanges();
+      http
+        .expectOne((req) => req.params.get('page') === '0')
+        .flush({ content: [], totalElements: 0, page: 0, size: 20 });
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('links to the composer when the user has notification:write', () => {
+      const link = render(true).querySelector('a[href="/notifications/new"]');
+      expect(link?.textContent).toContain('New notification');
+    });
+
+    it('is hidden without notification:write', () => {
+      expect(render(false).querySelector('a[href="/notifications/new"]')).toBeNull();
+    });
   });
   it('cancels stale requests when filters change', () => {
     const fixture = TestBed.createComponent(NotificationsPage);

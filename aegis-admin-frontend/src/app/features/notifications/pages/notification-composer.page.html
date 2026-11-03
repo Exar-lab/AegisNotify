@@ -1,0 +1,107 @@
+<div class="composer-page page" [attr.aria-busy]="templatesState().kind === 'loading'">
+  <nav aria-label="Breadcrumb" class="breadcrumb">
+    <a routerLink="/notifications">Notifications</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">New notification</span>
+  </nav>
+
+  <header>
+    <div>
+      <h1 class="page-title">New notification</h1>
+      <p class="page-lede">Send a notification manually through an active template.</p>
+    </div>
+  </header>
+
+  @switch (templatesState().kind) {
+    @case ('loading') {
+      <section class="panel">
+        <div class="message" role="status">Loading templates…</div>
+      </section>
+    }
+    @case ('error') {
+      <section class="panel">
+        <div class="message" role="alert">
+          <h2>Couldn't load templates</h2>
+          <p>Please go back and try again.</p>
+          <a routerLink="/notifications">Back to Notifications</a>
+        </div>
+      </section>
+    }
+    @default {
+      <form class="composer-form panel" [formGroup]="form" (ngSubmit)="submit()" aria-label="New notification" novalidate>
+        <div class="row">
+          <label
+            >Channel
+            <select formControlName="channel">
+              @for (channel of channels; track channel) {
+                <option [value]="channel">{{ channel }}</option>
+              }
+            </select>
+          </label>
+          <label
+            >Priority
+            <select formControlName="priority">
+              @for (priority of priorities; track priority) {
+                <option [value]="priority">{{ priority }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <label
+          >Recipient
+          <input formControlName="recipient" autocomplete="off" maxlength="320" />
+          @if (recipientMessage(); as message) {
+            <span class="field-error" role="alert">{{ message }}</span>
+          }
+        </label>
+
+        <label
+          >Template
+          <select formControlName="templateName">
+            <option value="">Select a template…</option>
+            @for (template of availableTemplates(); track template.id) {
+              <option [value]="template.name">{{ template.name }}</option>
+            }
+          </select>
+          @if (availableTemplates().length === 0) {
+            <span class="hint">No active templates for this channel.</span>
+          }
+          @if (form.controls.templateName.touched && form.controls.templateName.invalid) {
+            <span class="field-error" role="alert">Select a template.</span>
+          }
+        </label>
+
+        @if (parameterNames().length > 0) {
+          <fieldset formGroupName="parameters">
+            <legend>Template parameters</legend>
+            @for (name of parameterNames(); track name) {
+              <label
+                >{{ name }}
+                <input [formControlName]="name" autocomplete="off" />
+                @if (form.controls.parameters.controls[name]?.touched && form.controls.parameters.controls[name]?.invalid) {
+                  <span class="field-error" role="alert">{{ name }} is required.</span>
+                }
+              </label>
+            }
+          </fieldset>
+        }
+
+        @if (formError()) {
+          <p class="form-error" role="alert">{{ formError() }}</p>
+        }
+
+        <div class="form-actions">
+          <a class="button secondary" routerLink="/notifications">Cancel</a>
+          <button type="submit" [disabled]="submitting()">
+            @if (submitting()) {
+              Sending…
+            } @else {
+              Send notification
+            }
+          </button>
+        </div>
+      </form>
+    }
+  }
+</div>

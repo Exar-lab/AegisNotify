@@ -8,6 +8,29 @@
   position: relative;
   z-index: 1;
 }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: var(--text-inverted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.button:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
 .filters {
   display: flex;
   flex-wrap: wrap;

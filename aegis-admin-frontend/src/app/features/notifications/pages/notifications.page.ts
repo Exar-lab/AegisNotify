@@ -5,6 +5,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, catchError, map, of, startWith, switchMap } from 'rxjs';
+import { AuthService } from '../../../core/auth/auth.service';
+import { NOTIFICATION_WRITE_SCOPE } from '../../../core/auth/scope.guard';
 import { NotificationPage } from '../../../core/models/notification-list.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
 import { ShieldTokensComponent } from '../components/shield-tokens/shield-tokens.component';
@@ -29,6 +31,8 @@ const defaults = {
 })
 export class NotificationsPage {
   private readonly api = inject(NotificationsApiService);
+  /** Only users holding `notification:write` can open the composer. */
+  readonly canCompose = inject(AuthService).hasScope(NOTIFICATION_WRITE_SCOPE);
   private readonly route = inject(ActivatedRoute);
   private readonly initialChannel = this.route.snapshot.queryParamMap.get('channel') ?? '';
   private readonly initialQuery = {
