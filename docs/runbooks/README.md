@@ -12,6 +12,9 @@ follows the same structure: **symptom, detection, diagnosis, remediation, escala
 | [FAILED_CRITICAL notifications](05-failed-critical.md) | Notifications end in `FAILED_CRITICAL` |
 | [Dependency outages](06-dependency-outages.md) | Keycloak, Eureka, or Config Server is unavailable (Kafka, PostgreSQL, Redis covered briefly) |
 
+For the full metric catalog, a sample Prometheus scrape config, suggested dashboard panels, and suggested
+alert rules that point back to these runbooks, see [Observability](../observability.md).
+
 ## How to read these runbooks
 
 These documents are written against the code and configuration in this repository, not against a
@@ -34,7 +37,8 @@ specific production deployment. Three rules apply throughout:
 
 Knowing the gaps up front avoids searching for tooling that is not there:
 
-- No Prometheus alert rules, Grafana dashboards, or scrape configuration are committed.
+- No Prometheus alert rules, Grafana dashboards, or scrape configuration are committed. Suggested
+  ones, untested against a live Prometheus, are in [Observability](../observability.md).
 - No on-call, paging, or ticketing integration exists. Escalation sections therefore describe
   *when* to escalate and *what evidence to attach*; the owning team must supply the contact path.
 - No DLQ browser or replay tool exists, and nothing in the codebase consumes `notifications-dlq`.
