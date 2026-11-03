@@ -37,7 +37,8 @@ For system diagrams, the notification lifecycle, Kafka interfaces, persistence, 
 details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
 [`CONTRIBUTING.md`](CONTRIBUTING.md). For incident procedures (open circuits, provider failover,
 DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
-[`docs/runbooks/`](docs/runbooks/README.md).
+[`docs/runbooks/`](docs/runbooks/README.md). For the optional AI aggregation and summarizer feature,
+see [`docs/aggregation.md`](docs/aggregation.md).
 
 ## At a glance
 
