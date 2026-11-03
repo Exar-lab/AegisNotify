@@ -44,6 +44,15 @@ export class AuthService {
   }
 
   /**
+   * Checks whether the access token's space-delimited `scope` claim contains the given scope.
+   * Whole-scope match only; returns false when there is no token or no usable claim.
+   */
+  hasScope(scope: string): boolean {
+    const claim: unknown = this.keycloak?.tokenParsed?.['scope'];
+    return typeof claim === 'string' && claim.split(/\s+/).includes(scope);
+  }
+
+  /**
    * Retrieves the user's display name from the token, falling back to username.
    */
   getDisplayName(): string {
