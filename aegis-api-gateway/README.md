@@ -9,8 +9,10 @@ Responsibility:
 - Validate bearer JWTs (OAuth2 resource server).
 - Enforce per-route OAuth2 scopes.
 - Route requests to services discovered through Eureka (`lb://`).
-- Relay the incoming token to downstream services (default filter `TokenRelay`).
+- Rate-limit notification submissions per caller (Redis-backed).
 - Apply CORS policy.
+
+The gateway does not use a `TokenRelay` filter. It was removed because the gateway authenticates callers as a resource server (`JwtAuthenticationToken`), for which `TokenRelay` is a no-op (see the comment in `application.yml` and `TokenRelayPropagationTest`). The caller's `Authorization` header reaches downstream services through normal proxy header forwarding.
 
 ## Routes
 
@@ -18,10 +20,16 @@ Routes defined in `application.yml`:
 
 | Route id | Predicate | Target |
 |----------|-----------|--------|
-| `notification-submit` | `POST /api/v1/notifications` | `lb://aegis-notification-service` |
+| `notification-submit` | `POST /api/v1/notifications` (rate limited) | `lb://aegis-notification-service` |
 | `notification-status` | `GET /api/v1/notifications/*/status` | `lb://aegis-notification-service` |
+| `notification-list` | `GET /api/v1/notifications` | `lb://aegis-notification-service` |
+| `dashboard-summary` | `GET /api/v1/dashboard/**` | `lb://aegis-notification-service` |
+| `metrics-summary` | `GET /api/v1/metrics/**` | `lb://aegis-notification-service` |
+| `templates-api` | `/api/v1/templates/**` (any method) | `lb://aegis-notification-service` |
+| `users-api` | `/api/v1/users/**` (any method) | `lb://aegis-user-service` |
+| `audit-read` | `GET /api/v1/audit/**` | `lb://aegis-audit-service` |
 
-Audit (8083) and user (8084) endpoints are not proxied; call those services directly. See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
+Audit and user endpoints are proxied. Notification cancel and retry (`PATCH .../cancel`, `POST .../retry`) have scope rules but no route in `application.yml`; see [Known limitations](#known-limitations). See also [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md).
 
 ## Scope rules
 
@@ -31,11 +39,23 @@ Audit (8083) and user (8084) endpoints are not proxied; call those services dire
 |-----------------|----------------|
 | `POST /api/v1/notifications` | `notification:write` |
 | `GET /api/v1/notifications`, `GET /api/v1/notifications/*/status` | `notification:read` |
-| `PATCH /api/v1/notifications/*/cancel` | `notification:write` |
-| `POST /api/v1/notifications/*/retry` | `notification:write` |
-| `/api/v1/audit/**` | `audit:read` |
+| `PATCH /api/v1/notifications/*/cancel`, `POST /api/v1/notifications/*/retry` | `notification:write` |
+| `GET /api/v1/dashboard/**`, `GET /api/v1/metrics/**` | `notification:read` |
+| `GET /api/v1/templates`, `GET /api/v1/templates/*` | `notification:read` |
+| `POST /api/v1/templates`, `PUT /api/v1/templates/*`, `PATCH /api/v1/templates/*/status` | `notification:write` |
+| `/api/v1/audit/**` (any method) | `audit:read` |
 | `GET /api/v1/users/**` | `user:read` |
 | `POST /api/v1/users`, `PUT /api/v1/users/**`, `PATCH /api/v1/users/**` | `user:admin` |
+
+Any other `/api/v1/**` request only needs a valid JWT.
+
+## Rate limiting
+
+Only `notification-submit` (`POST /api/v1/notifications`) uses the `RequestRateLimiter` filter (Redis token bucket).
+
+- Bucket key (`userKeyResolver`): JWT `sub`, falling back to `jti` when `sub` is absent. If no key can be resolved, the filter rejects the request (`deny-empty-key`, status 403).
+- Defaults: replenish rate 100 tokens/s, 60 tokens per request (about 100 requests per minute sustained), burst capacity 1200 (20-request burst). Override with `RATE_LIMIT_REPLENISH_RATE`, `RATE_LIMIT_BURST_CAPACITY`, `RATE_LIMIT_REQUESTED_TOKENS`.
+- Redis outage: the limiter degrades open (traffic is admitted), per the `RateLimiterConfig` javadoc. Lettuce timeouts are short (`REDIS_TIMEOUT` 250ms, `REDIS_CONNECT_TIMEOUT` 500ms) and the Redis health contributor surfaces the state at `/actuator/health`.
 
 ## Configuration
 
@@ -43,16 +63,20 @@ Audit (8083) and user (8084) endpoints are not proxied; call those services dire
 |----------|--------------|---------|-------------|
 | `server.port` | — | 8080 | HTTP port |
 | `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | `JWKS_URI` | Keycloak `localhost:8088`, realm `aegis` | JWT signing keys |
-| `spring.cloud.gateway.globalcors` allowed origins | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins; methods GET, POST, PUT, DELETE, OPTIONS |
-| `spring.config.import` | — | `optional:configserver:http://localhost:8888` | Config Server, no credentials configured |
-| `eureka.client.register-with-eureka` / `fetch-registry` | — | `true` / `true` | Uses the default Eureka URL |
+| CORS allowed origin (`corsConfigurationSource` in `SecurityConfig`) | `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Single origin; methods GET, POST, PUT, PATCH, DELETE, OPTIONS; all headers |
+| `spring.data.redis.host` / `port` | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Rate limiter store |
+| `spring.data.redis.timeout` / `connect-timeout` | `REDIS_TIMEOUT` / `REDIS_CONNECT_TIMEOUT` | `250ms` / `500ms` | Redis timeouts |
+| `spring.config.import` | — | `optional:configserver:` | Config Server (Spring default URI), optional |
+| `eureka.client.service-url.defaultZone` | `EUREKA_HOST`, `EUREKA_SECURITY_USER`, `EUREKA_SECURITY_PASSWORD` | host `localhost`; no default for user and password | Eureka at port 8761 with basic credentials in the URL |
+
+CORS is enforced by Spring Security (`SecurityConfig`), not `spring.cloud.gateway.globalcors`.
 
 ## Security
 
 - Reactive JWT resource server; CSRF is disabled.
-- Public: `/actuator/health`, `/actuator/info`. `/actuator/prometheus` is exposed but requires authentication.
+- Public: `OPTIONS` preflight requests, `/actuator/health`, `/actuator/info`. `/actuator/prometheus` is exposed but requires authentication.
 - Every other request requires authentication; `/api/v1/**` requires the scope listed above.
-- Authorization failures use `ScopeAwareAccessDeniedHandler`.
+- Authorization failures use `ScopeAwareAccessDeniedHandler`, which returns a 403 JSON body naming the required scope (`insufficient_scope`).
 - Downstream services validate the JWT again; the gateway is not the only enforcement point.
 
 ## API documentation routes
@@ -71,8 +95,9 @@ Start last, after the services it routes to:
 
 1. Eureka Server (8761); the gateway registers and fetches the registry.
 2. Keycloak (8088, JWKS endpoint).
-3. `aegis-notification-service` (8082), the only routed target.
-4. Optionally Config Server (8888); the import is optional.
+3. Redis (rate limiting; the gateway degrades open if it is down).
+4. The routed services: `aegis-notification-service`, `aegis-user-service`, `aegis-audit-service`.
+5. Optionally Config Server (8888); the import is optional.
 
 ## Run
 
@@ -83,13 +108,14 @@ Start last, after the services it routes to:
 
 ## Known limitations
 
-- No rate limiting is configured in this checkout.
-- Only the two notification routes above are defined; scope rules for audit and user paths exist but have no matching route.
-- The Config Server import carries no credentials, while the Config Server requires HTTP Basic.
+- `PATCH /api/v1/notifications/*/cancel` and `POST /api/v1/notifications/*/retry` have scope rules in `RouteScopeRules` but no matching route in `application.yml`, so the gateway does not proxy them.
+- Rate limiting applies only to `POST /api/v1/notifications`.
+- The Config Server import carries no credentials.
 
 ## Dependencies
 
 - Spring Cloud Gateway (WebFlux)
-- Spring Security OAuth2 Resource Server, OAuth2 Client (TokenRelay)
+- Spring Security OAuth2 Resource Server and OAuth2 Client
+- Spring Data Redis Reactive (rate limiter)
 - Spring Cloud Netflix Eureka Client and Config client
 - Spring Boot Starter Actuator
