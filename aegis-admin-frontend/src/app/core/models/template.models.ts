@@ -33,3 +33,15 @@ export interface UpdateTemplateRequest {
 export interface SetTemplateStatusRequest {
   active: boolean;
 }
+
+export interface RenderTemplateRequest {
+  templateName: string;
+  parameters: Record<string, string>;
+}
+
+/** Result of `POST /api/v1/templates/render`: nothing is sent, this is only a preview. */
+export interface RenderTemplateResponse {
+  name: string;
+  subject: string | null;
+  body: string;
+}

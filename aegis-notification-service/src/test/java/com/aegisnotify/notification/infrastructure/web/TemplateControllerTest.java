@@ -14,19 +14,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aegisnotify.notification.application.dto.CreateTemplateCommand;
+import com.aegisnotify.notification.application.dto.RenderTemplateCommand;
+import com.aegisnotify.notification.application.dto.RenderedTemplateResponse;
 import com.aegisnotify.notification.application.dto.TemplateResponse;
 import com.aegisnotify.notification.application.dto.UpdateTemplateCommand;
 import com.aegisnotify.notification.application.port.in.CreateTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.GetTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.ListTemplatesUseCase;
+import com.aegisnotify.notification.application.port.in.RenderTemplateUseCase;
 import com.aegisnotify.notification.application.port.in.SetTemplateStatusUseCase;
 import com.aegisnotify.notification.application.port.in.UpdateTemplateUseCase;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.exception.DuplicateTemplateNameException;
 import com.aegisnotify.notification.domain.exception.TemplateNotFoundException;
+import com.aegisnotify.notification.domain.exception.TemplateRenderingException;
 import com.aegisnotify.notification.infrastructure.config.SecurityConfig;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +66,9 @@ class TemplateControllerTest {
 
   @MockitoBean
   private SetTemplateStatusUseCase setTemplateStatusUseCase;
+
+  @MockitoBean
+  private RenderTemplateUseCase renderTemplateUseCase;
 
   private static TemplateResponse response(UUID id, boolean active) {
     return new TemplateResponse(id, "welcome", Channel.EMAIL, "Hi", "Hello {{name}}",
@@ -309,5 +317,91 @@ class TemplateControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"active\":true}"))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void render_validRequest_returns200WithSubjectAndBody() throws Exception {
+    var expected = new RenderTemplateCommand("welcome", Map.of("name", "Ana"));
+    when(renderTemplateUseCase.render(expected))
+        .thenReturn(new RenderedTemplateResponse("welcome", "Hi", "Hello Ana"));
+
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> WRITE))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"welcome\",\"parameters\":{\"name\":\"Ana\"}}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("welcome"))
+        .andExpect(jsonPath("$.subject").value("Hi"))
+        .andExpect(jsonPath("$.body").value("Hello Ana"));
+  }
+
+  @Test
+  void render_missingParameters_defaultsToEmptyMap() throws Exception {
+    var expected = new RenderTemplateCommand("welcome", Map.of());
+    when(renderTemplateUseCase.render(expected))
+        .thenReturn(new RenderedTemplateResponse("welcome", null, "Hello"));
+
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> WRITE))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"welcome\"}"))
+        .andExpect(status().isOk());
+
+    verify(renderTemplateUseCase).render(expected);
+  }
+
+  @Test
+  void render_unknownTemplate_returns404() throws Exception {
+    when(renderTemplateUseCase.render(any()))
+        .thenThrow(new TemplateNotFoundException("ghost"));
+
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> WRITE))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"ghost\"}"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.status").value(404));
+  }
+
+  @Test
+  void render_missingVariables_returns422() throws Exception {
+    when(renderTemplateUseCase.render(any()))
+        .thenThrow(new TemplateRenderingException("Missing required variables: [name]"));
+
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> WRITE))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"welcome\",\"parameters\":{}}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.status").value(422))
+        .andExpect(jsonPath("$.message").value("Missing required variables: [name]"));
+  }
+
+  @Test
+  void render_blankTemplateName_returns400() throws Exception {
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> WRITE))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\" \"}"))
+        .andExpect(status().isBadRequest());
+    verifyNoInteractions(renderTemplateUseCase);
+  }
+
+  @Test
+  void render_withoutWriteScope_returns403() throws Exception {
+    mockMvc.perform(post("/api/v1/templates/render")
+            .with(jwt().authorities(() -> READ))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"welcome\"}"))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(renderTemplateUseCase);
+  }
+
+  @Test
+  void render_noToken_returns401() throws Exception {
+    mockMvc.perform(post("/api/v1/templates/render")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"templateName\":\"welcome\"}"))
+        .andExpect(status().isUnauthorized());
   }
 }

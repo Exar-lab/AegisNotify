@@ -4,7 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { TemplateChannel, TemplateResponse } from '../../../core/models/template.models';
-import { NotificationComposerPage, recipientError } from './notification-composer.page';
+import {
+  NotificationComposerPage,
+  PREVIEW_DEBOUNCE_MS,
+  recipientError,
+} from './notification-composer.page';
 
 function tpl(
   name: string,
@@ -198,5 +202,111 @@ describe('NotificationComposerPage', () => {
     http.expectOne(templatesUrl).flush('x', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain("Couldn't load templates");
+  });
+
+  describe('preview', () => {
+    const renderUrl = `${templatesUrl}/render`;
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    function fill(page: NotificationComposerPage) {
+      page.form.controls.templateName.setValue('welcome');
+      page.form.controls.parameters.controls['name'].setValue('Ada');
+      page.form.controls.parameters.controls['code'].setValue('1234');
+    }
+
+    it('renders after the debounce once the template and all parameters are filled', () => {
+      const { fixture, page } = setup();
+      fill(page);
+      http.expectNone(renderUrl);
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      const req = http.expectOne(renderUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        templateName: 'welcome',
+        parameters: { name: 'Ada', code: '1234' },
+      });
+      req.flush({ name: 'welcome', subject: 'Hi Ada', body: 'Your code is 1234' });
+      fixture.detectChanges();
+      const text = fixture.nativeElement.textContent as string;
+      expect(text).toContain('Preview');
+      expect(text).toContain('Hi Ada');
+      expect(text).toContain('Your code is 1234');
+    });
+
+    it('does not call the endpoint while a parameter is missing', () => {
+      const { fixture, page } = setup();
+      page.form.controls.templateName.setValue('welcome');
+      page.form.controls.parameters.controls['name'].setValue('Ada');
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS * 2);
+      http.expectNone(renderUrl);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Fill in all parameters');
+    });
+
+    it('debounces rapid edits into a single request', () => {
+      const { page } = setup();
+      fill(page);
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS - 100);
+      page.form.controls.parameters.controls['code'].setValue('9999');
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS - 100);
+      http.expectNone(renderUrl);
+      vi.advanceTimersByTime(100);
+      const req = http.expectOne(renderUrl);
+      expect(req.request.body.parameters.code).toBe('9999');
+      req.flush({ name: 'welcome', subject: null, body: 'x' });
+    });
+
+    it('shows the backend message inline on 422 and 404', () => {
+      const { fixture, page } = setup();
+      fill(page);
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      http
+        .expectOne(renderUrl)
+        .flush(
+          { status: 422, message: 'Missing required variables: [code]' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Missing required variables: [code]');
+
+      page.form.controls.parameters.controls['code'].setValue('5678');
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      http
+        .expectOne(renderUrl)
+        .flush({ message: 'Template not found: welcome' }, { status: 404, statusText: 'Not Found' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Template not found: welcome');
+    });
+
+    it('shows a generic inline error on other failures', () => {
+      const { fixture, page } = setup();
+      fill(page);
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      http.expectOne(renderUrl).flush('boom', { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain("Couldn't load the preview");
+    });
+
+    it('clears the preview when a parameter is emptied', () => {
+      const { fixture, page } = setup();
+      fill(page);
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      http.expectOne(renderUrl).flush({ name: 'welcome', subject: 'Hi Ada', body: 'Body' });
+      fixture.detectChanges();
+      page.form.controls.parameters.controls['code'].setValue('');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).not.toContain('Hi Ada');
+    });
+
+    it('previews a template without variables right away', () => {
+      const { page } = setup();
+      page.form.controls.templateName.setValue('plain');
+      vi.advanceTimersByTime(PREVIEW_DEBOUNCE_MS);
+      const req = http.expectOne(renderUrl);
+      expect(req.request.body).toEqual({ templateName: 'plain', parameters: {} });
+      req.flush({ name: 'plain', subject: null, body: 'x' });
+    });
   });
 });

@@ -227,6 +227,24 @@ class SecurityConfigTest {
   }
 
   @Test
+  void templateRender_withoutNotificationWriteScope_returns403WithRequiredScope() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:read"))
+        .post().uri("/api/v1/templates/render")
+        .exchange()
+        .expectStatus().isForbidden()
+        .expectBody()
+        .jsonPath("$.requiredScope").isEqualTo("notification:write");
+  }
+
+  @Test
+  void templateRender_withNotificationWriteScope_isNotForbidden() {
+    webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
+        .post().uri("/api/v1/templates/render")
+        .exchange()
+        .expectStatus().is5xxServerError();
+  }
+
+  @Test
   void templateUpdate_withNotificationWriteScope_isNotForbidden() {
     webTestClient.mutateWith(mockJwt().authorities(() -> "SCOPE_notification:write"))
         .put().uri("/api/v1/templates/some-id")
