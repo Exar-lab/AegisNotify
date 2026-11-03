@@ -2,7 +2,8 @@
 
 `AegisNotify.postman_collection.json` covers the 23 requests exposed by `aegis-notification-service`,
 `aegis-user-service`, and `aegis-audit-service`, generated from their live OpenAPI specs
-(issue #169). The gateway's `/docs/<service>/**` routes that serve those specs only exist
+(issue #169), plus a hand-maintained **Quick start** folder with runnable examples for each channel
+(issue #202). The gateway's `/docs/<service>/**` routes that serve those specs only exist
 under the `local` Spring profile and are never reachable in a normal deployment — see
 [`aegis-api-gateway`'s `ApiDocsConfig`](../../aegis-api-gateway/src/main/java/com/aegisnotify/gateway/config/ApiDocsConfig.java).
 
@@ -26,6 +27,13 @@ under the `local` Spring profile and are never reachable in a normal deployment 
 
    (Same client this repo's root README already documents for local JWT retrieval —
    `aegis-dev-cli`/`aegis-dev` exist only for local development.)
+
+## Quick start folder
+
+Run the requests in order: create a template for the channel you want (`1. Create template`), submit a
+notification with it (`2. Submit ...`), then `3. Get status`. Each submit stores the returned id in the
+collection variable `notificationId`, which `3. Get status` reads. The folder is not generated from
+OpenAPI; keep its bodies in sync with [`../api-guide.md`](../api-guide.md) when the API changes.
 
 ## Regenerating
 
@@ -60,3 +68,6 @@ than hand-editing it.
    variable. There's no saved script for this merge step — it's a handful of lines of JSON
    surgery (see `AegisNotify.postman_collection.json`'s `info`/`auth`/`variable`/`item`
    structure for the shape to reproduce).
+5. Re-add the **Quick start** folder as the first item, and the `notificationId` collection variable.
+   Regeneration replaces the whole file, so the folder is lost otherwise; recover it from git history
+   (`git show <commit>:docs/postman/AegisNotify.postman_collection.json`) and copy the folder over.

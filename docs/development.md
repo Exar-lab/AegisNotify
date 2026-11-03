@@ -67,7 +67,7 @@ Run one service with a profile (`local` profiles exist for the notification, aud
 | One module (+ upstream modules) | `./mvnw -pl aegis-user-service -am test` |
 | One test class | `./mvnw test -Dtest=ClassName` |
 | One test method | `./mvnw test -Dtest=ClassName#methodName` |
-| Architecture tests only | `./mvnw test -Dtest=ArchitectureTest` (every backend service module has one; `CLAUDE.md` mentions `*ArchTest*`, which does not match this class name) |
+| Architecture tests only | `./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false` (every backend service module has one; the flag is needed because `aegis-api-docs-support` has none and would otherwise fail with "No tests matching pattern". `CLAUDE.md` mentions `*ArchTest*`, which does not match this class name) |
 
 ### Frontend (`aegis-admin-frontend`)
 
