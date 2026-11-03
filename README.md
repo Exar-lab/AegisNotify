@@ -33,7 +33,8 @@ development; see [Current implementation status](#current-implementation-status)
 - [Current implementation status](#current-implementation-status)
 
 For system diagrams, the notification lifecycle, Kafka interfaces, persistence, and resilience
-details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
+details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To use the admin console, see the
+[user manual](docs/user-manual/README.md). To contribute, see
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## At a glance
