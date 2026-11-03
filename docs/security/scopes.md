@@ -13,6 +13,9 @@ Once `docker/keycloak/aegis-realm.json` ships (issue #74 slice 2), it MUST
 declare these same five scopes, byte-for-byte, as `clientScopes` with
 `attributes."include.in.token.scope": "true"`.
 
+For how the realm, clients, roles, and login theme are set up, see [Keycloak realm, clients, and login
+theme](keycloak.md).
+
 ## Scope Table
 
 | Scope | Enforced by | Endpoint(s) | Status |
