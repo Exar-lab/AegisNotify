@@ -37,7 +37,8 @@ default; see [Current implementation status](#current-implementation-status) and
 For system diagrams, the notification lifecycle, Kafka interfaces, persistence, and resilience
 details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). For deployment, startup order,
 Compose files, and the full configuration reference, see
-[`docs/deployment.md`](docs/deployment.md). To contribute, see
+[`docs/deployment.md`](docs/deployment.md). To use the admin console, see the
+[user manual](docs/user-manual/README.md). To contribute, see
 [`CONTRIBUTING.md`](CONTRIBUTING.md). For incident procedures (open circuits, provider failover,
 DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
 [`docs/runbooks/`](docs/runbooks/README.md).
