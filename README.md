@@ -26,6 +26,7 @@ development; see [Current implementation status](#current-implementation-status)
 - [At a glance](#at-a-glance)
 - [Project scope](#project-scope)
 - [Installation](#installation)
+- [Deployment and configuration guide](docs/deployment.md)
 - [Services and HTTP API](#services)
 - [Security](#security)
 - [Configuration](#configuration)
@@ -33,7 +34,9 @@ development; see [Current implementation status](#current-implementation-status)
 - [Current implementation status](#current-implementation-status)
 
 For system diagrams, the notification lifecycle, Kafka interfaces, persistence, and resilience
-details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To contribute, see
+details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). For deployment, startup order,
+Compose files, and the full configuration reference, see
+[`docs/deployment.md`](docs/deployment.md). To contribute, see
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## At a glance
@@ -426,6 +429,9 @@ Actuator `health`, `info`, and `prometheus` endpoints are public across services
 exposure before any non-local deployment.
 
 ## Configuration
+
+The complete per-service reference (every variable, default, purpose, and secret flag) is in
+[`docs/deployment.md`](docs/deployment.md#configuration-reference).
 
 The most important environment variables are:
 
