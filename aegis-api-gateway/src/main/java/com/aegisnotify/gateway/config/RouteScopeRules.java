@@ -43,7 +43,7 @@ public class RouteScopeRules {
           pathMatchers(HttpMethod.GET, "/api/v1/templates", "/api/v1/templates/*"),
           SecurityScopes.NOTIFICATION_READ),
       new RouteScopeRule(
-          pathMatchers(HttpMethod.POST, "/api/v1/templates"),
+          pathMatchers(HttpMethod.POST, "/api/v1/templates", "/api/v1/templates/render"),
           SecurityScopes.NOTIFICATION_WRITE),
       new RouteScopeRule(
           pathMatchers(HttpMethod.PUT, "/api/v1/templates/*"),
