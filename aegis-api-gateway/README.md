@@ -110,12 +110,12 @@ Start last, after the services it routes to:
 
 - `PATCH /api/v1/notifications/*/cancel` and `POST /api/v1/notifications/*/retry` have scope rules in `RouteScopeRules` but no matching route in `application.yml`, so the gateway does not proxy them.
 - Rate limiting applies only to `POST /api/v1/notifications`.
-- The Config Server import carries no credentials.
+- The Config Server import carries no credentials, while the Config Server requires HTTP Basic.
 
 ## Dependencies
 
 - Spring Cloud Gateway (WebFlux)
-- Spring Security OAuth2 Resource Server and OAuth2 Client
+- Spring Security OAuth2 Resource Server (the OAuth2 Client starter is also in the `pom.xml`, but `TokenRelay` is not used)
 - Spring Data Redis Reactive (rate limiter)
 - Spring Cloud Netflix Eureka Client and Config client
 - Spring Boot Starter Actuator
