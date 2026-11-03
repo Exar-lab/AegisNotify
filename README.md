@@ -39,7 +39,7 @@ details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). For deployment, sta
 Compose files, and the full configuration reference, see
 [`docs/deployment.md`](docs/deployment.md). To use the admin console, see the
 [user manual](docs/user-manual/README.md). To contribute, see
-[`CONTRIBUTING.md`](CONTRIBUTING.md). For incident procedures (open circuits, provider failover,
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and the [developer guide](docs/development.md). For incident procedures (open circuits, provider failover,
 DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
 [`docs/runbooks/`](docs/runbooks/README.md). For the optional AI aggregation and summarizer feature,
 see [`docs/aggregation.md`](docs/aggregation.md).
