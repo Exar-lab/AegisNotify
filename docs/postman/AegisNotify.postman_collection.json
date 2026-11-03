@@ -25,9 +25,444 @@
       "key": "bearerToken",
       "value": "",
       "description": "A Keycloak access token for the aegis realm (dev login aegis-dev/dev123 against the aegis-admin-frontend client), scoped for whichever endpoints you're calling."
+    },
+    {
+      "key": "notificationId",
+      "value": ""
     }
   ],
   "item": [
+    {
+      "name": "Quick start",
+      "description": {
+        "content": "Runnable examples per channel. Run a template request first, then the matching submit request, then 'Get status'. Hand-maintained: not produced by OpenAPI generation (see docs/postman/README.md).",
+        "type": "text/plain"
+      },
+      "item": [
+        {
+          "id": "aa0ac2cf-392d-4ee2-badf-d6965d657386",
+          "name": "1. Create template (EMAIL)",
+          "request": {
+            "name": "1. Create template (EMAIL)",
+            "description": {
+              "content": "Creates the template used by the matching submit request below. Returns 409 if the name already exists. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"welcome-email\",\n  \"channel\": \"EMAIL\",\n  \"subject\": \"Welcome, {{name}}!\",\n  \"body\": \"<p>Hi {{name}}, welcome to AegisNotify.</p>\",\n  \"variables\": [\n    \"name\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "f211e875-98c4-49c0-a7b0-ccab38cf0ef9",
+          "name": "1. Create template (SMS)",
+          "request": {
+            "name": "1. Create template (SMS)",
+            "description": {
+              "content": "Creates the template used by the matching submit request below. Returns 409 if the name already exists. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"otp-sms\",\n  \"channel\": \"SMS\",\n  \"body\": \"Your code is {{code}}\",\n  \"variables\": [\n    \"code\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "7b4e6205-e131-4206-a7c2-84b69cad3e5c",
+          "name": "1. Create template (WHATSAPP)",
+          "request": {
+            "name": "1. Create template (WHATSAPP)",
+            "description": {
+              "content": "Creates the template used by the matching submit request below. Returns 409 if the name already exists. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"order-shipped-whatsapp\",\n  \"channel\": \"WHATSAPP\",\n  \"body\": \"Order {{orderId}} has shipped\",\n  \"variables\": [\n    \"orderId\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "0a3098fd-4474-4b03-820b-2dc81c25d823",
+          "name": "1. Create template (PUSH)",
+          "request": {
+            "name": "1. Create template (PUSH)",
+            "description": {
+              "content": "Creates the template used by the matching submit request below. Returns 409 if the name already exists. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "templates"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"new-message-push\",\n  \"channel\": \"PUSH\",\n  \"subject\": \"New message\",\n  \"body\": \"{{sender}} sent you a message\",\n  \"variables\": [\n    \"sender\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": []
+        },
+        {
+          "id": "db4278c6-f113-4e79-a429-188d895839af",
+          "name": "2. Submit EMAIL",
+          "request": {
+            "name": "2. Submit EMAIL",
+            "description": {
+              "content": "Email recipient must match local@domain.tld. Returns 202 with the notification id, which is saved to the notificationId variable. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"EMAIL\",\n  \"recipient\": \"user@example.com\",\n  \"templateName\": \"welcome-email\",\n  \"parameters\": {\n    \"name\": \"Ada\"\n  },\n  \"priority\": \"MEDIUM\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('notificationId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "b525f7db-e280-431c-89de-72baa506ec81",
+          "name": "2. Submit SMS",
+          "request": {
+            "name": "2. Submit SMS",
+            "description": {
+              "content": "Recipient must be E.164. Returns 202 with the notification id, which is saved to the notificationId variable. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"SMS\",\n  \"recipient\": \"+34600000000\",\n  \"templateName\": \"otp-sms\",\n  \"parameters\": {\n    \"code\": \"482913\"\n  },\n  \"priority\": \"HIGH\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('notificationId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "3a823521-7a47-4e0a-9368-48743e11c568",
+          "name": "2. Submit WHATSAPP",
+          "request": {
+            "name": "2. Submit WHATSAPP",
+            "description": {
+              "content": "Recipient must be E.164. Returns 202 with the notification id, which is saved to the notificationId variable. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"WHATSAPP\",\n  \"recipient\": \"+34600000000\",\n  \"templateName\": \"order-shipped-whatsapp\",\n  \"parameters\": {\n    \"orderId\": \"A-1042\"\n  },\n  \"priority\": \"MEDIUM\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('notificationId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "8b624e4c-dde2-43e7-8987-ef93571fee41",
+          "name": "2. Submit PUSH",
+          "request": {
+            "name": "2. Submit PUSH",
+            "description": {
+              "content": "Recipient is the device token your push provider expects. Returns 202 with the notification id, which is saved to the notificationId variable. Needs notification:write.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "auth": null,
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"PUSH\",\n  \"recipient\": \"<device-token>\",\n  \"templateName\": \"new-message-push\",\n  \"parameters\": {\n    \"sender\": \"Ada\"\n  },\n  \"priority\": \"LOW\"\n}",
+              "options": {
+                "raw": {
+                  "headerFamily": "json",
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('notificationId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "7cce9cfc-b83f-46bb-8840-74a5aec53fe9",
+          "name": "3. Get status",
+          "request": {
+            "name": "3. Get status",
+            "description": {
+              "content": "Polls the notification saved by the last submit request. Needs notification:read.",
+              "type": "text/plain"
+            },
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notificationId}}",
+                "status"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [],
+            "method": "GET",
+            "auth": null
+          },
+          "response": [],
+          "event": []
+        }
+      ]
+    },
     {
       "name": "Notification Service",
       "item": [
