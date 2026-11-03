@@ -16,16 +16,17 @@ the pull request checklist that CI actually enforces.
 - [Testing requirements](#testing-requirements)
 - [Running checks locally](#running-checks-locally)
 - [Pull request checklist](#pull-request-checklist)
+- [Releases](#releases)
 - [Reporting bugs and requesting features](#reporting-bugs-and-requesting-features)
 - [Documentation changes](#documentation-changes)
 
 ## Before you start
 
-- For anything non-trivial (new use case, new module, API change), open an issue first
-  describing the problem and proposed approach. This avoids wasted work if the direction needs to
-  change.
-- For a small, obvious fix (typo, dependency bump, a clearly broken test), a pull request without
-  a prior issue is fine.
+- Open an issue first, using one of the templates (blank issues are disabled), and wait for a
+  maintainer to apply the `status:approved` label before opening a pull request. Each template
+  states this. It avoids wasted work if the direction needs to change. CI does not enforce the
+  label, so it is a convention maintainers rely on.
+- The full path from clone to merged PR is in [`docs/development.md`](docs/development.md).
 - Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before touching `domain/`, `application/`,
   or `infrastructure/` in `aegis-notification-service`, `aegis-audit-service`, or
   `aegis-user-service` — the layering rules are enforced by ArchUnit and a violating PR will fail
@@ -39,7 +40,11 @@ Requirements:
 - Docker, to run Testcontainers-based integration tests (PostgreSQL, Kafka, MongoDB)
 - Git
 
-Maven does not need to be installed separately; the repository ships `mvnw` / `mvnw.cmd`.
+Maven does not need to be installed separately; the repository ships `mvnw` / `mvnw.cmd`. The
+wrapper is committed without the executable bit, so on Linux and macOS run `chmod +x mvnw` once
+(or use `sh ./mvnw ...`) if you get `Permission denied`.
+
+For the admin frontend you also need Node.js 22 (the version CI uses) and pnpm 11.
 
 Clone and build:
 
@@ -55,16 +60,19 @@ See the [README](README.md#installation) for prerequisites needed to actually ru
 
 ## Project structure
 
-Six Maven modules under one reactor:
+Seven Maven modules under one reactor, plus the Angular frontend, which is built with pnpm and is
+not part of the reactor:
 
 ```text
 AegisNotify/
+├── aegis-api-docs-support/
 ├── aegis-api-gateway/
 ├── aegis-audit-service/
 ├── aegis-config-server/
 ├── aegis-eureka-server/
 ├── aegis-notification-service/
 ├── aegis-user-service/
+├── aegis-admin-frontend/
 └── pom.xml
 ```
 
@@ -126,8 +134,8 @@ A breaking change adds `!` after the type/scope (`feat(notification)!: ...`) or 
 
 ## Architecture rules (Hexagonal)
 
-Enforced by ArchUnit tests (`*ArchTest*` / `ArchitectureTest`) in both `aegis-notification-service`
-and `aegis-audit-service`:
+Enforced by an ArchUnit `ArchitectureTest` in each Java service module (the layering rules below
+apply to `aegis-notification-service`, `aegis-audit-service`, and `aegis-user-service`):
 
 - `domain/` must not depend on `application/` or `infrastructure/`, and must not import Spring or
   persistence framework types.
@@ -175,8 +183,16 @@ Useful narrower commands while iterating:
 # One test method
 ./mvnw test -Dtest=ClassName#methodName
 
-# Architecture tests only
-./mvnw test -Dtest="*ArchTest*"
+# Architecture tests only (the extra flag lets modules without that test pass)
+./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+Frontend changes (from `aegis-admin-frontend`):
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+pnpm test:ci
 ```
 
 Testcontainers-based integration tests require Docker to be running; without it, tests like
@@ -197,7 +213,14 @@ Before opening a PR:
 - [ ] The PR description explains *why*, not just *what* — link the issue it addresses, if any.
 
 CI (`.github/workflows/ci.yml`) runs Checkstyle and the full `mvnw clean verify` on every push and
-pull request targeting `main`. A PR can't merge with a red CI run.
+pull request targeting `main`. When a PR touches `aegis-admin-frontend/`, `ci-frontend.yml` also
+runs `pnpm build` and `pnpm test:ci`. A PR can't merge with a red CI run.
+
+## Releases
+
+Releases are automated with release-please from the commits that land on `main`; see
+[Commits and releases](docs/development.md#commits-and-releases) for how commit types map to the
+changelog.
 
 ## Reporting bugs and requesting features
 
