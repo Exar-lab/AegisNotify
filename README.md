@@ -27,6 +27,7 @@ default; see [Current implementation status](#current-implementation-status) and
 - [At a glance](#at-a-glance)
 - [Project scope](#project-scope)
 - [Installation](#installation)
+- [Deployment and configuration guide](docs/deployment.md)
 - [Services and HTTP API](#services)
 - [Security](#security)
 - [Configuration](#configuration)
@@ -34,11 +35,14 @@ default; see [Current implementation status](#current-implementation-status) and
 - [Current implementation status](#current-implementation-status)
 
 For system diagrams, the notification lifecycle, Kafka interfaces, persistence, and resilience
-details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). To use the admin console, see the
+details, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). For deployment, startup order,
+Compose files, and the full configuration reference, see
+[`docs/deployment.md`](docs/deployment.md). To use the admin console, see the
 [user manual](docs/user-manual/README.md). To contribute, see
 [`CONTRIBUTING.md`](CONTRIBUTING.md). For incident procedures (open circuits, provider failover,
 DLQ, outbox backlog, `FAILED_CRITICAL`, dependency outages), see
-[`docs/runbooks/`](docs/runbooks/README.md).
+[`docs/runbooks/`](docs/runbooks/README.md). For the optional AI aggregation and summarizer feature,
+see [`docs/aggregation.md`](docs/aggregation.md).
 
 ## At a glance
 
@@ -440,6 +444,9 @@ exposure before any non-local deployment.
 
 ## Configuration
 
+The complete per-service reference (every variable, default, purpose, and secret flag) is in
+[`docs/deployment.md`](docs/deployment.md#configuration-reference).
+
 The most important environment variables are:
 
 | Variable | Default | Used by |
@@ -457,7 +464,7 @@ The most important environment variables are:
 | `CONFIG_SERVER_USER` / `CONFIG_SERVER_PASSWORD` | None | Config Server |
 | `CONFIG_REPO_URI` | None | Config Server Git backend |
 | `CONFIG_REPO_USERNAME` / `CONFIG_REPO_TOKEN` | None | Private Config Server Git backend |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | API Gateway |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | API Gateway |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | API Gateway (submit rate limiter) |
 | `SENDGRID_API_KEY` / `SENDGRID_FROM_ADDRESS` | Empty / `noreply@aegisnotify.com` | Email provider |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Empty | SMS and WhatsApp providers |

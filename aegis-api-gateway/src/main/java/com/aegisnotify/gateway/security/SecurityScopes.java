@@ -5,10 +5,8 @@ package com.aegisnotify.gateway.security;
  *
  * <p>The gateway is the single source of truth consumed by both the reactive
  * {@code authorizeExchange} matchers and {@code ScopeAwareAccessDeniedHandler}.
- * {@code USER_READ} and {@code USER_ADMIN} are forward-looking: their routes
- * are not yet proxied (the {@code aegis-user-service} module ships in a later
- * slice), but the scope literals are reserved here so the realm and docs
- * contract can be authored once. Values MUST match
+ * {@code USER_READ} and {@code USER_ADMIN} govern the {@code aegis-user-service}
+ * routes ({@code /api/v1/users/**}) proxied by this gateway. Values MUST match
  * {@code docs/security/scopes.md} and {@code docker/keycloak/aegis-realm.json}
  * byte-for-byte. A dedicated canary test ({@code SecurityScopesTest})
  * duplicates these literals to catch drift.</p>
