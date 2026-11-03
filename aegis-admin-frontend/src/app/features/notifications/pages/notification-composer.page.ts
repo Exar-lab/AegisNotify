@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -11,7 +11,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { catchError, map, of, startWith } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 import {
   NOTIFICATION_PRIORITIES,
   NotificationPriority,
@@ -23,6 +23,9 @@ import {
 } from '../../../core/models/template.models';
 import { NotificationsApiService } from '../../../core/services/notifications-api.service';
 import { TemplatesApiService } from '../../../core/services/templates-api.service';
+
+/** Wait this long after the last edit before asking the backend for a preview. */
+export const PREVIEW_DEBOUNCE_MS = 400;
 
 const EMAIL_PATTERN = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
 const E164_PATTERN = /^\+[1-9]\d{1,14}$/;
@@ -47,6 +50,11 @@ export function recipientError(channel: TemplateChannel, value: string): string 
       return null;
   }
 }
+
+type PreviewState =
+  | { kind: 'idle' | 'loading' }
+  | { kind: 'ready'; subject: string | null; body: string }
+  | { kind: 'error'; message: string };
 
 type TemplatesState = { kind: 'loading' | 'error' } | { kind: 'ready'; templates: TemplateResponse[] };
 
@@ -110,6 +118,17 @@ export class NotificationComposerPage {
   );
   readonly parameterNames = computed(() => this.selectedTemplate()?.variables ?? []);
 
+  readonly previewState = signal<PreviewState>({ kind: 'idle' });
+
+  readonly previewReady = computed(() => {
+    const state = this.previewState();
+    return state.kind === 'ready' ? state : null;
+  });
+  readonly previewError = computed(() => {
+    const state = this.previewState();
+    return state.kind === 'error' ? state.message : '';
+  });
+
   readonly submitting = signal(false);
   readonly formError = signal('');
 
@@ -122,6 +141,7 @@ export class NotificationComposerPage {
       }
     });
     this.form.controls.templateName.valueChanges.subscribe(() => this.syncParameters());
+    this.watchPreview();
   }
 
   recipientMessage(): string | null {
@@ -155,6 +175,51 @@ export class NotificationComposerPage {
           this.formError.set(this.describeError(err));
         },
       });
+  }
+
+  /**
+   * Requests a server-side preview whenever a template is selected and all of its parameters are
+   * filled. Rendering stays on the backend so the preview matches what is actually sent.
+   */
+  private watchPreview(): void {
+    this.form.valueChanges
+      .pipe(
+        map(() => this.previewRequest()),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        tap(() => this.previewState.set({ kind: 'idle' })),
+        debounceTime(PREVIEW_DEBOUNCE_MS),
+        switchMap((request) =>
+          request
+            ? this.templatesApi.render(request).pipe(
+                map((rendered): PreviewState => ({ kind: 'ready', subject: rendered.subject, body: rendered.body })),
+                catchError((err: HttpErrorResponse) =>
+                  of<PreviewState>({ kind: 'error', message: this.describePreviewError(err) }),
+                ),
+                startWith<PreviewState>({ kind: 'loading' }),
+              )
+            : of<PreviewState>({ kind: 'idle' }),
+        ),
+        takeUntilDestroyed(),
+      )
+      .subscribe((state) => this.previewState.set(state));
+  }
+
+  private previewRequest(): { templateName: string; parameters: Record<string, string> } | null {
+    const { templateName, parameters } = this.form.getRawValue();
+    if (!templateName || !this.availableTemplates().some((t) => t.name === templateName)) return null;
+    const names = this.parameterNames();
+    const filled = names.every((n) => (parameters[n] ?? '').trim() !== '');
+    if (!filled) return null;
+    return { templateName, parameters: { ...parameters } };
+  }
+
+  private describePreviewError(err: HttpErrorResponse): string {
+    const backendMessage: unknown = err.error?.message;
+    if ((err.status === 404 || err.status === 422) && typeof backendMessage === 'string' && backendMessage) {
+      return backendMessage;
+    }
+    if (err.status === 403) return "You don't have permission to preview templates.";
+    return "Couldn't load the preview. Please try again.";
   }
 
   private validateRecipient(control: AbstractControl): ValidationErrors | null {

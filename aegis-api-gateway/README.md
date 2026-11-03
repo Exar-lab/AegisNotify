@@ -44,7 +44,7 @@ Notification, audit and user endpoints are proxied. See also [docs/ARCHITECTURE.
 | `PATCH /api/v1/notifications/*/cancel`, `POST /api/v1/notifications/*/retry` | `notification:write` |
 | `GET /api/v1/dashboard/**`, `GET /api/v1/metrics/**` | `notification:read` |
 | `GET /api/v1/templates`, `GET /api/v1/templates/*` | `notification:read` |
-| `POST /api/v1/templates`, `PUT /api/v1/templates/*`, `PATCH /api/v1/templates/*/status` | `notification:write` |
+| `POST /api/v1/templates`, `POST /api/v1/templates/render`, `PUT /api/v1/templates/*`, `PATCH /api/v1/templates/*/status` | `notification:write` |
 | `/api/v1/audit/**` (any method) | `audit:read` |
 | `GET /api/v1/users/**` | `user:read` |
 | `POST /api/v1/users`, `PUT /api/v1/users/**`, `PATCH /api/v1/users/**` | `user:admin` |
