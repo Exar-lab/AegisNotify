@@ -44,6 +44,16 @@ spring:
           predicates:
             - Path=/api/v1/notifications/*/status
             - Method=GET
+        - id: notification-cancel
+          uri: lb://aegis-notification-service
+          predicates:
+            - Path=/api/v1/notifications/*/cancel
+            - Method=PATCH
+        - id: notification-retry
+          uri: lb://aegis-notification-service
+          predicates:
+            - Path=/api/v1/notifications/*/retry
+            - Method=POST
         - id: notification-list
           uri: lb://aegis-notification-service
           predicates:
