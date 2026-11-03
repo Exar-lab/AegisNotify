@@ -13,7 +13,10 @@ live in [`CONTRIBUTING.md`](../CONTRIBUTING.md); this page holds the commands an
 | pnpm | 11 (`pnpm@11.22.0`, pinned in `package.json`) | `aegis-admin-frontend` |
 | `jq` | any | Extracting the token in the README walkthrough |
 
-Maven is not required: use the wrapper (`./mvnw`, `mvnw.cmd` on Windows).
+Maven is not required: use the wrapper (`./mvnw`, `mvnw.cmd` on Windows). `mvnw` is committed
+without the executable bit, so on Linux and macOS run `chmod +x mvnw` once after cloning (CI does
+the same) or call it as `sh mvnw`. The first run downloads Maven, so it needs access to Maven
+Central.
 
 ## 2. Modules
 
@@ -77,7 +80,7 @@ Run from the `aegis-admin-frontend` directory.
 | Production build | `pnpm build` |
 | Unit tests, watch mode | `pnpm test` |
 | Unit tests, as CI | `pnpm test:ci` |
-| Static hosting test | `pnpm test:hosting` |
+| Static hosting test | `pnpm test:hosting` (not a unit test: it needs the built app served on port 4300, e.g. `pnpm build` then `npx serve dist/aegis-admin-frontend/browser -l 4300`; override the URL with `AEGIS_STATIC_URL`) |
 
 The frontend logs in through Keycloak (`aegis-admin-frontend` client), so start Keycloak before
 `pnpm start`.

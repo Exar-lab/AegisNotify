@@ -277,9 +277,8 @@ curl -i -X POST http://localhost:8080/api/v1/notifications \
 [`docker/keycloak/aegis-realm.json`](docker/keycloak/aegis-realm.json) for the exact definitions.
 If scopes drift after editing that file, re-import with
 `docker compose down -v && docker compose up -d keycloak`. Full scope contract:
-[`docs/security/scopes.md`](docs/security/scopes.md). Realm, clients, roles and token flow:
-[`docs/security/keycloak.md`](docs/security/keycloak.md); login theme:
-[`docs/security/login-theme.md`](docs/security/login-theme.md).
+[`docs/security/scopes.md`](docs/security/scopes.md). Realm, clients, and login theme:
+[`docs/security/keycloak.md`](docs/security/keycloak.md).
 
 ### Running the full stack in Docker
 

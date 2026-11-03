@@ -40,7 +40,9 @@ Requirements:
 - Node.js 22 and pnpm 11, only for `aegis-admin-frontend`
 - Git
 
-Maven does not need to be installed separately; the repository ships `mvnw` / `mvnw.cmd`.
+Maven does not need to be installed separately; the repository ships `mvnw` / `mvnw.cmd`. On
+Linux and macOS run `chmod +x mvnw` once after cloning, because the script is committed without the
+executable bit.
 
 Clone and build:
 
