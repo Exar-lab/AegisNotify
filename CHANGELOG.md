@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.18.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.17.0...aegisnotify-v0.18.0) (2026-11-03)
+
+
+### Features
+
+* **frontend:** add create notification call to the API client ([2df9008](https://github.com/Exar-lab/AegisNotify/commit/2df9008ceda2b2b7e76a8347284bf30406fdc39b))
+* **frontend:** add notification composer screen for operators ([25e2d87](https://github.com/Exar-lab/AegisNotify/commit/25e2d8771fc3c0efb8b18459d77627abbfe12ec0))
+* **frontend:** add notification composer screen gated by notification:write ([209725f](https://github.com/Exar-lab/AegisNotify/commit/209725f1a11620f2d4b0b68163a7099dde848cdf))
+* **frontend:** add template preview panel to the composer ([35e38ef](https://github.com/Exar-lab/AegisNotify/commit/35e38ef7baf94a06b3e690a015bfd7e99b8f965e))
+* **frontend:** add token scope helper and reusable scope guard ([c696e75](https://github.com/Exar-lab/AegisNotify/commit/c696e75120ca5bc7517d3dafaf7c4de4c4fae5df))
+* **gateway:** require notification:write for template render ([182e572](https://github.com/Exar-lab/AegisNotify/commit/182e5720a973067afb8b3adfdbe126562134d10a))
+* **keycloak:** add custom AegisNotify-branded login theme ([bf4ffbc](https://github.com/Exar-lab/AegisNotify/commit/bf4ffbc9f2b9aebf15382efca2f39b95907b0d0b))
+* **keycloak:** add custom AegisNotify-branded login theme ([d3242c4](https://github.com/Exar-lab/AegisNotify/commit/d3242c44185eeab183cf9c255a3a0134e62df9c4))
+* **notification:** add Groq as alternate aggregation summarizer, fix infinite re-hold loop ([46b1f92](https://github.com/Exar-lab/AegisNotify/commit/46b1f925e7fb44749f4540693c5732ea656ea995))
+* **notification:** add Groq as alternate aggregation summarizer, fix infinite re-hold loop ([88cca45](https://github.com/Exar-lab/AegisNotify/commit/88cca45cce1ef662fdc646e1a661c14ec54e805d))
+* **notification:** add Mailtrap and Vonage as alternate EMAIL/WHATSAPP providers ([84fdd85](https://github.com/Exar-lab/AegisNotify/commit/84fdd855253007f10a14da62633d27a8e6594235))
+* **notification:** add Mailtrap and Vonage as alternate EMAIL/WHATSAPP providers ([2dada51](https://github.com/Exar-lab/AegisNotify/commit/2dada51b7105e0e1c1ba90d0dc32bd6873a63060))
+* **notification:** add template render endpoint ([1bf2dcd](https://github.com/Exar-lab/AegisNotify/commit/1bf2dcd2700269780d543a9fbd879474332a083c))
+* **notification:** add template render preview endpoint and composer preview ([e59c15b](https://github.com/Exar-lab/AegisNotify/commit/e59c15b38ed4bc22de8b47aec8a8e840d51dcb8b))
+
+
+### Bug Fixes
+
+* **gateway:** add missing routes for notification cancel and retry ([5098a54](https://github.com/Exar-lab/AegisNotify/commit/5098a545a9fbff3b0b1e231469b869cfd8e295ba))
+* **gateway:** route notification cancel and retry ([3f8e6ce](https://github.com/Exar-lab/AegisNotify/commit/3f8e6ce484abe223a58a2fb402113d9fd032ede3))
+* **notification:** address SonarCloud findings on provider vendor selectors ([b12fb36](https://github.com/Exar-lab/AegisNotify/commit/b12fb366f79f9663c37f63eb1b06d0df559b47c2))
+
+
+### Documentation
+
+* **adr:** record key architecture decisions ([1cad825](https://github.com/Exar-lab/AegisNotify/commit/1cad8255926f3cf15a566f219a05bb7af12fa118))
+* **adr:** record key architecture decisions ([4303a96](https://github.com/Exar-lab/AegisNotify/commit/4303a96cf9394131fc9e83817079026f0d78da24))
+* **api:** publish an API integration guide and add Postman quick start ([6ec5740](https://github.com/Exar-lab/AegisNotify/commit/6ec5740070c4b069d05d829632b7d7b057725fc2))
+* **api:** publish an API integration guide and add Postman quick start ([ec2dc24](https://github.com/Exar-lab/AegisNotify/commit/ec2dc246e414ebed3ec02941fbbc7837ca1cb983)), closes [#202](https://github.com/Exar-lab/AegisNotify/issues/202)
+* **api:** reference merged keycloak page and render endpoint ([88a76d1](https://github.com/Exar-lab/AegisNotify/commit/88a76d1fb5740a13a1610bb629e98bbccaaa8362))
+* **dev:** avoid linking to a page not yet on main ([119db64](https://github.com/Exar-lab/AegisNotify/commit/119db64f2ad41da3828ed73589a240ae0ca30b14))
+* **dev:** fix the all-modules ArchUnit command ([2ed5104](https://github.com/Exar-lab/AegisNotify/commit/2ed5104de230b71e1be9c744ae955dbb544c7503))
+* **dev:** refresh the contributor and developer guide ([0e3957d](https://github.com/Exar-lab/AegisNotify/commit/0e3957d040704821e370305ba7df4a8265185c16))
+* **dev:** refresh the contributor and developer guide ([9468415](https://github.com/Exar-lab/AegisNotify/commit/946841582596bd4ecc2f7d939008861cd49abdc0)), closes [#201](https://github.com/Exar-lab/AegisNotify/issues/201)
+* **dev:** refresh the contributor and developer guide ([321666f](https://github.com/Exar-lab/AegisNotify/commit/321666f5473055a73c17e1b6da93053ad15aa118)), closes [#201](https://github.com/Exar-lab/AegisNotify/issues/201)
+* fix stale statements in README, ARCHITECTURE, and scopes docs ([22ea034](https://github.com/Exar-lab/AegisNotify/commit/22ea0349eb811824f1bf9c52461532dd157a2651))
+* fix stale statements in README, ARCHITECTURE, and scopes docs ([aeb0083](https://github.com/Exar-lab/AegisNotify/commit/aeb0083467799773bc68d6cd2cfcf44b1b8fe04d))
+* **gateway:** correct token forwarding description ([5ddd969](https://github.com/Exar-lab/AegisNotify/commit/5ddd969bfae8175932e58eba4d0f878daa1bc9d9))
+* **gateway:** fix CORS default and routed services in READMEs ([4dd4d8b](https://github.com/Exar-lab/AegisNotify/commit/4dd4d8b400a8e6751c8ae7bdbf24bc6150e76f3d))
+* **gateway:** fix stale gateway README and root-level migration duplicate ([f7bedfc](https://github.com/Exar-lab/AegisNotify/commit/f7bedfccb60b4ee6ba8b38a3c9d0ed9899b6a226))
+* **gateway:** fix stale gateway README and root-level migration duplicate ([947165d](https://github.com/Exar-lab/AegisNotify/commit/947165db692c314ce3314dee4b1a7cf46db9b493))
+* **notification:** document the AI aggregation and summarizer configuration ([3c3d93d](https://github.com/Exar-lab/AegisNotify/commit/3c3d93d6859271872e6859fef258e50e7e0e6e9a))
+* **notification:** document the AI aggregation and summarizer configuration ([5813259](https://github.com/Exar-lab/AegisNotify/commit/5813259b0acba88285c62cd7939d34a297aa544b))
+* **observability:** document metrics, dashboards, and alerting ([f5b893f](https://github.com/Exar-lab/AegisNotify/commit/f5b893fabd3c6c9329e4fa518bd2abcb731c2ae3))
+* **observability:** document metrics, dashboards, and alerting ([45d0010](https://github.com/Exar-lab/AegisNotify/commit/45d00103abf7d04f3323aacb5866aa3438be8efe)), closes [#203](https://github.com/Exar-lab/AegisNotify/issues/203)
+* **ops:** add deployment and configuration guide ([1a02a38](https://github.com/Exar-lab/AegisNotify/commit/1a02a385c2b5af65b2dbf3c0f502a7c87e37e192))
+* **ops:** add deployment and configuration guide ([68ae8f3](https://github.com/Exar-lab/AegisNotify/commit/68ae8f3648b26e00c0bb45ed0a33e4c7555a9cf3)), closes [#196](https://github.com/Exar-lab/AegisNotify/issues/196)
+* **ops:** add operational runbooks ([0c00770](https://github.com/Exar-lab/AegisNotify/commit/0c00770d7237b28800c97d34ce4e84f641e24358))
+* **ops:** add operational runbooks ([bea2221](https://github.com/Exar-lab/AegisNotify/commit/bea2221fd78b26b0491f4fc52b2a9abc63cf9625))
+* **security:** document Keycloak realm setup, clients, and login theme ([b5bf8af](https://github.com/Exar-lab/AegisNotify/commit/b5bf8afedce6dac59e15a4c0fa26cda1645cbf1d))
+* **security:** document Keycloak realm setup, clients, and login theme ([7f3e76c](https://github.com/Exar-lab/AegisNotify/commit/7f3e76c12783102019d72f9b672741b5950b208e)), closes [#199](https://github.com/Exar-lab/AegisNotify/issues/199)
+* **security:** document Keycloak realm setup, roles, and login theme ([381ace2](https://github.com/Exar-lab/AegisNotify/commit/381ace2fb5131009de1a9128163259149c765142)), closes [#199](https://github.com/Exar-lab/AegisNotify/issues/199)
+* **user:** add admin console user manual ([1c431f9](https://github.com/Exar-lab/AegisNotify/commit/1c431f92e54e49477a94ff43eadb47595bac10e2))
+* **user:** add admin console user manual ([916e2d8](https://github.com/Exar-lab/AegisNotify/commit/916e2d818e00bc1a797a3e1eb1f576af83b7b73e)), closes [#195](https://github.com/Exar-lab/AegisNotify/issues/195)
+
 ## [0.17.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.16.0...aegisnotify-v0.17.0) (2026-10-30)
 
 
