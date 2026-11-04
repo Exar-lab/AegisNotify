@@ -1,0 +1,26 @@
+# Static server inside the aegis-admin-frontend container. TLS is terminated by
+# the edge proxy (docker/caddy/Caddyfile), so this listens on plain HTTP only.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# Runtime configuration (#171), built from the container environment. It
+	# must never be cached, or a redeploy to a new IP would serve stale URLs.
+	handle /config.json {
+		header Cache-Control "no-store"
+		header Content-Type "application/json"
+		respond `{"apiBaseUrl":"{$API_BASE_URL}","keycloakUrl":"{$KEYCLOAK_URL}"}` 200
+	}
+
+	# Real files first (including /silent-check-sso.html, which must be the
+	# actual callback document), then the SPA fallback for client-side routes.
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}

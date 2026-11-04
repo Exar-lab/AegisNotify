@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "buildCommand": "printf '{\"apiBaseUrl\":\"%s\",\"keycloakUrl\":\"%s\"}' \"$API_BASE_URL\" \"$KEYCLOAK_URL\" > public/config.json && pnpm build",
+  "outputDirectory": "dist/aegis-admin-frontend/browser",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/config.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Let's Encrypt STAGING CA: no production rate limits, but the certificates are
+# not trusted by browsers. Use it to rehearse a deployment, then switch ACME_DIR
+# back to the default and recreate the caddy container (and delete the
+# aegis-caddy-data volume, which would otherwise keep serving staging certs).
+acme_ca https://acme-staging-v02.api.letsencrypt.org/directory

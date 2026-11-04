@@ -1,0 +1,35 @@
+# Reverse proxy for the single-VM deployment (docker-compose.prod.yml, issue #236).
+# Caddy obtains and renews TLS certificates automatically for the three
+# hostnames below; ports 80 and 443 must be reachable from the internet.
+#
+# PUBLIC_HOST and ACME_EMAIL come from the container environment.
+{
+	# Required for the ZeroSSL fallback and for expiry notices.
+	email {$ACME_EMAIL}
+
+	# Issuer policy. With no extra directive Caddy tries Let's Encrypt and
+	# falls back to ZeroSSL. ACME_DIR in .env.prod swaps in another snippet
+	# (for example the Let's Encrypt staging CA); see docs/deploy-vm.md.
+	import /etc/caddy/acme.d/*
+}
+
+# Keycloak. Caddy sets X-Forwarded-For/Proto/Host, which Keycloak trusts
+# through KC_PROXY_HEADERS=xforwarded.
+auth.{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy keycloak:8080
+}
+
+# API gateway. CORS and JWT validation are handled by the gateway itself.
+api.{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy aegis-api-gateway:8080
+}
+
+# Admin frontend (compose profile `frontend`). Unused when the SPA is hosted
+# on Vercel or S3; the certificate is still requested for this name, which is
+# harmless. Remove the block to avoid it.
+app.{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy aegis-admin-frontend:80
+}
