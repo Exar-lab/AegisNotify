@@ -15,10 +15,11 @@ see the [README](../README.md#running-the-full-stack-in-docker).
 - [Architecture](#architecture)
 - [Sizing](#sizing)
 - [Provision an AWS EC2 instance](#provision-an-aws-ec2-instance)
-- [Public IP, sslip.io and the stop/start problem](#public-ip-sslipio-and-the-stopstart-problem)
+- [Public IP, sslip.io and the Elastic IP](#public-ip-sslipio-and-the-elastic-ip)
 - [First deploy](#first-deploy)
-- [Choose where the frontend lives](#choose-where-the-frontend-lives)
+- [Frontend on Vercel (default)](#frontend-on-vercel-default)
 - [HTTPS certificates and rate limits](#https-certificates-and-rate-limits)
+- [Reach the Keycloak admin console](#reach-the-keycloak-admin-console)
 - [Update](#update)
 - [Stop and start to save credits](#stop-and-start-to-save-credits)
 - [Backups](#backups)
@@ -39,10 +40,12 @@ instance.
 | Check | Result |
 | --- | --- |
 | `docker compose --env-file .env.prod.example -f docker-compose.prod.yml config` | Passes; the only published ports are 80 and 443 (Caddy). |
-| `caddy validate` for the proxy Caddyfile (default and staging issuer snippets) and the frontend Caddyfile, using `caddy:2-alpine` | "Valid configuration". |
-| Rendering `aegis-realm.json.tpl` with the same `sed` as `keycloak-realm-init`, then importing it into `quay.io/keycloak/keycloak:26.0` (`start-dev`) | Realm `aegis` imported; issuer and JWKS URI use the `KC_HOSTNAME` value; password grant for `aegis-dev` returns a token with all five scopes; a second start logs "Realm 'aegis' already exists. Import skipped". |
+| `docker compose ... config` with the `frontend` profile enabled, and with `FRONTEND_ORIGIN` removed | Profile adds `aegis-admin-frontend`; the missing variable fails with a message naming it. |
+| `caddy validate` for the proxy Caddyfile (default and staging issuer snippets, with and without `ADMIN_ALLOWED_CIDR`) and the frontend Caddyfile, using `caddy:2-alpine` | "Valid configuration" in every variant. |
+| The admin-block matcher run in a throwaway Caddy | With the default CIDR, `/admin/...` and `/realms/master/...` return 404 while `/realms/aegis/...` and `/resources/...` return 200; with `ADMIN_ALLOWED_CIDR=0.0.0.0/0` all return 200. |
+| Rendering `aegis-realm.json.tpl` with the same `sed` as `keycloak-realm-init` (origin `https://aegis-notify.vercel.app`), then importing it into `quay.io/keycloak/keycloak:26.0` (`start-dev`) | Realm `aegis` imported; client list has no `aegis-dev-cli`; `aegis-admin-frontend` redirect URIs and web origin match the Vercel origin; password grant is refused for `aegis-dev-cli` (`invalid_client`), `admin-cli` and `aegis-admin-frontend` (`unauthorized_client`); the `aegis-user-service` client-credentials grant works; issuer and JWKS URI use the `KC_HOSTNAME` value. An earlier run showed the built-in `admin-cli` client accepting password grant until the template disabled it. A second start logs "Realm 'aegis' already exists. Import skipped". |
 | Frontend Caddyfile in `caddy:2-alpine` | `/config.json` returns the JSON built from `API_BASE_URL` / `KEYCLOAK_URL` with `Cache-Control: no-store`; unknown routes fall back to `index.html`; `/silent-check-sso.html` returns the real file. |
-| `shellcheck scripts/deploy`, `scripts/deploy init` / `check` | Clean; init and check work against the example file. |
+| `shellcheck scripts/deploy`, `scripts/deploy init` / `check` | Clean; init generates `.env.prod`, `check` fails while `FRONTEND_ORIGIN` still has `CHANGE_ME` and passes once it is set; a malformed origin is rejected. |
 
 Not run: building the six Spring Boot images and the frontend image, `docker compose up` of the
 whole stack, Keycloak in production mode (`start`) with PostgreSQL behind Caddy, its health check,
@@ -52,26 +55,26 @@ real ACME issuance, memory measurements, and anything on AWS. These are listed a
 ## Architecture
 
 ```text
-                       Internet (80, 443)
-                              |
-                         +----v----+
-                         |  Caddy  |  automatic HTTPS, the only published ports
-                         +----+----+
-        app.HOST   api.HOST   |   auth.HOST
-        +---------+-----------+-----------+
-        |                     |           |
- aegis-admin-frontend   aegis-api-gateway  keycloak ---- postgres (db: keycloak)
- (static SPA, optional)       |
-                  Eureka / Config Server (internal)
-                  notification-service ---- postgres (db: aegisnotify), kafka
-                  audit-service --------- mongo, kafka
-                  user-service ---------- keycloak (Admin API, internal URL)
-                  redis (gateway rate limiter)
+ Browser --> Vercel (static SPA, https://<project>.vercel.app)
+    |
+    |  HTTPS (80, 443)
+    v
+ +---------+  automatic HTTPS, the only published ports
+ |  Caddy  |  api.HOST -> gateway      auth.HOST -> Keycloak (realm aegis only)
+ +----+----+  app.HOST -> optional frontend container (profile `frontend`, off)
+      |
+ aegis-api-gateway          keycloak ---- postgres (db: keycloak)
+      |
+      +-- Eureka / Config Server (internal)
+      +-- notification-service ---- postgres (db: aegisnotify), kafka
+      +-- audit-service ----------- mongo, kafka
+      +-- user-service ------------ keycloak (Admin API, internal URL)
+      +-- redis (gateway rate limiter)
 ```
 
 `HOST` is `PUBLIC_HOST` from `.env.prod`, for example `203-0-113-10.sslip.io`, giving
-`https://app.203-0-113-10.sslip.io`, `https://api.203-0-113-10.sslip.io` and
-`https://auth.203-0-113-10.sslip.io`.
+`https://api.203-0-113-10.sslip.io` and `https://auth.203-0-113-10.sslip.io` (and
+`https://app.203-0-113-10.sslip.io` when the optional frontend profile is enabled).
 
 Design decisions:
 
@@ -94,7 +97,15 @@ Design decisions:
   `AUDIT_ENCRYPTION_KEY` is required.
 - **Realm rendering at deploy time.** `docker/keycloak/prod/aegis-realm.json.tpl` is rendered by the
   one-shot `keycloak-realm-init` container (secrets and the frontend origin are substituted), then
-  Keycloak imports it. The development realm file stays untouched.
+  Keycloak imports it. The development realm file stays untouched. The production template has no
+  `aegis-dev-cli` client and turns off password grant on the built-in `admin-cli` client, so the
+  only way to obtain a user token is the browser login flow.
+- **Keycloak admin is not public.** Caddy answers 404 for `/admin` and the `master` realm on the
+  public Keycloak host unless the caller matches `ADMIN_ALLOWED_CIDR` (default: nobody). See
+  [Reach the Keycloak admin console](#reach-the-keycloak-admin-console).
+- **Frontend on Vercel by default.** The gateway CORS origin, the Keycloak redirect URIs and the web
+  origin all come from one variable, `FRONTEND_ORIGIN`. The frontend container remains available
+  behind the `frontend` compose profile.
 
 ## Sizing
 
@@ -162,9 +173,12 @@ Other sizing notes:
 
    Do not open any other port. Kafka, PostgreSQL, MongoDB, Redis, Eureka and the services have no
    published ports and must stay that way.
-4. **Elastic IP (recommended).** EC2, Elastic IPs, Allocate, then Associate it with the instance.
-   Read [the next section](#public-ip-sslipio-and-the-stopstart-problem) first: it decides whether
-   the demo URLs survive a stop/start.
+4. **Elastic IP (required for this guide).** EC2, Elastic IPs, Allocate Elastic IP address, then
+   Actions, Associate with the new instance. Do this **before the first deploy** and use that
+   address for everything below: it gives you a stable sslip.io hostname that survives
+   stop/start. Cost: about 0.005 USD per hour (roughly 3.65 USD per month), also while the
+   instance is stopped; confirm the current rate. See
+   [the next section](#public-ip-sslipio-and-the-elastic-ip).
 5. **Connect and install Docker.**
 
    ```bash
@@ -189,87 +203,74 @@ Other sizing notes:
    git clone https://github.com/Exar-lab/AegisNotify.git && cd AegisNotify
    ```
 
-## Public IP, sslip.io and the stop/start problem
+## Public IP, sslip.io and the Elastic IP
 
-sslip.io maps `app.203-0-113-10.sslip.io` to `203.0.113.10`. The hostname **is** the IP, so
-everything derived from `PUBLIC_HOST` is tied to it: the TLS certificates, the Keycloak issuer,
-the realm redirect URIs, the gateway CORS origin and the frontend `config.json`.
+sslip.io maps `api.203-0-113-10.sslip.io` to `203.0.113.10`. The hostname **is** the IP, so
+everything derived from `PUBLIC_HOST` is tied to it: the TLS certificates, the Keycloak issuer in
+the tokens, and the `API_BASE_URL` / `KEYCLOAK_URL` values you give Vercel.
 
-**What happens when the IP changes.** A normal EC2 public IPv4 address is released when the
-instance is stopped and a different one is assigned on start (a plain reboot keeps it). After a
-stop/start without an Elastic IP:
+**This guide uses an Elastic IP.** It stays attached to your account, so stop/start, reboot and
+redeploy all keep the same IP, the same hostnames, the same certificates and the same Vercel
+configuration. AWS charges for every public IPv4 address, in use or idle; at the time of writing that
+is about 0.005 USD per hour (roughly 3.65 USD per month if held continuously). Confirm the current
+rate, and whether your free plan covers it, on the VPC pricing page (Public IPv4 Address tab). It
+keeps costing while the instance is stopped. **Release it at [teardown](#teardown)**: an unattached
+Elastic IP keeps billing. A recreated deployment gets a different IP, so treat it as a new
+`PUBLIC_HOST` (new certificates, new Vercel variables).
 
-- the old hostnames no longer point at your server and the new ones have no certificates yet;
-- `PUBLIC_HOST` in `.env.prod` is wrong, so Keycloak's `KC_HOSTNAME`, the CORS origin and the
-  frontend URLs are wrong;
-- **the realm is not re-imported**, because Keycloak skips the import when the realm already
-  exists. The `aegis-admin-frontend` client keeps the old redirect URIs and web origin, and login
-  fails with "Invalid parameter: redirect_uri".
+### Fallback: no Elastic IP
 
-Recovery, in order of effort:
+A normal EC2 public IPv4 is released on stop and a different one is assigned on start (a plain
+reboot keeps it). If you choose not to pay for an Elastic IP, after every start:
 
-1. Edit `PUBLIC_HOST` in `.env.prod` (new IP with dots replaced by dashes, plus `.sslip.io`), then
-   run `scripts/deploy up`.
-2. Fix the Keycloak client. Either edit it in the admin console (`https://auth.<new host>/admin`,
-   realm `aegis`, Clients, `aegis-admin-frontend`: Valid redirect URIs `https://app.<new host>/*`,
-   `https://app.<new host>/silent-check-sso.html`, `https://app.<new host>`, and Web origins
-   `https://app.<new host>`), or reset the Keycloak database so the realm is imported again with the
-   new values (this deletes users and edits made in the console):
-
-   ```bash
-   docker compose --env-file .env.prod -f docker-compose.prod.yml stop keycloak
-   docker compose --env-file .env.prod -f docker-compose.prod.yml exec postgres \
-     psql -U aegis -d aegisnotify -c 'DROP DATABASE keycloak WITH (FORCE)' -c 'CREATE DATABASE keycloak'
-   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d keycloak
-   ```
-
-3. Wait for new certificates (one per hostname, three in total). Each new IP is a new set of
-   names, so the Let's Encrypt limits in
+1. Edit `PUBLIC_HOST` in `.env.prod` (new IP with dots replaced by dashes, plus `.sslip.io`) and run
+   `scripts/deploy up`.
+2. Update `API_BASE_URL` and `KEYCLOAK_URL` in Vercel and redeploy the frontend (they are read at
+   build time, see [Frontend on Vercel](#frontend-on-vercel-default)).
+3. Wait for three new certificates; each new IP is a new set of names, so the Let's Encrypt limits in
    [HTTPS certificates and rate limits](#https-certificates-and-rate-limits) apply again.
-4. If the frontend is on Vercel or S3, update its `KEYCLOAK_URL` / `API_BASE_URL`, redeploy it, and
-   set `FRONTEND_ORIGIN` only if the SPA origin changed.
 
-**Elastic IP: avoids all of that, costs money.** An Elastic IP stays with your account, so the
-hostnames, certificates and realm survive any number of stops and starts. AWS charges for every
-public IPv4 address, in use or idle; at the time of writing that is about 0.005 USD per hour
-(roughly 3.65 USD per month if held continuously). Confirm the current rate and whether your
-free plan covers it on the VPC pricing page (Public IPv4 Address tab). The address keeps costing
-while the instance is stopped. Release it at [teardown](#teardown).
-
-Recommendation: allocate an Elastic IP for the demo period. If you choose not to, follow the
-recovery steps above on every start, or use a real domain name instead of sslip.io and update
-its DNS record.
+The Keycloak realm needs no change: its redirect URIs and web origin are the Vercel origin, not the
+VM address.
 
 ## First deploy
 
-On the server, in the repository directory:
+Order matters because the Keycloak realm is imported only on the first start, using
+`FRONTEND_ORIGIN`:
 
-```bash
-scripts/deploy init <public-ip> <your-email>   # creates .env.prod (mode 600) with generated secrets
-scripts/deploy up                              # validates, builds the images, starts the stack
-```
+1. Associate the Elastic IP ([Provision](#provision-an-aws-ec2-instance), step 4). Your
+   `PUBLIC_HOST` is its dashed form, for example `203.0.113.10` becomes `203-0-113-10.sslip.io`.
+2. Create the Vercel project and note its production URL
+   ([Frontend on Vercel](#frontend-on-vercel-default)). It can be built before the backend exists.
+3. On the server, in the repository directory:
 
-`init` derives `PUBLIC_HOST` from the IP (`203.0.113.10` becomes `203-0-113-10.sslip.io`), fills
-every secret with random values, and prints the demo login password. It refuses to overwrite an
-existing `.env.prod`. **Back `.env.prod` up outside the server**; it holds the only copy of the
-secrets, including `AUDIT_ENCRYPTION_KEY`. Without the helper, copy
-[`.env.prod.example`](../.env.prod.example) and replace every `CHANGE_ME`.
+   ```bash
+   scripts/deploy init <elastic-ip> <your-email> https://<project>.vercel.app
+   scripts/deploy up
+   ```
 
-Required variables (every one except the optional blocks is checked by Compose and by
-`scripts/deploy check`):
+`init` derives `PUBLIC_HOST` from the IP, fills every secret with random values, writes
+`FRONTEND_ORIGIN`, and prints the demo login password. It refuses to overwrite an existing
+`.env.prod`. Without the third argument it leaves `FRONTEND_ORIGIN=https://CHANGE_ME.vercel.app`
+and `scripts/deploy check` (run by `up`) refuses to continue until you edit it. **Back `.env.prod`
+up outside the server**; it holds the only copy of the secrets, including `AUDIT_ENCRYPTION_KEY`.
+Without the helper, copy [`.env.prod.example`](../.env.prod.example) and replace every `CHANGE_ME`.
+
+Required variables (Compose and `scripts/deploy check` reject a missing or placeholder value):
 
 | Variable | Purpose |
 | --- | --- |
 | `PUBLIC_HOST` | `<ip-with-dashes>.sslip.io`; the single source of every public URL |
+| `FRONTEND_ORIGIN` | The Vercel production URL; the only CORS origin and the only Keycloak redirect origin |
 | `ACME_EMAIL` | Contact for Let's Encrypt / ZeroSSL |
 | `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` | Keycloak admin console login |
 | `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret of the `aegis-user-service` client (rendered into the realm) |
-| `DEMO_USER_PASSWORD` | Password of the demo user `aegis-dev` |
+| `DEMO_USER_PASSWORD` | Password of the demo user `aegis-dev` (browser login form) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database credentials (shared by the notification service and Keycloak) |
 | `EUREKA_SECURITY_USER`, `EUREKA_SECURITY_PASSWORD` | Eureka Basic auth |
 | `CONFIG_SERVER_USER`, `CONFIG_SERVER_PASSWORD` | Config Server Basic auth |
 | `AUDIT_ENCRYPTION_KEY` | `openssl rand -base64 32`; encrypts recipients at rest |
-| `ACME_DIR`, `COMPOSE_PROFILES`, `FRONTEND_ORIGIN` | Optional switches, see below |
+| `ADMIN_ALLOWED_CIDR`, `ACME_DIR`, `COMPOSE_PROFILES` | Optional switches, see below |
 | Provider and aggregation variables | Optional; defaults are the `local-placeholder` values, so real deliveries fail until set |
 
 The first start takes several minutes. Watch it with `scripts/deploy status` (or
@@ -280,48 +281,90 @@ Verify from the server and then from another computer:
 
 ```bash
 H=203-0-113-10.sslip.io        # your PUBLIC_HOST
-curl -si https://api.$H/actuator/health | head -1                                  # HTTP/2 200
-curl -s  https://auth.$H/realms/aegis/.well-known/openid-configuration | head -c 200
-curl -s  https://app.$H/config.json                                                # your URLs
+curl -si https://api.$H/actuator/health | head -1                                      # HTTP/2 200
+curl -s  https://auth.$H/realms/aegis/.well-known/openid-configuration | head -c 200   # public issuer
+curl -s -o /dev/null -w '%{http_code}\n' https://auth.$H/admin/master/console/         # 404 (blocked)
 ```
 
-Then open `https://app.<PUBLIC_HOST>` in a browser, sign in as `aegis-dev` with the generated
+Then open the Vercel URL in a browser, sign in as `aegis-dev` with the generated
 `DEMO_USER_PASSWORD`, and confirm that the dashboard loads without CORS errors in the browser
 console. Provision at least one active template before submitting notifications (the notification
 service has no template seed; see the [README](../README.md#4-provision-a-template)).
 
-## Choose where the frontend lives
+## Frontend on Vercel (default)
 
-Default: the frontend container serves the SPA at `https://app.<PUBLIC_HOST>` (compose profile
-`frontend`, enabled by `COMPOSE_PROFILES=frontend`). It needs no extra account and the origin
-follows `PUBLIC_HOST`.
+The admin SPA is a static site. Vercel hosts it; it needs the public API and Keycloak URLs, which
+the SPA reads from `/config.json` at start (runtime configuration, issue #171).
 
-**One origin only.** The gateway accepts exactly one CORS origin (`SecurityConfig` wraps
-`CORS_ALLOWED_ORIGINS` in a single-element list) and the Keycloak client is rendered for one
-origin. Choose the SPA's home *before the first deploy*:
+**Project setup**
 
-- **Served by the VM (default).** Leave `FRONTEND_ORIGIN` unset.
-- **Vercel.** Set `COMPOSE_PROFILES=` (empty) and `FRONTEND_ORIGIN=https://<project>.vercel.app` in
-  `.env.prod` before the first `scripts/deploy up`. In Vercel, import the repository with root
-  directory `aegis-admin-frontend` (it contains a [`vercel.json`](../aegis-admin-frontend/vercel.json)
-  that writes `public/config.json` at build time and sets the SPA rewrite and `no-store` header), and
-  define the build environment variables `API_BASE_URL=https://api.<PUBLIC_HOST>` and
-  `KEYCLOAK_URL=https://auth.<PUBLIC_HOST>`. A custom Vercel domain works the same way; use that
-  origin as `FRONTEND_ORIGIN`.
-- **S3 + CloudFront.** Build with `pnpm build`, replace `config.json` in
-  `dist/aegis-admin-frontend/browser` with `{"apiBaseUrl":"https://api.<PUBLIC_HOST>","keycloakUrl":"https://auth.<PUBLIC_HOST>"}`,
-  upload, and put CloudFront in front for HTTPS (S3 website endpoints are HTTP only). Map 403/404
-  to `/index.html` with status 200 and set `Cache-Control: no-store` on `config.json`.
-  `/silent-check-sso.html` must be served as the real file. Use the CloudFront origin as
-  `FRONTEND_ORIGIN`. This route was not exercised.
+1. Vercel, Add New, Project, import the `Exar-lab/AegisNotify` repository.
+2. **Root Directory:** `aegis-admin-frontend`. Everything else comes from
+   [`aegis-admin-frontend/vercel.json`](../aegis-admin-frontend/vercel.json): install
+   (`corepack enable && pnpm install --frozen-lockfile`), build, output directory
+   `dist/aegis-admin-frontend/browser`, the SPA rewrite and the `no-store` header for `config.json`.
+3. Settings, General, Node.js Version: **22.x** (the version CI uses).
+4. Settings, Environment Variables (Production):
 
-If you switch the frontend home after the first deploy, the realm import is skipped (see the
-previous section): update the client in the admin console or reset the Keycloak database, and
-change `FRONTEND_ORIGIN` so the gateway CORS origin follows.
+   | Name | Value |
+   | --- | --- |
+   | `API_BASE_URL` | `https://api.<PUBLIC_HOST>` |
+   | `KEYCLOAK_URL` | `https://auth.<PUBLIC_HOST>` |
+
+   Absolute `https` URLs, no trailing slash, no path.
+5. Deploy. Copy the **production** URL (`https://<project>.vercel.app`, or your custom domain if you
+   assigned one) into `FRONTEND_ORIGIN` ([First deploy](#first-deploy)).
+6. Settings, Deployment Protection: make sure the production URL is publicly reachable, otherwise
+   a second computer is sent to a Vercel login page. Confirm in a private window.
+
+**How the runtime configuration works on Vercel.** Vercel does not serve environment variables to
+the browser at request time. `vercel.json` therefore runs, before `pnpm build`:
+
+```bash
+printf '{"apiBaseUrl":"%s","keycloakUrl":"%s"}' "$API_BASE_URL" "$KEYCLOAK_URL" > public/config.json
+```
+
+so the generated file ships as `/config.json` in the static output and the SPA fetches it
+(`cache: 'no-store'`, plus the `no-store` response header from `vercel.json`) before Angular and
+Keycloak start. Consequences: the two variables are *build-time* inputs on Vercel; after changing
+them, **redeploy** the project. If the file is missing or invalid, the SPA falls back to
+`localhost` URLs and login fails visibly. The Keycloak realm (`aegis`) and client
+(`aegis-admin-frontend`) are compiled in.
+
+**One origin only; preview URLs do not work.** The gateway accepts exactly one CORS origin and the
+Keycloak client is rendered with exactly one redirect origin, both from `FRONTEND_ORIGIN`. Vercel
+creates other origins that are *different*: every deployment URL
+(`<project>-<hash>-<team>.vercel.app`) and every branch preview URL. Opening the app from one of
+them fails with CORS errors or `Invalid parameter: redirect_uri`. Share and test only the
+production URL. If you need previews, add their origin to the client in the Keycloak admin console
+by hand and accept that the gateway will still reject it; this guide does not support that.
+
+If you change the production domain later (for example a custom domain), update `FRONTEND_ORIGIN`,
+run `scripts/deploy up` to restart the gateway with the new CORS origin, and update the client's
+redirect URIs and web origin, because the realm is only imported on first start (see
+[Reach the Keycloak admin console](#reach-the-keycloak-admin-console)).
+
+### Alternative: serve the SPA from the VM
+
+Set `COMPOSE_PROFILES=frontend` and `FRONTEND_ORIGIN=https://app.<PUBLIC_HOST>` in `.env.prod` before
+the first deploy. `docker-compose.prod.yml` then builds and starts `aegis-admin-frontend`
+(a small Caddy with the compiled SPA, `/config.json` generated from `PUBLIC_HOST`), and the edge
+Caddy serves it at `https://app.<PUBLIC_HOST>`. It adds an image build on the VM (Node, pnpm) and one
+more certificate, but needs no Vercel account.
+
+### Alternative: S3 + CloudFront
+
+Build with `pnpm build`, replace `config.json` in `dist/aegis-admin-frontend/browser` with
+`{"apiBaseUrl":"https://api.<PUBLIC_HOST>","keycloakUrl":"https://auth.<PUBLIC_HOST>"}`, upload, and
+put CloudFront in front for HTTPS (S3 website endpoints are HTTP only). Map 403/404 to
+`/index.html` with status 200, set `Cache-Control: no-store` on `config.json`, and make sure
+`/silent-check-sso.html` is served as the real file. Use the CloudFront origin as `FRONTEND_ORIGIN`.
+Not exercised.
 
 ## HTTPS certificates and rate limits
 
-Caddy requests one certificate per hostname (`app.`, `api.`, `auth.`) on first start, using the
+Caddy requests one certificate per hostname (`api.` and `auth.`, plus `app.` because the proxy
+config always declares it) on first start, using the
 ACME HTTP and TLS-ALPN challenges, so ports 80 and 443 must be open to the internet and the
 hostname must already resolve to the VM. Certificates and the ACME account live in the
 `aegis-caddy-data` volume; **do not delete it** between redeploys.
@@ -353,6 +396,51 @@ hostname must already resolve to the VM. Certificates and the ACME account live 
 - **A real domain** removes the shared-domain risk: create `app.`, `api.` and `auth.` A records
   pointing at the Elastic IP and set `PUBLIC_HOST` to the domain. Nothing else changes.
 
+## Reach the Keycloak admin console
+
+The public Keycloak host serves only what login needs. Caddy answers **404** for `/admin` (console
+and Admin REST API) and the `master` realm unless the caller's address is inside
+`ADMIN_ALLOWED_CIDR`. The default is `192.0.2.1/32`, a documentation address that matches nobody.
+The block list is not a complete allow-list of Keycloak endpoints; it removes the administrative
+surface. Keycloak's own endpoints for the `aegis` realm remain public by design.
+
+You rarely need the console: realm values come from `docker/keycloak/prod/aegis-realm.json.tpl`.
+When you do:
+
+**Option 1: allow your own address, temporarily.** Set `ADMIN_ALLOWED_CIDR=<your-public-ip>/32` in
+`.env.prod`, run `scripts/deploy up` (only the `caddy` container is recreated), open
+`https://auth.<PUBLIC_HOST>/admin`, sign in with `KC_BOOTSTRAP_ADMIN_USERNAME` /
+`KC_BOOTSTRAP_ADMIN_PASSWORD`, and when finished remove the variable and run `scripts/deploy up`
+again. Caddy sees the caller's real address because it is the edge; this was not verified on AWS.
+
+**Option 2: command line over SSH, nothing public.** `kcadm.sh` runs inside the Keycloak container
+and talks to `localhost:8080`, so it never touches the blocked public paths:
+
+```bash
+C="docker compose --env-file .env.prod -f docker-compose.prod.yml"
+$C exec keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080 --realm master --user admin
+$C exec keycloak /opt/keycloak/bin/kcadm.sh get clients -r aegis -q clientId=aegis-admin-frontend
+# change the demo password (prompts are interactive; use -ti if needed)
+$C exec keycloak /opt/keycloak/bin/kcadm.sh set-password -r aegis --username aegis-dev --new-password '<new>'
+```
+
+An SSH port forward to the console is not a supported route here: Keycloak builds absolute URLs
+from `KC_HOSTNAME`, so the console would redirect to the blocked public address. These `kcadm`
+commands were not run against this deployment.
+
+To change the Vercel origin of an existing realm, update the client with `kcadm.sh update
+clients/<id> -r aegis -s 'redirectUris=[...]' -s 'webOrigins=[...]'` (get `<id>` from the query
+above), or reset the Keycloak database so the realm imports again with the new `FRONTEND_ORIGIN`
+(this deletes users and edits made after the first start):
+
+```bash
+$C stop keycloak
+$C exec postgres psql -U aegis -d aegisnotify \
+  -c 'DROP DATABASE keycloak WITH (FORCE)' -c 'CREATE DATABASE keycloak'
+$C up -d keycloak
+```
+
 ## Update
 
 ```bash
@@ -364,7 +452,8 @@ docker image prune -f    # drop dangling images
 
 Database volumes are untouched. Flyway applies new notification-service migrations on start.
 A change to `docker/keycloak/prod/aegis-realm.json.tpl` does **not** reach an existing realm;
-apply it in the admin console or reset the Keycloak database (see above).
+apply it with `kcadm.sh` or reset the Keycloak database
+([Reach the Keycloak admin console](#reach-the-keycloak-admin-console)).
 
 ## Stop and start to save credits
 
@@ -385,8 +474,9 @@ Procedure:
 3. To resume: Start instance. Docker is enabled and every service has `restart: unless-stopped`, so
    the stack comes back by itself; allow several minutes for the Spring Boot services to turn
    healthy (`scripts/deploy status`).
-4. **Without an Elastic IP the public IP has changed.** Follow
-   [the recovery steps](#public-ip-sslipio-and-the-stopstart-problem) before the demo.
+4. With the Elastic IP the address, hostnames, certificates and Vercel configuration are unchanged,
+   so nothing else is needed. (Without one, follow the
+   [fallback steps](#fallback-no-elastic-ip) before the demo.)
 
 Do the first start-after-stop well before a live demo, and open the login page once to confirm it.
 
@@ -432,9 +522,10 @@ To recreate: repeat [Provision](#provision-an-aws-ec2-instance) and [First deplo
 | --- | --- |
 | Browser shows a certificate error, or `caddy` logs ACME errors | Ports 80/443 closed in the security group; hostname does not resolve to the VM (`dig +short app.$H`); rate limit; staging CA still selected (`ACME_DIR`). Read `logs caddy`. |
 | `502 Bad Gateway` on `auth.` or `api.` | The service is still starting or restarting. `scripts/deploy status`; Keycloak needs a few minutes on first start. |
-| Login: "Invalid parameter: redirect_uri" | Client redirect URIs do not match the SPA origin (IP changed, or `FRONTEND_ORIGIN` mismatch). See the stop/start section. |
-| Page loads, API calls fail with CORS errors | `FRONTEND_ORIGIN` / `app.<PUBLIC_HOST>` differs from the origin in the address bar; the gateway allows exactly one origin. Check `docker compose ... exec aegis-api-gateway env`. |
-| Page loads but login redirects to `localhost` | `config.json` is missing or cached. Open `https://app.<PUBLIC_HOST>/config.json`; for Vercel, check the build variables. |
+| Login: "Invalid parameter: redirect_uri" | The origin in the address bar is not the one the realm was imported with (`FRONTEND_ORIGIN` at first start): a Vercel preview URL, a changed domain, or `http`. Use the production URL, or update the client ([Reach the Keycloak admin console](#reach-the-keycloak-admin-console)). |
+| Page loads, API calls fail with CORS errors | `FRONTEND_ORIGIN` differs from the origin in the address bar (a Vercel preview or deployment URL, a custom domain, `http` vs `https`); the gateway allows exactly one origin. Compare with `docker compose ... exec aegis-api-gateway env`. |
+| Page loads but login redirects to `localhost` | `config.json` is missing or stale. Open `<Vercel URL>/config.json`; if it is empty or wrong, check `API_BASE_URL` / `KEYCLOAK_URL` in Vercel and redeploy (they are read at build time). |
+| `https://auth.<PUBLIC_HOST>/admin` returns 404 | Intended: the admin console is blocked. See [Reach the Keycloak admin console](#reach-the-keycloak-admin-console). |
 | A service restarts repeatedly | `docker inspect --format '{{.State.OOMKilled}}' <container>`: `true` means the memory limit is too low; raise it in the compose file. Otherwise read `logs <service>`. |
 | `docker compose` complains about a missing variable | A required value is empty in `.env.prod`; the message names it. Run `scripts/deploy check`. |
 | Keycloak fails with "database \"keycloak\" does not exist" | The PostgreSQL volume predates `init-keycloak.sql`. Create it: `exec postgres psql -U aegis -d aegisnotify -c 'CREATE DATABASE keycloak'`, then restart `keycloak`. |
@@ -445,33 +536,38 @@ To recreate: repeat [Provision](#provision-an-aws-ec2-instance) and [First deplo
 
 ## Demo script
 
-About five minutes, from a second computer. Prepare beforehand: instance running, one active
-template created, the password at hand, a token command ready.
+About five minutes, from a second computer. There is no password-grant client in this deployment:
+everything runs through the browser login (Authorization Code with PKCE). Prepare beforehand:
+instance running, one active template created, the Vercel URL and the `aegis-dev` password at hand,
+a private browser window.
 
 1. **Context (30 s).** "AegisNotify is a notification orchestration service: outbox for
    at-least-once delivery, circuit breakers per provider, automatic fallback, dead-letter queue."
-   Show `https://app.<PUBLIC_HOST>` in the browser: HTTPS, no local setup.
-2. **Login (30 s).** Sign in as `aegis-dev`. Point out that authentication is Keycloak (Authorization
-   Code with PKCE) and the browser talks only to `api.` and `auth.`.
-3. **Submit a notification (60 s).** Get a token and call the API (payload fields in
-   [`api-guide.md`](api-guide.md)):
+   Open the Vercel URL: HTTPS, no local setup.
+2. **Login (30 s).** The app redirects to `https://auth.<PUBLIC_HOST>` (branded login page). Sign in
+   as `aegis-dev`. Point out that authentication is Keycloak and that the browser talks only to
+   `api.` and `auth.`.
+3. **Dashboard and Notifications (90 s).** Walk through the dashboard counters, the notifications
+   list (filters, pagination) and a detail page with its status timeline.
+4. **Submit a notification through the API (60 s, optional).** The UI does not send notifications.
+   Copy a bearer token from the app instead of fetching one with a password:
+   browser developer tools, Network tab, reload, click any request to `api.<PUBLIC_HOST>`, copy the
+   `Authorization: Bearer ...` request header (tokens last minutes). Then, with the payload from
+   [`api-guide.md`](api-guide.md):
 
    ```bash
-   H=<PUBLIC_HOST>
-   TOKEN=$(curl -s https://auth.$H/realms/aegis/protocol/openid-connect/token \
-     -d grant_type=password -d client_id=aegis-dev-cli \
-     -d username=aegis-dev -d "password=<DEMO_USER_PASSWORD>" | jq -r .access_token)
-   curl -si https://api.$H/api/v1/notifications -H "Authorization: Bearer $TOKEN" \
-     -H 'Content-Type: application/json' -d '<payload from api-guide.md>'   # 202 + notification id
+   curl -si https://api.<PUBLIC_HOST>/api/v1/notifications \
+     -H "Authorization: Bearer <token>" -H 'Content-Type: application/json' \
+     -d '<payload from api-guide.md>'        # 202 + notification id
    ```
 
-4. **See it in the UI (60 s).** Notifications list: the new entry and its status timeline (detail
-   page). Dashboard and Metrics: counters and latency.
+   Reload the list: the new notification appears. The same token works in Postman as a Bearer
+   token; Postman's own OAuth flow is not set up because no client allows its callback URL.
 5. **Resilience (60 s).** Providers page: primary/secondary state and circuit breakers. Explain that
-   with placeholder credentials the provider call fails, which is exactly what exercises retry,
-   fallback and the DLQ; point at the audit trail.
+   with placeholder credentials the provider call fails, which exercises retry, fallback and the
+   DLQ; point at the audit trail.
 6. **Close (30 s).** Architecture: gateway, Eureka, Kafka, per-service stores, one VM, HTTPS by
-   Caddy; mention that the instance is stopped between demos to save credits.
+   Caddy, SPA on Vercel; mention that the instance is stopped between demos to save credits.
 
 If anything fails live, switch to the recorded walkthrough below.
 
@@ -503,14 +599,14 @@ On any provider the Docker, `scripts/deploy` and Caddy steps are identical.
 
 This is a demo hardened only as far as the effort allows.
 
-- **Keycloak admin console is public** at `https://auth.<PUBLIC_HOST>/admin`. It is protected by
-  `KC_BOOTSTRAP_ADMIN_PASSWORD` (generated). Restrict it with a Caddy `@admin path /admin/*` matcher
-  and a `remote_ip` rule if you do not want it reachable by everyone.
-- **`aegis-dev-cli` is a public client with password grant**, kept so the demo can fetch a token
-  with curl. Anyone who knows the demo password can use it. Delete the client after the demo or
-  rotate `DEMO_USER_PASSWORD`.
+- **Keycloak admin is not public.** `/admin` and the `master` realm return 404 from the internet;
+  open them only through `ADMIN_ALLOWED_CIDR` or `kcadm.sh` over SSH
+  ([Reach the Keycloak admin console](#reach-the-keycloak-admin-console)). The admin password is
+  generated.
+- **No password grant.** The production realm has no `aegis-dev-cli` client and `admin-cli` has
+  direct access grants disabled; a token needs the interactive browser login.
 - **The demo user is shared.** Treat `DEMO_USER_PASSWORD` as public while a demo runs and change it
-  afterwards (admin console, Users).
+  afterwards (`kcadm.sh set-password`, see above).
 - MongoDB and Redis run without authentication, and Kafka uses PLAINTEXT. This is acceptable only
   because none of them publishes a port; do not add `ports:` to them.
 - Actuator `health`, `info` and `prometheus` follow the gateway rules in
@@ -545,3 +641,12 @@ Everything below is believed correct but was not observed. Check it on the first
    the pricing pages.
 9. **sslip.io availability.** The service is run by volunteers; if it is down, DNS for the demo
    fails. A domain you control avoids that dependency.
+10. **Vercel.** The build (`corepack enable`, pnpm 11, Node 22, the `printf` that writes
+    `config.json`), the rewrite behaviour (existing files such as `/config.json` and
+    `/silent-check-sso.html` winning over the catch-all rewrite) and the public reachability of the
+    production URL were not run on Vercel.
+11. **Admin block in the real stack.** The Caddy matcher was exercised in a throwaway Caddy with a
+    fixed response, not in front of Keycloak, and the client address Caddy sees behind the AWS
+    network (needed for `ADMIN_ALLOWED_CIDR`) was not observed. The `kcadm.sh` commands were not run.
+12. **Realm hardening.** Password grant refusal was tested on `start-dev`; other built-in clients
+    (`account-console`, `security-admin-console`) are left at their defaults.
