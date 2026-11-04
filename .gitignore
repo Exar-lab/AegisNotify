@@ -43,3 +43,6 @@ logs/
 !.mvn/wrapper/*.jar
 *.war
 *.ear
+
+# Python bytecode
+__pycache__/
