@@ -62,10 +62,13 @@ public class NotificationJpaEntity {
   @Column(name = "aggregate_body")
   private String aggregateBody;
 
+  @Column(name = "aggregate_subject")
+  private String aggregateSubject;
+
   protected NotificationJpaEntity() {
   }
 
-  /** Back-compat constructor: pre-aggregation shape, both new columns null. */
+  /** Back-compat constructor: pre-aggregation shape, all aggregation columns null. */
   public NotificationJpaEntity(UUID id, Channel channel, String recipient,
       String templateName, Map<String, Object> parameters, Priority priority,
       NotificationStatus status, String providerUsed, String errorDetail,
@@ -78,6 +81,15 @@ public class NotificationJpaEntity {
       String templateName, Map<String, Object> parameters, Priority priority,
       NotificationStatus status, String providerUsed, String errorDetail,
       Instant createdAt, Instant updatedAt, UUID aggregationId, String aggregateBody) {
+    this(id, channel, recipient, templateName, parameters, priority, status,
+        providerUsed, errorDetail, createdAt, updatedAt, aggregationId, aggregateBody, null);
+  }
+
+  public NotificationJpaEntity(UUID id, Channel channel, String recipient,
+      String templateName, Map<String, Object> parameters, Priority priority,
+      NotificationStatus status, String providerUsed, String errorDetail,
+      Instant createdAt, Instant updatedAt, UUID aggregationId, String aggregateBody,
+      String aggregateSubject) {
     this.id = id;
     this.channel = channel;
     this.recipient = recipient;
@@ -91,6 +103,7 @@ public class NotificationJpaEntity {
     this.updatedAt = updatedAt;
     this.aggregationId = aggregationId;
     this.aggregateBody = aggregateBody;
+    this.aggregateSubject = aggregateSubject;
   }
 
   public UUID getId() {
@@ -143,5 +156,9 @@ public class NotificationJpaEntity {
 
   public String getAggregateBody() {
     return aggregateBody;
+  }
+
+  public String getAggregateSubject() {
+    return aggregateSubject;
   }
 }

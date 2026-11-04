@@ -220,10 +220,9 @@ public class AggregationFlushTransactions {
    *                   leader included
    * @param leaderRow  the buffered row chosen as the group leader (oldest
    *                   successfully rendered member, X2)
-   * @param summary    the summarizer's output; only {@link
-   *                   SummarizedContent#body()} is persisted today — see
-   *                   apply-progress for the subject-persistence gap (no
-   *                   {@code aggregate_subject} column exists)
+   * @param summary    the summarizer's output; its body and subject are
+   *                   persisted on the leader ({@code aggregate_body},
+   *                   {@code aggregate_subject})
    */
   @Transactional
   public void flushAggregate(List<BufferedNotification> members, BufferedNotification leaderRow,
@@ -234,7 +233,7 @@ public class AggregationFlushTransactions {
             "Aggregation leader notification not found: " + leaderRow.getNotificationId()));
 
     Notification aggregatedLeader =
-        leaderNotification.markAggregated(aggregationId, summary.body());
+        leaderNotification.markAggregated(aggregationId, summary.body(), summary.subject());
     notificationRepository.save(aggregatedLeader);
     outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
     String leaderDetail =

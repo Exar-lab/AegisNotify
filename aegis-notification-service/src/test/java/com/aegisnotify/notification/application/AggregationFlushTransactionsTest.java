@@ -259,11 +259,13 @@ class AggregationFlushTransactionsTest {
         .filter(n -> n.getId().equals(leaderNotificationId)).findFirst().orElseThrow();
     assertNotNull(savedLeader.getAggregationId());
     assertEquals("Two things happened.", savedLeader.getAggregateBody());
+    assertEquals("Update", savedLeader.getAggregateSubject());
 
     Notification savedSibling1 = saved.stream()
         .filter(n -> n.getId().equals(sibling1Id)).findFirst().orElseThrow();
     assertEquals(savedLeader.getAggregationId(), savedSibling1.getAggregationId());
     assertNull(savedSibling1.getAggregateBody());
+    assertNull(savedSibling1.getAggregateSubject());
 
     Notification savedSibling2 = saved.stream()
         .filter(n -> n.getId().equals(sibling2Id)).findFirst().orElseThrow();

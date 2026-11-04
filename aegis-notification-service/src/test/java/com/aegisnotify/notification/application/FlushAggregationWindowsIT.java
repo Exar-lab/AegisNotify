@@ -168,6 +168,7 @@ class FlushAggregationWindowsIT {
     NotificationJpaEntity sibling = notificationJpaRepository.findById(siblingId).orElseThrow();
     assertThat(leader.getAggregationId()).isNotNull();
     assertThat(leader.getAggregateBody()).isEqualTo("Two things happened to Jane.");
+    assertThat(leader.getAggregateSubject()).isEqualTo("Update");
     assertThat(sibling.getAggregationId()).isEqualTo(leader.getAggregationId());
     assertThat(sibling.getAggregateBody()).isNull();
 

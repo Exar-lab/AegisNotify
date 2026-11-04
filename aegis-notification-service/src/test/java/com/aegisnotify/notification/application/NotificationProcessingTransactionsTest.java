@@ -190,6 +190,45 @@ class NotificationProcessingTransactionsTest {
   }
 
   @Test
+  void prepare_leaderWithAggregateSubject_usesSummarizerSubject() {
+    PreparedNotification prepared = prepareLeaderWithSubject("Two updates for you");
+
+    assertEquals("Two updates for you", prepared.subject());
+    assertEquals("Two things happened.", prepared.renderedBody());
+  }
+
+  @Test
+  void prepare_leaderWithBlankAggregateSubject_fallsBackToTemplateSubject() {
+    assertEquals("Welcome", prepareLeaderWithSubject("   ").subject());
+  }
+
+  @Test
+  void prepare_leaderWithNullAggregateSubject_fallsBackToTemplateSubject() {
+    assertEquals("Welcome", prepareLeaderWithSubject(null).subject());
+  }
+
+  private PreparedNotification prepareLeaderWithSubject(String aggregateSubject) {
+    UUID notificationId = UUID.randomUUID();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, Instant.now(), Instant.now(), UUID.randomUUID(),
+        "Two things happened.", aggregateSubject);
+    Template template = Template.reconstitute(
+        UUID.randomUUID(), "welcome", Channel.EMAIL,
+        "Welcome", "Hello {{name}}", List.of("name"),
+        true, Instant.now(), Instant.now());
+    when(notificationRepository.findById(notificationId))
+        .thenReturn(Optional.of(notification));
+    when(notificationRepository.save(any(Notification.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(templateRepository.findActiveByName("welcome")).thenReturn(Optional.of(template));
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    return transactions.prepare(notificationId);
+  }
+
+  @Test
   void prepare_normalNotificationWithoutAggregateBody_takesUnchangedRenderPath() {
     UUID notificationId = UUID.randomUUID();
     Notification notification = Notification.reconstitute(

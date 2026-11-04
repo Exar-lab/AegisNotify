@@ -79,11 +79,14 @@ public class NotificationProcessingTransactions {
 
     // X2 of the design: a leader notification carries a pre-summarized
     // aggregate_body (set by the aggregation flush path, issue #86 Slice 2)
-    // and skips the renderer entirely — the template is still looked up for
-    // its subject line, since no dedicated aggregate-subject column exists.
+    // and skips the renderer entirely. The summarizer's subject (issue #225,
+    // aggregate_subject) replaces the template subject; the template subject
+    // remains the fallback when the summarizer returned none.
     if (processing.getAggregateBody() != null) {
-      return new PreparedNotification(processing, template.getSubject(),
-          processing.getAggregateBody());
+      String aggregateSubject = processing.getAggregateSubject();
+      String subject = aggregateSubject == null || aggregateSubject.isBlank()
+          ? template.getSubject() : aggregateSubject;
+      return new PreparedNotification(processing, subject, processing.getAggregateBody());
     }
 
     TemplateRenderRequest request = new TemplateRenderRequest(

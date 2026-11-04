@@ -80,4 +80,38 @@ class NotificationAggregationTest {
     assertEquals(aggregationId, queued.getAggregationId());
     assertEquals("Summary", queued.getAggregateBody());
   }
+
+  @Test
+  void markAggregated_withSubject_storesSubjectAndSurvivesTransitions() {
+    Notification notification = Notification.create(
+        Channel.EMAIL, "user@example.com", "welcome", Map.of(), Priority.MEDIUM);
+
+    UUID aggregationId = UUID.randomUUID();
+    Notification aggregated = notification.markAggregated(aggregationId, "Body", "Digest");
+
+    assertEquals("Digest", aggregated.getAggregateSubject());
+    assertEquals("Body", aggregated.getAggregateBody());
+    assertEquals("Digest", aggregated.markQueued().getAggregateSubject());
+    assertEquals("Digest", aggregated.markSent("SendGrid").getAggregateSubject());
+  }
+
+  @Test
+  void markAggregated_twoArgOverload_leavesSubjectNull() {
+    Notification aggregated = Notification.create(
+        Channel.EMAIL, "user@example.com", "welcome", Map.of(), Priority.MEDIUM)
+        .markAggregated(UUID.randomUUID(), "Body");
+
+    assertNull(aggregated.getAggregateSubject());
+  }
+
+  @Test
+  void reconstitute_fullOverloadWithSubject_preservesSubject() {
+    Notification notification = Notification.reconstitute(
+        UUID.randomUUID(), Channel.EMAIL, "user@example.com", "welcome",
+        Map.of(), Priority.HIGH, NotificationStatus.QUEUED,
+        null, null, Instant.now(), Instant.now(),
+        UUID.randomUUID(), "Summary", "Subject");
+
+    assertEquals("Subject", notification.getAggregateSubject());
+  }
 }

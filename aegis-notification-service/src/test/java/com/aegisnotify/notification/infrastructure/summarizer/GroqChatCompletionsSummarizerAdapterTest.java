@@ -176,6 +176,37 @@ class GroqChatCompletionsSummarizerAdapterTest {
     assertThat(result.body()).isEqualTo("01234");
   }
 
+  @Test
+  void summarize_subjectWithLineBreaks_isCollapsedToSingleLine() {
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"  Hello\\\\r\\\\nBcc: x@evil.com  \\\",\\\"body\\\":\\\"B\\\"}\""));
+
+    SummarizedContent result = adapter().summarize(requestWith(Channel.EMAIL));
+
+    assertThat(result.subject()).isEqualTo("Hello Bcc: x@evil.com");
+  }
+
+  @Test
+  void summarize_subjectLongerThanLimit_isCappedAt255() {
+    String longSubject = "s".repeat(400);
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"" + longSubject + "\\\",\\\"body\\\":\\\"B\\\"}\""));
+
+    SummarizedContent result = adapter().summarize(requestWith(Channel.SMS));
+
+    assertThat(result.subject()).hasSize(255);
+  }
+
+  @Test
+  void summarize_blankOrMissingSubject_isReturnedAsNull() {
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"   \\\",\\\"body\\\":\\\"B\\\"}\""));
+    server.enqueue(completionWithContent("\"{\\\"body\\\":\\\"B\\\"}\""));
+
+    assertThat(adapter().summarize(requestWith(Channel.SMS)).subject()).isNull();
+    assertThat(adapter().summarize(requestWith(Channel.SMS)).subject()).isNull();
+  }
+
   /**
    * Same escape-then-cap ordering guarantee as the Anthropic adapter, proven
    * here for Groq rather than assumed: "<<<<<" escapes to 20 chars, so a
