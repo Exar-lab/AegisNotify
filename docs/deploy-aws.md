@@ -16,7 +16,7 @@ tags everything `Project=aegisnotify-demo`. `up` creates, in `us-east-2`:
 | Security group | Inbound 80 and 443 only. No SSH; administer through SSM Session Manager |
 | Elastic IP | Stable `sslip.io` hostnames that survive stop/start |
 | IAM | An EC2 role with `AmazonSSMManagedInstanceCore` and a scheduler role limited to stopping tagged instances |
-| Idle alarm | Stops the instance when average CPU stays below 10 % for one hour |
+| Idle alarm | Stops the instance when average CPU stays below 10 % for one hour (it has stopped the instance on a real run) |
 | Nightly stop | EventBridge Scheduler, 04:00 UTC every day, as a backstop |
 
 First boot installs Docker, adds 2 GiB of swap, clones the repository and runs
@@ -90,6 +90,21 @@ The rows were never sent to anyone: emails use `example.com`, phone numbers and 
 fictional. Do not press Retry on them. The Audit screen stays empty until real notifications are
 processed (its events are encrypted and live in MongoDB), and the circuit breaker table shows live
 state, so neither is seeded.
+
+## Keeping the demo on longer
+
+The idle alarm stops the instance after an hour with average CPU below 10 %. A single request does not
+reset that: it takes 12 consecutive 5-minute periods below the threshold, and one email barely moves
+the average. To stay on longer, switch the alarm off for a while instead of generating load:
+
+```bash
+python scripts/aws-demo/aws_demo.py keep-on --at 2026-11-05T04:05:00 --timezone UTC
+python scripts/aws-demo/aws_demo.py idle-on    # switch it back on right away
+```
+
+`keep-on` creates a one-off schedule that re-enables the alarm at the given time (it deletes itself
+afterwards) and only then disables the alarm actions, so the guard cannot stay off by accident. Pick
+a time after the nightly stop (04:00 UTC). The nightly stop is never affected.
 
 ## Findings from the first deployment
 

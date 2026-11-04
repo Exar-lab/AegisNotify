@@ -3,7 +3,7 @@
 This script only creates and guards the machine. The stack itself (docker-compose.prod.yml, Caddy,
 Keycloak realm, `scripts/deploy`) is the one from issue #236; the instance runs it on first boot.
 
-Actions: plan | up | providers | seed | unseed | schedule-start | start | stop | status | destroy
+Actions: plan | up | providers | seed | unseed | schedule-start | keep-on | idle-on | start | stop | status | destroy
 
     python scripts/aws-demo/aws_demo.py plan
     python scripts/aws-demo/aws_demo.py up --frontend-origin https://my-demo.vercel.app --acme-email you@example.com
@@ -11,6 +11,7 @@ Actions: plan | up | providers | seed | unseed | schedule-start | start | stop |
     python scripts/aws-demo/aws_demo.py seed          # synthetic templates and history (unseed removes it)
     python scripts/aws-demo/aws_demo.py stop          # stop paying for compute
     python scripts/aws-demo/aws_demo.py schedule-start --at 2026-11-05T16:00:00 --timezone America/Costa_Rica
+    python scripts/aws-demo/aws_demo.py keep-on --at 2026-11-05T04:05:00 --timezone UTC   # idle-stop off until then
     python scripts/aws-demo/aws_demo.py start
     python scripts/aws-demo/aws_demo.py destroy --yes # deletes the instance, its disk and all data
 
@@ -148,10 +149,13 @@ async def ensure_iam():
     # Start and stop, only for instances tagged with this project. Applied on every run so roles
     # created by older versions pick it up too.
     await CALL("iam", "PutRolePolicy", None, {"RoleName": NAMES["sched_role"], "PolicyName": "start-stop-demo-instance",
-                    "PolicyDocument": json.dumps({"Version": "2012-10-17", "Statement": [{
-                        "Effect": "Allow", "Action": ["ec2:StartInstances", "ec2:StopInstances"],
-                        "Resource": f"arn:aws:ec2:{REGION}:*:instance/*",
-                        "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}}]})})
+                    "PolicyDocument": json.dumps({"Version": "2012-10-17", "Statement": [
+                        {"Effect": "Allow", "Action": ["ec2:StartInstances", "ec2:StopInstances"],
+                         "Resource": f"arn:aws:ec2:{REGION}:*:instance/*",
+                         "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}},
+                        {"Effect": "Allow", "Action": "cloudwatch:EnableAlarmActions",
+                         "Resource": f"arn:aws:cloudwatch:{REGION}:*:alarm:{NAMES['alarm']}"}]})})
+
 
 async def ensure_ssm_read():
     """Let the instance read the provider secrets (and only those) from Parameter Store."""
@@ -309,6 +313,28 @@ async def schedule_start(at, timezone):
                    "Input": json.dumps({"InstanceIds": [inst["InstanceId"]]})}})
     return {"schedule": name, "starts": f"{at} {timezone}"}
 
+async def keep_on(at, timezone):
+    """Switch the idle-stop alarm off until `at`, when a one-off schedule switches it back on.
+
+    The schedule is created first, so the guard cannot stay off by accident. The nightly stop is
+    not affected.
+    """
+    await ensure_iam()  # makes sure the scheduler role may re-enable the alarm
+    role = await CALL("iam", "GetRole", None, {"RoleName": NAMES["sched_role"]})
+    name = f"{PREFIX}-idle-guard-on-" + re.sub(r"[^0-9]", "", at)
+    await CALL("scheduler", "CreateSchedule", REGION, {
+        "Name": name, "Description": "Re-enables the idle-stop alarm actions.", "ScheduleExpression": f"at({at})",
+        "ScheduleExpressionTimezone": timezone, "FlexibleTimeWindow": {"Mode": "OFF"}, "ActionAfterCompletion": "DELETE",
+        "Target": {"Arn": "arn:aws:scheduler:::aws-sdk:cloudwatch:enableAlarmActions", "RoleArn": role["Role"]["Arn"],
+                   "Input": json.dumps({"AlarmNames": [NAMES["alarm"]]})}})
+    await CALL("cloudwatch", "DisableAlarmActions", REGION, {"AlarmNames": [NAMES["alarm"]]})
+    return {"idle_stop": "off", "back_on": f"{at} {timezone}", "schedule": name}
+
+async def idle_on():
+    """Switch the idle-stop alarm back on now."""
+    await CALL("cloudwatch", "EnableAlarmActions", REGION, {"AlarmNames": [NAMES["alarm"]]})
+    return {"idle_stop": "on"}
+
 # ---------------------------------------------------------------- start / stop / destroy
 async def power(action):
     inst = await find_instance()
@@ -375,6 +401,10 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
         return await providers()
     if action in ("seed", "unseed"):
         return await seed(remove=action == "unseed")
+    if action == "keep-on":
+        return await keep_on(start_at, timezone)
+    if action == "idle-on":
+        return await idle_on()
     if action == "schedule-start":
         return await schedule_start(start_at, timezone)
     if action in ("start", "stop"):
@@ -388,13 +418,13 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("action", choices=["plan", "up", "providers", "seed", "unseed", "schedule-start", "start", "stop", "status", "destroy"])
+    parser.add_argument("action", choices=["plan", "up", "providers", "seed", "unseed", "schedule-start", "keep-on", "idle-on", "start", "stop", "status", "destroy"])
     parser.add_argument("--frontend-origin", help="Vercel origin allowed by CORS and Keycloak, e.g. https://my-demo.vercel.app")
     parser.add_argument("--repo-ref", default="main", help="Git ref of the repository to deploy from")
     parser.add_argument("--acme-email", help="Address for Let's Encrypt/ZeroSSL certificate expiry notices")
     parser.add_argument("--instance-type", default=INSTANCE_TYPE)
     parser.add_argument("--yes", action="store_true", help="Confirm destroy")
-    parser.add_argument("--at", dest="start_at", help="schedule-start: local date and time, e.g. 2026-11-05T16:00:00")
-    parser.add_argument("--timezone", default="UTC", help="schedule-start: IANA time zone, e.g. America/Costa_Rica")
+    parser.add_argument("--at", dest="start_at", help="schedule-start / keep-on: local date and time, e.g. 2026-11-05T16:00:00")
+    parser.add_argument("--timezone", default="UTC", help="schedule-start / keep-on: IANA time zone, e.g. America/Costa_Rica")
     args = parser.parse_args()
     print(json.dumps(asyncio.run(main(boto3_call, args.action, args.frontend_origin, args.acme_email, args.repo_ref, args.instance_type, args.yes, args.start_at, args.timezone)), indent=2))
