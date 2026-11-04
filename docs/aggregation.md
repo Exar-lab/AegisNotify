@@ -170,10 +170,17 @@ Groq-specific keys under `notification.aggregation.summarizer.groq`:
 |---|---|---|---|
 | `base-url` | `AGGREGATION_LLM_GROQ_BASE_URL` | `https://api.groq.com/openai` | Groq OpenAI-compatible API base URL. |
 | `api-key` | `AGGREGATION_LLM_GROQ_API_KEY` | empty | Groq API key, sent as a Bearer token. |
-| `model` | `AGGREGATION_LLM_GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model identifier. |
+| `model` | `AGGREGATION_LLM_GROQ_MODEL` | `qwen/qwen3.8-27b` | Groq model identifier. |
 
 `max-tokens`, `timeout` and `max-output-chars` must be positive; a blank `base-url`, `model` or
 `anthropic-version` falls back to the default.
+
+**Choosing the Groq model.** Model availability depends on the Groq account (list yours with
+`GET https://api.groq.com/openai/v1/models`). The default `qwen/qwen3.8-27b` returned valid JSON in
+`json_object` mode on every call in live testing and uses few output tokens, but Groq lists it as a
+preview model that may be discontinued at short notice. Reasoning models such as
+`openai/gpt-oss-20b` spend part of `max-tokens` on reasoning and intermittently fail with
+`json_validate_failed` at the default `max-tokens` of 512.
 
 ### Circuit breaker
 
@@ -467,7 +474,7 @@ CI runs never touch the network. The key is read from the environment only and i
 
 ```bash
 export AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
-# optional: AGGREGATION_LLM_GROQ_MODEL (default llama-3.1-8b-instant), AGGREGATION_LLM_GROQ_BASE_URL
+# optional: AGGREGATION_LLM_GROQ_MODEL (default qwen/qwen3.8-27b), AGGREGATION_LLM_GROQ_BASE_URL
 ./mvnw -pl aegis-notification-service test -Dtest=GroqSummarizerLiveSmokeTest
 ```
 
