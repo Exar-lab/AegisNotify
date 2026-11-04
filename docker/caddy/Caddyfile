@@ -17,6 +17,18 @@
 # through KC_PROXY_HEADERS=xforwarded.
 auth.{$PUBLIC_HOST} {
 	encode zstd gzip
+
+	# The admin console, the Admin REST API and the master realm are not
+	# reachable from the internet. Only the `aegis` realm endpoints that login
+	# needs are public. ADMIN_ALLOWED_CIDR (compose default 192.0.2.1/32, a
+	# documentation address that matches no real client) opens the blocked paths
+	# to one address range, for example your own IP as x.x.x.x/32.
+	@admin_blocked {
+		path /admin /admin/* /realms/master /realms/master/*
+		not remote_ip {$ADMIN_ALLOWED_CIDR:192.0.2.1/32}
+	}
+	respond @admin_blocked 404
+
 	reverse_proxy keycloak:8080
 }
 
@@ -26,9 +38,9 @@ api.{$PUBLIC_HOST} {
 	reverse_proxy aegis-api-gateway:8080
 }
 
-# Admin frontend (compose profile `frontend`). Unused when the SPA is hosted
-# on Vercel or S3; the certificate is still requested for this name, which is
-# harmless. Remove the block to avoid it.
+# Admin frontend (optional compose profile `frontend`, off by default). The
+# default deployment hosts the SPA on Vercel, so this name answers 502 and its
+# certificate is requested but unused. Remove the block to avoid that.
 app.{$PUBLIC_HOST} {
 	encode zstd gzip
 	reverse_proxy aegis-admin-frontend:80

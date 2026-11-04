@@ -81,6 +81,9 @@ services:
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST in .env.prod, e.g. 203-0-113-10.sslip.io}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+      # Source range allowed to reach the Keycloak admin console. The default
+      # (a TEST-NET address) denies everyone.
+      ADMIN_ALLOWED_CIDR: ${ADMIN_ALLOWED_CIDR:-192.0.2.1/32}
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       # ACME_DIR selects the issuer policy: acme-default (Let's Encrypt, then
@@ -96,8 +99,10 @@ services:
           memory: 64M
     logging: *default-logging
 
-  # --- Admin frontend (optional; enabled through COMPOSE_PROFILES=frontend) ---
-  # Skip it and host the SPA on Vercel or S3 instead (docs/deploy-vm.md).
+  # --- Admin frontend (optional profile, OFF by default) ---
+  # The default deployment hosts the SPA on Vercel (docs/deploy-vm.md). To serve
+  # it from this VM instead, set COMPOSE_PROFILES=frontend and
+  # FRONTEND_ORIGIN=https://app.<PUBLIC_HOST> in .env.prod.
   aegis-admin-frontend:
     profiles: ["frontend"]
     build:
@@ -124,7 +129,7 @@ services:
     image: alpine:3.20
     restart: "no"
     environment:
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://app.${PUBLIC_HOST:?set PUBLIC_HOST in .env.prod}}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env.prod (the Vercel URL)}
       USER_SERVICE_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET in .env.prod}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?set DEMO_USER_PASSWORD in .env.prod}
     volumes:
@@ -347,7 +352,7 @@ services:
       # The gateway accepts exactly ONE origin (SecurityConfig wraps the value
       # in a single-element list). Keep it equal to the origin that serves the
       # SPA, and to the redirect URI origin rendered into the Keycloak realm.
-      CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:-https://app.${PUBLIC_HOST:?set PUBLIC_HOST in .env.prod}}
+      CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env.prod (the Vercel URL)}
     depends_on:
       aegis-config-server:
         condition: service_healthy

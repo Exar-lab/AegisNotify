@@ -53,22 +53,15 @@
   ],
   "clients": [
     {
-      "clientId": "aegis-dev-cli",
-      "name": "Demo password-grant client",
-      "description": "Lets the demo script fetch a token with curl (docs/deploy-vm.md). Password grant on a public client: delete this client from the admin console once the demo no longer needs it.",
+      "clientId": "admin-cli",
+      "name": "${client_admin-cli}",
+      "description": "Built-in client. Password grant is switched off so the public realm offers no direct username/password token endpoint; only the browser login flow works.",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": false,
-      "defaultClientScopes": [
-        "notification:write",
-        "notification:read",
-        "audit:read",
-        "user:read",
-        "user:admin"
-      ]
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false
     },
     {
       "clientId": "aegis-user-service",
