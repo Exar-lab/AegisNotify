@@ -201,6 +201,16 @@ public final class Notification {
         createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
+  /**
+   * Returns a copy carrying {@code newPriority} (issue #227: the priority
+   * decided for an aggregate when its group is released).
+   */
+  public Notification withPriority(Priority newPriority) {
+    return reconstitute(id, channel, recipient, templateName, parameters,
+        newPriority, status, providerUsed, errorDetail,
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
+  }
+
   public boolean canCancel() {
     return status == NotificationStatus.PENDING || status == NotificationStatus.QUEUED;
   }

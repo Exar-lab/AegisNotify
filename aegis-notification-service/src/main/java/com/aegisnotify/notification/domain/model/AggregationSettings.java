@@ -26,6 +26,10 @@ import java.util.Set;
  * @param maxAttempts          claim attempts tolerated before a row that keeps
  *                             failing individual release is released loose
  *                             as its own notification (poison-row guard)
+ * @param modelPriorityEnabled whether the summarizer may assign the priority
+ *                             of an aggregated message (issue #227, default
+ *                             {@code false}); the applied priority is still
+ *                             never lower than the highest member priority
  */
 public record AggregationSettings(
     boolean enabled,
@@ -35,10 +39,19 @@ public record AggregationSettings(
     Set<String> excludedTemplates,
     Set<Channel> excludedChannels,
     Duration lease,
-    int maxAttempts) {
+    int maxAttempts,
+    boolean modelPriorityEnabled) {
 
   public AggregationSettings {
     excludedTemplates = excludedTemplates == null ? Set.of() : Set.copyOf(excludedTemplates);
     excludedChannels = excludedChannels == null ? Set.of() : Set.copyOf(excludedChannels);
+  }
+
+  /** Pre-#227 shape: model-assigned priority off. */
+  public AggregationSettings(boolean enabled, Duration window, boolean requireSameTemplate,
+      int maxGroupSize, Set<String> excludedTemplates, Set<Channel> excludedChannels,
+      Duration lease, int maxAttempts) {
+    this(enabled, window, requireSameTemplate, maxGroupSize, excludedTemplates, excludedChannels,
+        lease, maxAttempts, false);
   }
 }

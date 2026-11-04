@@ -51,7 +51,8 @@ public class AggregationConfig {
         properties.excludedTemplates(),
         properties.excludedChannels(),
         properties.claimLease(),
-        properties.maxAttempts()
+        properties.maxAttempts(),
+        properties.modelPriorityEnabled()
     );
   }
 

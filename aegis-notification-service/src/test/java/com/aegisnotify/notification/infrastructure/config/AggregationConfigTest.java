@@ -1,6 +1,7 @@
 package com.aegisnotify.notification.infrastructure.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -66,6 +67,19 @@ class AggregationConfigTest {
 
     assertEquals(Set.of("regulated-notice", "billing-statement"), settings.excludedTemplates());
     assertEquals(Set.of(Channel.SMS, Channel.PUSH), settings.excludedChannels());
+  }
+
+  @Test
+  void aggregationSettings_modelPriorityIsOffByDefaultAndMappedWhenEnabled() {
+    NotificationAggregationProperties defaults = new NotificationAggregationProperties(
+        true, Duration.ofMinutes(7), Duration.ofSeconds(15), false, 42,
+        Duration.ofMinutes(3), 5);
+    NotificationAggregationProperties enabled = new NotificationAggregationProperties(
+        true, Duration.ofMinutes(7), Duration.ofSeconds(15), false, 42,
+        Duration.ofMinutes(3), 5, Set.of(), Set.of(), true);
+
+    assertFalse(new AggregationConfig().aggregationSettings(defaults).modelPriorityEnabled());
+    assertTrue(new AggregationConfig().aggregationSettings(enabled).modelPriorityEnabled());
   }
 
   @Test
