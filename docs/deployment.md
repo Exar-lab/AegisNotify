@@ -5,6 +5,9 @@ it needs, and every environment variable and key property each service reads. It
 the Compose files, `application*.yml` files, Dockerfiles, and frontend sources in this repository
 (issue #196). Where the code and another document disagree, this guide states what the code does.
 
+To run the stack on a single cloud VM with HTTPS for portfolio demos, see
+[`deploy-vm.md`](deploy-vm.md).
+
 ## Navigate
 
 - [Topology and ports](#topology-and-ports)
@@ -55,6 +58,7 @@ is published by `docker-compose.yml` as `8088:8080`.
 | --- | --- |
 | `docker-compose.yml` | Keycloak only. Mounts `docker/keycloak` for the realm import and `docker/keycloak/themes/aegis` as the `aegis` login theme. Has no health check. |
 | `docker-compose.full.yml` | Full stack. Pulls Keycloak in with `include: docker-compose.yml` (do not also pass `-f docker-compose.yml`), and adds PostgreSQL, MongoDB, Kafka, Redis, and the six Spring Boot services. Defines no Compose profiles. |
+| `docker-compose.prod.yml` | Single-VM demo deployment (issue #236): standalone, Keycloak in production mode, Caddy HTTPS proxy as the only published ports (80/443), memory limits, restart policies. Reads `.env.prod`. See [`deploy-vm.md`](deploy-vm.md). |
 
 Service images are built from the repository root (`context: .`) using each module's `Dockerfile`:
 a multi-stage build (`eclipse-temurin:21-jdk-alpine` to build, `eclipse-temurin:21-jre-alpine` to
