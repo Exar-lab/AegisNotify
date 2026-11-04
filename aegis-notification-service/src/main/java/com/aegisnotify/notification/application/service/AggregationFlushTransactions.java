@@ -89,22 +89,43 @@ public class AggregationFlushTransactions {
   }
 
   /**
-   * Forces a claimed row that has exhausted its claim attempts into a
-   * terminal {@code DONE} state after {@link #flushIndividually} itself
-   * failed (B3 poison-group guard). Runs in its own transaction, independent
-   * of the failed flush attempt, so a persistent DB failure on the normal
-   * flush path still cannot leave a row permanently {@code CLAIMED} —
-   * looping CLAIMED -&gt; lease-expiry -&gt; reclaimed forever past {@code
-   * maxAttempts} is exactly what this guards against.
+   * Last-resort delivery for a claimed row whose {@link #flushIndividually}
+   * kept failing past {@code max-attempts} (issue #225): instead of giving up
+   * and dropping the notification, release it loose — write a fresh outbox
+   * event carrying {@code skipAggregation: true}, so it is delivered as its
+   * own notification and never re-held — and mark the buffer row {@code DONE}.
+   * Runs in its own transaction and writes only the outbox event and the row
+   * resolution (no trace log, see {@link #recordLooseRelease}), so a failure
+   * confined to the log write cannot keep blocking delivery. If this fails
+   * too the row is left {@code CLAIMED} and reclaimed after the lease; it is
+   * never marked {@code DONE} without an outbox event or an explicit
+   * {@code FAILED} log (missing notification).
    */
   @Transactional
-  public void forcePoisonRowDone(BufferedNotification claimed, String failureReason) {
-    notificationLogRepository.save(NotificationLog.create(
-        claimed.getNotificationId(), LogStatus.FAILED,
-        "Aggregation buffer flush exceeded max attempts (" + claimed.getAttempts()
-            + "); giving up after: " + failureReason));
+  public void releaseLoose(BufferedNotification claimed, String failureReason) {
+    Optional<Notification> notification =
+        notificationRepository.findById(claimed.getNotificationId());
+
+    notification.ifPresentOrElse(
+        found -> outboxEventRepository.save(buildOutboxEvent(found)),
+        () -> notificationLogRepository.save(NotificationLog.create(
+            claimed.getNotificationId(), LogStatus.FAILED,
+            "Aggregation buffer flush found no matching notification (after "
+                + claimed.getAttempts() + " attempts: " + failureReason + ")")));
 
     aggregationBufferRepository.resolve(claimed.getId());
+  }
+
+  /**
+   * Best-effort audit trace for {@link #releaseLoose}, in its own transaction
+   * so a failing log write can never undo or block the release itself.
+   */
+  @Transactional
+  public void recordLooseRelease(BufferedNotification claimed, String failureReason) {
+    notificationLogRepository.save(NotificationLog.create(
+        claimed.getNotificationId(), LogStatus.PENDING,
+        "Released from aggregation buffer for individual delivery after "
+            + claimed.getAttempts() + " failed attempts (" + failureReason + ")"));
   }
 
   private void writeIndividualOutboxEvent(Notification notification) {

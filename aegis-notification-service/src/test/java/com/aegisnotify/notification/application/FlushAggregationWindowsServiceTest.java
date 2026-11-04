@@ -80,9 +80,13 @@ class FlushAggregationWindowsServiceTest {
       true, Duration.ofMinutes(5), true, 20, Set.of(), Set.of(), Duration.ofMinutes(2), 3);
 
   private FlushAggregationWindowsService service() {
+    return service(settings);
+  }
+
+  private FlushAggregationWindowsService service(AggregationSettings customSettings) {
     return new FlushAggregationWindowsService(aggregationBufferRepository, transactions,
-        settings, clock, metrics, notificationRepository, templateRepository, templateRenderer,
-        summarizerPort);
+        customSettings, clock, metrics, notificationRepository, templateRepository,
+        templateRenderer, summarizerPort);
   }
 
   @Test
@@ -229,17 +233,17 @@ class FlushAggregationWindowsServiceTest {
     verify(transactions).flushIndividually(claimed2);
     verify(transactions).flushIndividually(claimed3);
     // Row 2's failure is under maxAttempts (1 <= 3): left CLAIMED for a
-    // future reclaim attempt, never forced to a terminal state prematurely.
-    verify(transactions, never()).forcePoisonRowDone(any(), any());
+    // future reclaim attempt, never released loose prematurely.
+    verify(transactions, never()).releaseLoose(any(), any());
   }
 
   /**
-   * A row whose flush attempt fails AND has exceeded maxAttempts must reach
-   * a terminal DONE state instead of looping CLAIMED -> lease-expiry ->
-   * reclaimed forever (B3 poison-group guard).
+   * A row whose flush attempt fails AND has exceeded maxAttempts must be
+   * delivered individually (released loose) instead of looping CLAIMED ->
+   * lease-expiry -> reclaimed forever, and never be dropped (issue #225).
    */
   @Test
-  void flushExpiredWindows_rowExceedsMaxAttemptsAndFlushFails_forcedToTerminalState() {
+  void flushExpiredWindows_rowExceedsMaxAttemptsAndFlushFails_releasedLooseAndDelivered() {
     BufferedNotification buffered = BufferedNotification.create(
         UUID.randomUUID(), Channel.EMAIL, "user@example.com", "welcome",
         Priority.MEDIUM, FIXED_NOW.minusSeconds(1), FIXED_NOW.minusSeconds(300));
@@ -258,8 +262,115 @@ class FlushAggregationWindowsServiceTest {
 
     int resolved = service().flushExpiredWindows();
 
+    assertEquals(1, resolved);
+    verify(transactions).releaseLoose(eq(reclaimed), any());
+    verify(transactions).recordLooseRelease(eq(reclaimed), any());
+  }
+
+  /**
+   * If even the loose release fails, the row must stay CLAIMED (retried after
+   * the lease) and must NOT be reported as resolved, dropped or marked done.
+   */
+  @Test
+  void flushExpiredWindows_releaseLooseAlsoFails_rowStaysClaimedNotResolved() {
+    BufferedNotification buffered = BufferedNotification.create(
+        UUID.randomUUID(), Channel.EMAIL, "user@example.com", "welcome",
+        Priority.MEDIUM, FIXED_NOW.minusSeconds(1), FIXED_NOW.minusSeconds(300));
+    BufferedNotification reclaimed = buffered.claim(FIXED_NOW.minusSeconds(200))
+        .claim(FIXED_NOW.minusSeconds(150))
+        .claim(FIXED_NOW.minusSeconds(100))
+        .claim(FIXED_NOW);
+
+    when(aggregationBufferRepository.findClaimable(any(), any())).thenReturn(List.of(buffered));
+    when(transactions.claim(buffered, FIXED_NOW)).thenReturn(Optional.of(reclaimed));
+    org.mockito.Mockito.doThrow(new RuntimeException("db write failed"))
+        .when(transactions).flushIndividually(reclaimed);
+    org.mockito.Mockito.doThrow(new RuntimeException("db still down"))
+        .when(transactions).releaseLoose(eq(reclaimed), any());
+
+    int resolved = service().flushExpiredWindows();
+
     assertEquals(0, resolved);
-    verify(transactions).forcePoisonRowDone(eq(reclaimed), any());
+    verify(transactions, never()).recordLooseRelease(any(), any());
+    verify(metrics).recordAggregationFlushError("force_poison_row_failed");
+  }
+
+  // --- Issue #225: max-group-size enforcement ---
+
+  private AggregationSettings settingsWithMaxGroupSize(int maxGroupSize) {
+    return new AggregationSettings(true, Duration.ofMinutes(5), true, maxGroupSize, Set.of(),
+        Set.of(), Duration.ofMinutes(2), 3);
+  }
+
+  /**
+   * Five claimable rows of one group with max-group-size 2 are split across
+   * flushes oldest-first: two aggregates of two members plus the leftover
+   * row released individually. No group exceeds the cap and no row is lost.
+   */
+  @Test
+  void flushExpiredWindows_groupLargerThanMaxGroupSize_isSplitAndNeverExceedsCap() {
+    List<UUID> ids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        UUID.randomUUID(), UUID.randomUUID());
+    List<BufferedNotification> rows = new java.util.ArrayList<>();
+    List<BufferedNotification> claimed = new java.util.ArrayList<>();
+    for (int i = 0; i < ids.size(); i++) {
+      Instant createdAt = FIXED_NOW.minusSeconds(500 - i * 10L);
+      BufferedNotification row = groupRow(ids.get(i), createdAt);
+      rows.add(row);
+      claimed.add(row.claim(FIXED_NOW));
+      when(transactions.claim(row, FIXED_NOW)).thenReturn(Optional.of(claimed.get(i)));
+      if (i < 4) {
+        // The leftover fifth row is released individually and never rendered.
+        when(notificationRepository.findById(ids.get(i)))
+            .thenReturn(Optional.of(notificationFor(ids.get(i), createdAt)));
+      }
+    }
+    // Hand the rows over newest-first to prove the split is oldest-first.
+    List<BufferedNotification> shuffled = new java.util.ArrayList<>(rows);
+    java.util.Collections.reverse(shuffled);
+    when(aggregationBufferRepository.findClaimable(any(), any())).thenReturn(shuffled);
+    when(templateRepository.findActiveByName("welcome")).thenReturn(Optional.of(welcomeTemplate()));
+    when(templateRenderer.render(any(TemplateRenderRequest.class))).thenReturn("Hello Jane");
+    SummarizedContent summary = new SummarizedContent("Update", "Two things happened.");
+    when(summarizerPort.summarize(any(SummarizationRequest.class))).thenReturn(summary);
+
+    int resolved = service(settingsWithMaxGroupSize(2)).flushExpiredWindows();
+
+    assertEquals(5, resolved);
+    verify(transactions).flushAggregate(List.of(claimed.get(0), claimed.get(1)),
+        claimed.get(0), summary);
+    verify(transactions).flushAggregate(List.of(claimed.get(2), claimed.get(3)),
+        claimed.get(2), summary);
+    verify(transactions).flushIndividually(claimed.get(4));
+    verify(summarizerPort, times(2)).summarize(any(SummarizationRequest.class));
+  }
+
+  @Test
+  void flushExpiredWindows_groupExactlyAtMaxGroupSize_isNotSplit() {
+    UUID id1 = UUID.randomUUID();
+    UUID id2 = UUID.randomUUID();
+    BufferedNotification row1 = groupRow(id1, FIXED_NOW.minusSeconds(300));
+    BufferedNotification row2 = groupRow(id2, FIXED_NOW.minusSeconds(200));
+    BufferedNotification claimed1 = row1.claim(FIXED_NOW);
+    BufferedNotification claimed2 = row2.claim(FIXED_NOW);
+    when(aggregationBufferRepository.findClaimable(any(), any()))
+        .thenReturn(List.of(row1, row2));
+    when(transactions.claim(row1, FIXED_NOW)).thenReturn(Optional.of(claimed1));
+    when(transactions.claim(row2, FIXED_NOW)).thenReturn(Optional.of(claimed2));
+    when(notificationRepository.findById(id1))
+        .thenReturn(Optional.of(notificationFor(id1, FIXED_NOW.minusSeconds(300))));
+    when(notificationRepository.findById(id2))
+        .thenReturn(Optional.of(notificationFor(id2, FIXED_NOW.minusSeconds(200))));
+    when(templateRepository.findActiveByName("welcome")).thenReturn(Optional.of(welcomeTemplate()));
+    when(templateRenderer.render(any(TemplateRenderRequest.class))).thenReturn("Hello Jane");
+    SummarizedContent summary = new SummarizedContent("Update", "Two things happened.");
+    when(summarizerPort.summarize(any(SummarizationRequest.class))).thenReturn(summary);
+
+    int resolved = service(settingsWithMaxGroupSize(2)).flushExpiredWindows();
+
+    assertEquals(2, resolved);
+    verify(transactions).flushAggregate(List.of(claimed1, claimed2), claimed1, summary);
+    verify(transactions, never()).flushIndividually(any());
   }
 
   // --- Slice 2: summarizer-backed group flush ---

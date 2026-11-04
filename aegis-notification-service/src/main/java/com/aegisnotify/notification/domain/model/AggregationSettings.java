@@ -14,17 +14,18 @@ import java.util.Set;
  * @param window               how long a group is held before being flushed
  * @param requireSameTemplate  whether grouping also requires a matching
  *                             template name (D12, default {@code true})
- * @param maxGroupSize         cap on notifications held in a single group
- *                             before an early flush
+ * @param maxGroupSize         cap on notifications summarized into a single
+ *                             aggregate; larger claimable groups are split
+ *                             into chunks of at most this size at flush time
  * @param excludedTemplates    template names that must always bypass
  *                             aggregation (D13), trimmed/case-insensitive
  * @param excludedChannels     channels that must always bypass aggregation
  *                             (D13)
  * @param lease                how long a claimed group may stay {@code
  *                             CLAIMED} before being eligible for reclaim
- * @param maxAttempts          claim attempts allowed before a group is forced
- *                             onto the individual-delivery path (poison-group
- *                             guard)
+ * @param maxAttempts          claim attempts tolerated before a row that keeps
+ *                             failing individual release is released loose
+ *                             as its own notification (poison-row guard)
  */
 public record AggregationSettings(
     boolean enabled,
