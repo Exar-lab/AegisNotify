@@ -22,6 +22,7 @@ disabled, no notification is held and no summarizer call is made.
 - [Database objects](#database-objects)
 - [Observability](#observability)
 - [Admin UI and API](#admin-ui-and-api)
+- [Live Groq smoke check](#live-groq-smoke-check)
 - [Known gaps](#known-gaps)
 
 ## How it works
@@ -66,24 +67,28 @@ Step by step:
 3. **Claim.** Each row is claimed in its own short transaction with a conditional update, so only
    one claimant wins a concurrent race. The claim increments `attempts`.
 4. **Group.** Claimable rows are grouped by key: channel and recipient, plus template name when
-   `require-same-template` is `true`.
+   `require-same-template` is `true`. A group with more rows than `max-group-size` is split,
+   oldest buffer row first, into consecutive chunks of at most `max-group-size` rows; every chunk
+   is flushed in the same poll, so no row is deferred or lost. A trailing chunk of one row is
+   released individually like any other group of one.
 5. **Single row.** A group with one row is released for individual delivery with no summarizer call.
 6. **Summarize.** For a group of two or more, each member's template body is rendered at flush time
    (not at hold time). The summarizer is then called with no database transaction open. The prompt
    asks for a JSON object `{"subject", "body"}` and gives a soft length hint of 480 characters.
 7. **Leader and siblings.** On success, `AggregationFlushTransactions.flushAggregate` runs in one
    transaction:
-   - the leader is the oldest member by notification creation time; it gets the new `aggregation_id`
-     and the summarized text in `aggregate_body`, and receives the only outbox event;
+   - the leader is the oldest member by notification creation time; it gets the new `aggregation_id`,
+     the summarized text in `aggregate_body` and the summarizer's subject in `aggregate_subject`,
+     and receives the only outbox event;
    - every other member (sibling) gets the same `aggregation_id`, is moved to `QUEUED`, and gets no
      outbox event and no provider call;
    - every member's buffer row becomes `DONE`;
    - an audit event is published per member, including the leader, with the aggregation id in its
      details.
 8. **Delivery.** The leader is delivered through the normal pipeline. When the consumer renders the
-   leader, a non-null `aggregate_body` replaces the template rendering; the template is still
-   loaded for its subject line, because no aggregate subject is stored (see
-   [Known gaps](#known-gaps)).
+   leader, a non-null `aggregate_body` replaces the template rendering. The delivered subject is the
+   stored `aggregate_subject`; when the summarizer returned no subject (or a blank one), it falls
+   back to the leader's template subject (the template is still loaded for that).
 9. **Outcome fan-out.** After the leader's outcome is applied, the same outcome (and an audit entry)
    is copied to each sibling that is still `QUEUED`. Siblings in any other status, for example
    `CANCELLED`, are left untouched.
@@ -130,9 +135,9 @@ variable with the default shown. Durations use ISO-8601 format (for example `PT5
 | `window` | `NOTIFICATION_AGGREGATION_WINDOW` | `PT5M` | How long a notification is held before its row becomes eligible to flush. |
 | `poll-interval` | `NOTIFICATION_AGGREGATION_POLL_INTERVAL` | `PT10S` | Fixed delay between flush polls (`@Scheduled(fixedDelay)`). |
 | `require-same-template` | `NOTIFICATION_AGGREGATION_REQUIRE_SAME_TEMPLATE` | `true` | When `true`, a group needs the same channel, recipient and template; when `false`, channel and recipient only. |
-| `max-group-size` | `NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE` | `20` | Validated as greater than zero and mapped into the domain settings, but not read by any flush logic. See [Limits](#limits). |
+| `max-group-size` | `NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE` | `20` | Maximum notifications summarized into one aggregate. Larger claimable groups are split across chunks in the same poll. See [Limits](#limits). |
 | `claim-lease` | `NOTIFICATION_AGGREGATION_CLAIM_LEASE` | `PT2M` | How long a row may stay `CLAIMED` before a later poll may re-claim it. |
-| `max-attempts` | `NOTIFICATION_AGGREGATION_MAX_ATTEMPTS` | `3` | Claim attempts tolerated before a row that keeps failing individual release is forced to `DONE`. See [Failure and fallback behavior](#failure-and-fallback-behavior). |
+| `max-attempts` | `NOTIFICATION_AGGREGATION_MAX_ATTEMPTS` | `3` | Claim attempts tolerated before a row that keeps failing individual release is released loose as its own notification. See [Failure and fallback behavior](#failure-and-fallback-behavior). |
 | `excluded-templates` | `NOTIFICATION_AGGREGATION_EXCLUDED_TEMPLATES` | empty | Comma-separated template names that always bypass aggregation. |
 | `excluded-channels` | `NOTIFICATION_AGGREGATION_EXCLUDED_CHANNELS` | empty | Comma-separated channels (`EMAIL`, `SMS`, `WHATSAPP`, `PUSH`) that always bypass aggregation. |
 
@@ -233,9 +238,10 @@ exceed the cap.
 | Flush latency | up to `poll-interval` (default 10 s) after the window ends | Scheduler fixed delay. |
 | Summarizer timeout | `timeout` (default 10 s) | Must be strictly less than both `window` and `claim-lease`; checked at startup (see below). |
 | Summary length | `max-output-chars` (default 2000) | Hard cap on the stored body. The prompt separately hints at 480 characters (a constant, not configurable). |
+| Subject length | 255 characters (constant) | The summarizer subject is stripped of control characters (line breaks become spaces), trimmed and capped; a blank result is stored as null and the template subject is used. |
 | Output tokens | `max-tokens` (default 512) | Passed to the vendor. |
-| Group size | `max-group-size` (default 20) | **Not enforced.** The value is validated and carried into the domain settings but no code reads it: a group contains every row that is claimable at the poll. |
-| Retry of failed releases | `max-attempts` (default 3) | See below. |
+| Group size | `max-group-size` (default 20) | `FlushAggregationWindowsService` splits a larger group, oldest buffer row first, into chunks of at most this size, all flushed in the same poll. Each chunk is summarized separately, so a group of N rows costs `ceil(N / max-group-size)` summarizer calls; a chunk of one row is released individually. |
+| Retry of failed releases | `max-attempts` (default 3) | After this many failed claims the row is released loose (see below). |
 
 **Startup invariants.** When aggregation is enabled and the selected vendor has a key,
 `AggregationConfig` throws `IllegalStateException` and the service refuses to start if
@@ -261,7 +267,7 @@ releases the affected notifications to normal individual delivery.
 | Claim fails (database error) | The row is skipped for this poll and retried on a later one. | `claim_failed` |
 | Another poll already claimed the row | Skipped silently. | none |
 | Individual release itself fails | The row stays `CLAIMED` and is retried after `claim-lease` expires. | `flush_failed` |
-| Individual release keeps failing and `attempts > max-attempts` | Poison-row guard: the row is forced to `DONE` and a `FAILED` log entry is written for the notification. See the note below. | `flush_failed`, then `force_poison_row_failed` if the guard itself fails |
+| Individual release keeps failing and `attempts > max-attempts` | Poison-row guard: the row is released loose, that is delivered as its own notification (see the note below). | `flush_failed`, then `force_poison_row_failed` if the loose release itself fails (the row then stays `CLAIMED` and is retried after `claim-lease`) |
 
 **Individual release** (`flushIndividually`) writes a fresh outbox event with the notification's
 original payload plus `skipAggregation: true`, adds a `PENDING` log entry (`Released from
@@ -269,13 +275,20 @@ aggregation buffer for individual delivery`), and marks the row `DONE`. If the n
 longer exists, a `FAILED` log entry is written and the row still becomes `DONE`, so a row is never
 held forever.
 
-**Poison-row note.** The guard exists to stop a row from looping CLAIMED, lease expiry, re-claim
-indefinitely. A row forced to `DONE` this way is *not* delivered: only a `FAILED` log entry is
-written (`Aggregation buffer flush exceeded max attempts ...`) and the notification's status is not
-changed. Because `attempts` is incremented on each claim and the check is `attempts > max-attempts`,
-the guard fires on the claim after the `max-attempts`-th. The default of 3 therefore applies on the
-fourth failing claim. Investigate such notifications manually (runbook
-[04](runbooks/04-outbox-backlog.md)).
+**Poison-row guard.** It exists to stop a row from looping CLAIMED, lease expiry, re-claim
+indefinitely without ever delivering. Once `attempts > max-attempts` and the individual release still
+fails, `AggregationFlushTransactions.releaseLoose` runs in its own transaction: it writes a fresh
+outbox event with the notification's original payload plus `skipAggregation: true` and marks the
+buffer row `DONE`, so the notification is delivered on its own and is never held again. A best-effort
+`PENDING` log entry (`Released from aggregation buffer for individual delivery after N failed
+attempts (<reason>)`) is then written in a separate transaction; a failure of that log write does not
+undo the release. If the notification no longer exists, a `FAILED` log entry is written and the row
+becomes `DONE`. If the loose release itself fails, nothing is marked done: the row stays `CLAIMED`,
+the metric `force_poison_row_failed` is incremented, and a later poll tries again after
+`claim-lease`. A row is therefore never closed without either an outbox event or an explicit
+`FAILED` log entry. Because `attempts` is incremented on each claim and the check is
+`attempts > max-attempts`, the guard fires on the claim after the `max-attempts`-th; the default of 3
+applies on the fourth failing claim.
 
 **Leader failures.** If the leader's delivery fails or goes to `FAILED_CRITICAL`, the same outcome is
 copied to its `QUEUED` siblings. Only the leader is published to the DLQ, so the count of
@@ -304,6 +317,7 @@ Flyway migration `V3__add_notification_aggregation.sql` (additive; the new colum
 |---|---|
 | `notifications.aggregation_id` | `UUID`, shared by the leader and siblings of one aggregate; null when never aggregated. Partial index `idx_notifications_aggregation_id` where not null. |
 | `notifications.aggregate_body` | `TEXT`, the summarized body; set on the leader only. |
+| `notifications.aggregate_subject` | `VARCHAR(255)`, the summarizer subject; set on the leader only, null when the summarizer returned none. Added by `V7__add_aggregate_subject.sql` (additive, nullable). |
 | `aggregation_buffer` | One row per held notification: `id`, `notification_id` (FK to `notifications`), `channel`, `recipient`, `template_name`, `priority`, `status` (`BUFFERED`, `CLAIMED`, `DONE`), `expires_at`, `claimed_at`, `attempts`, `created_at`. |
 | Indexes on `aggregation_buffer` | `idx_aggregation_buffer_claimable (status, expires_at, claimed_at)` for the flush scan, and `idx_aggregation_buffer_notification_id`. |
 
@@ -319,19 +333,31 @@ SELECT status, count(*), min(expires_at) FROM aggregation_buffer GROUP BY status
 |---|---|
 | Counter `aegisnotify.aggregation.flush.success.count` | Incremented per row resolved (individually) and per aggregate flush. |
 | Counter `aegisnotify.aggregation.flush.error.count` | Tagged `reason`: `claim_failed`, `render_failed`, `summarizer_unavailable`, `flush_failed`, `force_poison_row_failed`. |
-| Log events | `aggregation_flush_tick_completed`, `aggregation_flush_tick_failed`, `aggregation_buffer_claim_failed`, `aggregation_member_render_failed`, `aggregation_summarizer_unavailable`, `aggregation_summarizer_breaker_open`, `aggregation_summarizer_call_failed`, `aggregation_group_flush_failed`, `aggregation_buffer_flush_failed`, `aggregation_buffer_force_poison_row_failed`. |
+| Log events | `aggregation_flush_tick_completed`, `aggregation_flush_tick_failed`, `aggregation_buffer_claim_failed`, `aggregation_member_render_failed`, `aggregation_summarizer_unavailable`, `aggregation_summarizer_breaker_open`, `aggregation_summarizer_call_failed`, `aggregation_group_flush_failed`, `aggregation_buffer_flush_failed`, `aggregation_buffer_force_poison_row_failed`, `aggregation_buffer_released_loose`, `aggregation_buffer_loose_release_trace_failed`. |
 | Circuit breaker `aggregation-agent` | Exposed by Resilience4j health and `/actuator/circuitbreakers`. It is not one of the four providers in the admin Providers view (that view lists only the email, SMS, WhatsApp and push breakers). |
 
 ## Admin UI and API
 
-There is no aggregation-specific UI or API field. Neither `NotificationStatusResponse` nor the admin
-frontend models expose `aggregation_id`, `aggregate_body` or the buffer, and a search of
-`aegis-admin-frontend` finds no aggregation handling. An aggregated notification looks like any other
-notification:
+Aggregation state is exposed additively in the status API and shown in the admin notification
+detail screen.
 
-- `GET /api/v1/notifications/{id}/status` returns the usual fields and the `auditTrail` built from
-  `notification_logs`. The admin notification detail page renders that trail as its timeline, so
-  aggregation shows up only as log entries:
+- `GET /api/v1/notifications/{id}/status` keeps all its existing fields and adds an `aggregation`
+  object (always present; older clients simply ignore it):
+
+  | Field | Meaning |
+  |---|---|
+  | `role` | `NONE` (never aggregated, including a row still held in the buffer), `LEADER`, `SIBLING` or `RELEASED_INDIVIDUALLY`. |
+  | `aggregationId` | Shared id of the aggregate (`LEADER` and `SIBLING` only, else null). |
+  | `groupSize` | Notifications folded into the aggregate, leader included (`LEADER` and `SIBLING` only, else null). |
+  | `leaderId` | Id of the leader (the notification itself for `LEADER`; `SIBLING` only otherwise, else null). |
+
+  The role is derived on read, nothing extra is persisted: `LEADER` is a notification with an
+  `aggregation_id` and an `aggregate_body`, `SIBLING` has an `aggregation_id` without a body, and
+  `RELEASED_INDIVIDUALLY` has no `aggregation_id` but a `Released from aggregation buffer for
+  individual delivery` log entry.
+- The admin notification detail page shows an Aggregation row in the details panel for `LEADER`,
+  `SIBLING` (with a link to the leader) and `RELEASED_INDIVIDUALLY`; nothing is shown for `NONE`.
+- The `auditTrail` is still built from `notification_logs`, so the timeline also shows:
   - while held: status `PENDING`, log `Held for aggregation`;
   - leader after a flush: log `Aggregated as leader of a N-notification group (aggregation <id>)`;
   - sibling after a flush: status `QUEUED`, log `Folded into aggregate led by <leader id>
@@ -345,12 +371,32 @@ notification:
 - The audit trail in the audit service has one event per folded notification, with the aggregation
   id in the free-text details.
 
+## Live Groq smoke check
+
+`GroqSummarizerLiveSmokeTest` calls the real Groq API through `GroqChatCompletionsSummarizerAdapter`
+with a small batch of three realistic order-update messages and asserts that the returned body and
+subject are non-blank and within limits (body at most `max-output-chars`, subject at most 255
+characters). It is opt-in: it is skipped unless `AGGREGATION_LLM_GROQ_API_KEY` is set, so normal and
+CI runs never touch the network. The key is read from the environment only and is never logged.
+
+```bash
+export AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
+# optional: AGGREGATION_LLM_GROQ_MODEL (default llama-3.1-8b-instant), AGGREGATION_LLM_GROQ_BASE_URL
+./mvnw -pl aegis-notification-service test -Dtest=GroqSummarizerLiveSmokeTest
+```
+
+A passing run confirms that the configured model accepts `response_format: json_object` and returns
+the `{"subject","body"}` shape the adapter parses. Without the key the test is reported as skipped.
+
 ## Known gaps
 
-- `max-group-size` is configured and validated but is not enforced.
-- The summarizer's `subject` is parsed but not stored; there is no `aggregate_subject` column. The
-  delivered subject comes from the leader's template.
-- Rows forced to `DONE` by the poison-row guard are not delivered (a `FAILED` log is the only trace).
-- No automatic vendor failover, and no admin UI representation of aggregation.
-- Not verified here: end-to-end behavior against the live Anthropic or Groq APIs, and production
-  sizing of `window`, `timeout` and thresholds.
+- No automatic vendor failover.
+- Not verified here: end-to-end behavior against the live Anthropic or Groq APIs (the opt-in
+  [live Groq smoke check](#live-groq-smoke-check) exists but has not been run in this repository's
+  CI), and production sizing of `window`, `timeout` and thresholds.
+- A group larger than `max-group-size` is summarized in several chunks, so the recipient receives
+  one aggregated message per chunk (and one individual message for a trailing single row), not one
+  message for the whole group.
+
+The earlier gaps (`max-group-size` not enforced, summarizer subject not stored, poison rows dropped,
+no aggregation state in the status API or admin UI) were closed by issue #225.

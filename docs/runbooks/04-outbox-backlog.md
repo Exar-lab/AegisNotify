@@ -102,7 +102,8 @@ Work from the cheapest check to the most specific.
    `CLAIMED` rows past the lease (default `PT2M`) mean the flush scheduler is failing; look for
    `aggregation_flush_tick_failed`, `aggregation_buffer_flush_failed`, and
    `aegisnotify_aggregation_flush_error_count_total{reason}`. Rows that exceed
-   `NOTIFICATION_AGGREGATION_MAX_ATTEMPTS` (default 3) are forced to `DONE`.
+   `NOTIFICATION_AGGREGATION_MAX_ATTEMPTS` (default 3) are released loose and delivered as individual notifications
+   (`aggregation_buffer_released_loose`); if that also fails they stay `CLAIMED` and are retried.
 3. **Is Kafka reachable?** If `kafka_publish_failed` or `kafka_publish_timed_out` appear, or
    `aegisnotify_outbox_publish_error_count_total` increases, the problem is the broker or the
    network path to `KAFKA_BOOTSTRAP_SERVERS`. See [runbook 06](06-dependency-outages.md).
