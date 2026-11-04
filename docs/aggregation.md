@@ -205,6 +205,46 @@ export AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
 # optional: AGGREGATION_LLM_GROQ_MODEL, AGGREGATION_LLM_GROQ_BASE_URL
 ```
 
+### Enable aggregation with Groq
+
+Steps for the Docker Compose stack (`docker-compose.full.yml`), which passes the variables below
+from the host environment or `.env` to `aegis-notification-service`. Compose already enables the
+outbox relay and the Kafka consumer, so no extra prerequisite setting is needed there.
+
+1. Create a Groq API key in your Groq account.
+2. Copy `.env.example` to `.env` (gitignored) if you have not already, and set:
+
+   ```bash
+   NOTIFICATION_AGGREGATION_ENABLED=true
+   AGGREGATION_LLM_VENDOR=groq
+   AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
+   # optional: NOTIFICATION_AGGREGATION_WINDOW (default PT5M),
+   # AGGREGATION_LLM_GROQ_MODEL, AGGREGATION_LLM_GROQ_BASE_URL
+   ```
+
+   Use the `AGGREGATION_LLM_GROQ_*` key, not `AGGREGATION_LLM_API_KEY`, which is the Anthropic key.
+3. Recreate the service so it picks up the new environment:
+
+   ```bash
+   docker compose -f docker-compose.full.yml up -d --build aegis-notification-service
+   ```
+4. Confirm the resolved values:
+
+   ```bash
+   docker compose -f docker-compose.full.yml config
+   ```
+
+   Check that the notification service shows `NOTIFICATION_AGGREGATION_ENABLED: "true"` and
+   `AGGREGATION_LLM_VENDOR: groq`. This output prints the key in clear text; do not share it.
+5. Submit two or more non-`HIGH` notifications to the same recipient, channel and template within
+   the window. After the window plus up to one poll interval, one aggregated message is delivered.
+   If no key reaches the service, groups are delivered individually (metric reason
+   `summarizer_unavailable`).
+
+For a host run without Compose, export the same variables plus
+`NOTIFICATION_KAFKA_RELAY_ENABLED=true` as shown above. End-to-end behavior against the live Groq
+API was not verified for this guide.
+
 Both vendors share one system prompt and one response-handling path (`SummarizerCallTemplate`): the
 completion text is parsed as `{"subject": ..., "body": ...}`, the body is HTML-escaped for `EMAIL`
 and then capped to `max-output-chars`. Escaping happens before the cap so the stored body can never

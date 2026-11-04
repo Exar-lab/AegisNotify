@@ -125,6 +125,11 @@ Node.js with `pnpm` for the frontend.
 Provider credentials default to the literal `local-placeholder`, so the notification service
 starts, but real deliveries fail against the vendor APIs until real values are supplied in `.env`.
 
+AI aggregation is off by default. Compose passes `NOTIFICATION_AGGREGATION_*` and
+`AGGREGATION_LLM_*` from `.env` to the notification service; to enable it with Groq, follow
+[Enable aggregation with Groq](aggregation.md#enable-aggregation-with-groq). The unqualified
+`AGGREGATION_LLM_API_KEY` is the Anthropic key.
+
 To tear down and delete all data volumes:
 
 ```bash
