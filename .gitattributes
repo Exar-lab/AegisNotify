@@ -1,0 +1,9 @@
+# Files that run on the Linux deployment host must keep LF endings even when
+# checked out on Windows with core.autocrlf=true (issue #236).
+scripts/deploy text eol=lf
+docker-compose.prod.yml text eol=lf
+docker/caddy/** text eol=lf
+docker/frontend/** text eol=lf
+docker/postgres/** text eol=lf
+docker/keycloak/prod/** text eol=lf
+.env.prod.example text eol=lf
