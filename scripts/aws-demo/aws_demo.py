@@ -206,7 +206,7 @@ async def up():
             await ec2("AssociateAddress", AllocationId=addr["AllocationId"], InstanceId=inst["InstanceId"], AllowReassociation=True)
             break
         except Exception as error:
-            if "IncorrectInstanceState" not in str(error) or attempt == 29:
+            if not any(m in str(error) for m in ("IncorrectInstanceState", "InvalidInstanceID", "not in a valid state")) or attempt == 29:
                 raise
             await asyncio.sleep(5)
     await ensure_guardrails(inst["InstanceId"])
