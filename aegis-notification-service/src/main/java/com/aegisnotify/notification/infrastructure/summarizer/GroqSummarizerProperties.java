@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
 public record GroqSummarizerProperties(String baseUrl, String apiKey, String model) {
 
   private static final String DEFAULT_BASE_URL = "https://api.groq.com/openai";
-  private static final String DEFAULT_MODEL = "llama-3.3-70b-versatile";
+  private static final String DEFAULT_MODEL = "llama-3.1-8b-instant";
 
   @ConstructorBinding
   public GroqSummarizerProperties {

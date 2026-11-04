@@ -74,7 +74,7 @@ notification:
       groq:
         base-url: ${AGGREGATION_LLM_GROQ_BASE_URL:https://api.groq.com/openai}
         api-key: ${AGGREGATION_LLM_GROQ_API_KEY:}
-        model: ${AGGREGATION_LLM_GROQ_MODEL:llama-3.3-70b-versatile}
+        model: ${AGGREGATION_LLM_GROQ_MODEL:llama-3.1-8b-instant}
   kafka:
     relay:
       enabled: ${NOTIFICATION_KAFKA_RELAY_ENABLED:false}

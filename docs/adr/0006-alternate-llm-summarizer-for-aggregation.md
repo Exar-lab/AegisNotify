@@ -19,7 +19,7 @@ Keep summarization behind an outbound port, `AggregationSummarizerPort`, and sel
 configuration (`88cca45`):
 
 - `notification.aggregation.summarizer.vendor` is `anthropic` (default) or `groq`. Groq uses its
-  Chat Completions API, default model `llama-3.3-70b-versatile`.
+  Chat Completions API, default model `llama-3.1-8b-instant`.
 - `AggregationConfig` returns the adapter for the selected vendor. If aggregation is off or the
   selected vendor has no API key, it returns `UnavailableSummarizerAdapter` instead of failing
   startup. This mirrors the EMAIL and WHATSAPP vendor selectors in `ProviderConfig`.
@@ -61,6 +61,9 @@ the buffer was re-held on every outbox poll indefinitely. Resolved events now ca
 - Only one vendor is active at a time; there is no automatic failover between Anthropic and Groq.
 - Shared parsing assumes both vendors honor the `{"subject","body"}` JSON instruction; non-conforming
   output falls back to individual delivery.
+- A group larger than `max-group-size` is split into several aggregates, so a recipient may get more
+  than one aggregated message per window (issue #225 enforces the cap; the summarizer subject is now
+  stored and used for delivery, and a row that keeps failing release is delivered individually).
 - Some Anthropic-named settings (`api-key`, `model`, `anthropic-version`) sit beside the Groq block
   in the same `summarizer` section, which is easy to misconfigure.
 

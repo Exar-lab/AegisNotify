@@ -110,11 +110,36 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
 
     int resolvedCount = 0;
     for (List<BufferedNotification> groupRows : groups.values()) {
-      resolvedCount += groupRows.size() == 1
-          ? flushSingle(groupRows.get(0), now)
-          : flushGroup(groupRows, now);
+      for (List<BufferedNotification> chunk : splitByMaxGroupSize(groupRows)) {
+        resolvedCount += chunk.size() == 1
+            ? flushSingle(chunk.get(0), now)
+            : flushGroup(chunk, now);
+      }
     }
     return resolvedCount;
+  }
+
+  /**
+   * Enforces {@code max-group-size} (issue #225): a group with more claimable
+   * rows than the cap is split, oldest buffer row first, into consecutive
+   * chunks of at most {@code maxGroupSize}. Every chunk is flushed in this
+   * same poll, so no row is deferred or lost; a trailing chunk of one row is
+   * released individually like any other group of one.
+   */
+  private List<List<BufferedNotification>> splitByMaxGroupSize(
+      List<BufferedNotification> groupRows) {
+    int maxGroupSize = settings.maxGroupSize();
+    if (groupRows.size() <= maxGroupSize) {
+      return List.of(groupRows);
+    }
+    List<BufferedNotification> ordered = groupRows.stream()
+        .sorted(Comparator.comparing(BufferedNotification::getCreatedAt))
+        .toList();
+    List<List<BufferedNotification>> chunks = new ArrayList<>();
+    for (int from = 0; from < ordered.size(); from += maxGroupSize) {
+      chunks.add(ordered.subList(from, Math.min(from + maxGroupSize, ordered.size())));
+    }
+    return chunks;
   }
 
   private int flushSingle(BufferedNotification bufferedNotification, Instant now) {
@@ -259,18 +284,40 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
       metrics.recordAggregationFlushError("flush_failed");
 
       if (claimed.hasExceededMaxAttempts(settings.maxAttempts())) {
-        try {
-          transactions.forcePoisonRowDone(claimed, ex.getMessage());
-        } catch (RuntimeException forceEx) {
-          log.warn("aggregation_buffer_force_poison_row_failed bufferedNotificationId={} "
-              + "reason={}", claimed.getId(), forceEx.getMessage());
-          metrics.recordAggregationFlushError("force_poison_row_failed");
-        }
+        return releaseLoose(claimed, ex.getMessage());
       }
       // Left CLAIMED when still under maxAttempts: reclaimable again once
       // its lease expires, giving the next poll another attempt.
       return false;
     }
+  }
+
+  /**
+   * Poison-row guard (issue #225): a row whose individual release keeps
+   * failing past {@code max-attempts} is delivered as its own notification
+   * (released loose) rather than forced to {@code DONE} and dropped. If the
+   * loose release fails too, the row stays {@code CLAIMED} and is retried
+   * after the lease.
+   */
+  private boolean releaseLoose(BufferedNotification claimed, String failureReason) {
+    try {
+      transactions.releaseLoose(claimed, failureReason);
+    } catch (RuntimeException looseEx) {
+      log.warn("aggregation_buffer_force_poison_row_failed bufferedNotificationId={} "
+          + "reason={}", claimed.getId(), looseEx.getMessage());
+      metrics.recordAggregationFlushError("force_poison_row_failed");
+      return false;
+    }
+    log.warn("aggregation_buffer_released_loose bufferedNotificationId={} attempts={}",
+        claimed.getId(), claimed.getAttempts());
+    metrics.recordAggregationFlushSuccess();
+    try {
+      transactions.recordLooseRelease(claimed, failureReason);
+    } catch (RuntimeException traceEx) {
+      log.warn("aggregation_buffer_loose_release_trace_failed bufferedNotificationId={} "
+          + "reason={}", claimed.getId(), traceEx.getMessage());
+    }
+    return true;
   }
 
   private record RenderedMember(BufferedNotification row, String body,

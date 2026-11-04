@@ -199,6 +199,7 @@ returns the rendered subject and body without sending anything.
 | `auditTrail` | Timestamped log of state changes |
 | `providerAttempts` | Each delivery attempt against a provider |
 | `correlationId` | Identifier for tracing across services |
+| `aggregation` | Aggregation state: `role` (`NONE`, `LEADER`, `SIBLING`, `RELEASED_INDIVIDUALLY`), `aggregationId`, `groupSize`, `leaderId`. See [aggregation](aggregation.md#admin-ui-and-api) |
 
 An unknown id returns `404`. Poll with a modest interval and stop at a terminal status; there is no webhook
 or callback.

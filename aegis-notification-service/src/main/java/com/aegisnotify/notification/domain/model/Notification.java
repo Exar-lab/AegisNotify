@@ -30,11 +30,13 @@ public final class Notification {
   private final Instant updatedAt;
   private final UUID aggregationId;
   private final String aggregateBody;
+  private final String aggregateSubject;
 
   private Notification(UUID id, Channel channel, String recipient,
       String templateName, Map<String, Object> parameters, Priority priority,
       NotificationStatus status, String providerUsed, String errorDetail,
-      Instant createdAt, Instant updatedAt, UUID aggregationId, String aggregateBody) {
+      Instant createdAt, Instant updatedAt, UUID aggregationId, String aggregateBody,
+      String aggregateSubject) {
     this.id = id;
     this.channel = channel;
     this.recipient = recipient;
@@ -48,6 +50,7 @@ public final class Notification {
     this.updatedAt = updatedAt;
     this.aggregationId = aggregationId;
     this.aggregateBody = aggregateBody;
+    this.aggregateSubject = aggregateSubject;
   }
 
   public static Notification create(Channel channel, String recipient,
@@ -57,7 +60,7 @@ public final class Notification {
     return new Notification(
         UUID.randomUUID(), channel, recipient, templateName,
         Map.copyOf(parameters), priority, NotificationStatus.PENDING,
-        null, null, now, now, null, null
+        null, null, now, now, null, null, null
     );
   }
 
@@ -72,7 +75,7 @@ public final class Notification {
       Priority priority, NotificationStatus status, String providerUsed,
       String errorDetail, Instant createdAt, Instant updatedAt) {
     return reconstitute(id, channel, recipient, templateName, parameters, priority,
-        status, providerUsed, errorDetail, createdAt, updatedAt, null, null);
+        status, providerUsed, errorDetail, createdAt, updatedAt, null, null, null);
   }
 
   public static Notification reconstitute(UUID id, Channel channel,
@@ -80,10 +83,20 @@ public final class Notification {
       Priority priority, NotificationStatus status, String providerUsed,
       String errorDetail, Instant createdAt, Instant updatedAt,
       UUID aggregationId, String aggregateBody) {
+    return reconstitute(id, channel, recipient, templateName, parameters, priority,
+        status, providerUsed, errorDetail, createdAt, updatedAt, aggregationId,
+        aggregateBody, null);
+  }
+
+  public static Notification reconstitute(UUID id, Channel channel,
+      String recipient, String templateName, Map<String, Object> parameters,
+      Priority priority, NotificationStatus status, String providerUsed,
+      String errorDetail, Instant createdAt, Instant updatedAt,
+      UUID aggregationId, String aggregateBody, String aggregateSubject) {
     return new Notification(
         id, channel, recipient, templateName,
         Map.copyOf(parameters), priority, status, providerUsed,
-        errorDetail, createdAt, updatedAt, aggregationId, aggregateBody
+        errorDetail, createdAt, updatedAt, aggregationId, aggregateBody, aggregateSubject
     );
   }
 
@@ -111,49 +124,49 @@ public final class Notification {
   public Notification markQueued() {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.QUEUED, providerUsed, errorDetail,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markProcessing() {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.PROCESSING, providerUsed, errorDetail,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markSent(String provider) {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.SENT, provider, null,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markSentViaFallback(String provider) {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.SENT_VIA_FALLBACK, provider, null,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markFailed(String error) {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.FAILED, providerUsed, error,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markFailedCritical(String error) {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.FAILED_CRITICAL, providerUsed, error,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification markCancelled() {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.CANCELLED, providerUsed, errorDetail,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public Notification resetToPending() {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, NotificationStatus.PENDING, null, null,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   /**
@@ -173,9 +186,19 @@ public final class Notification {
    * stays {@code PENDING} forever with no path to ever leave it.</p>
    */
   public Notification markAggregated(UUID aggregationId, String aggregateBody) {
+    return markAggregated(aggregationId, aggregateBody, null);
+  }
+
+  /**
+   * Same as {@link #markAggregated(UUID, String)} but also stores the
+   * summarizer's subject line, which the leader's delivery uses instead of the
+   * template subject (issue #225). Siblings pass {@code null} for both.
+   */
+  public Notification markAggregated(UUID aggregationId, String aggregateBody,
+      String aggregateSubject) {
     return reconstitute(id, channel, recipient, templateName, parameters,
         priority, status, providerUsed, errorDetail,
-        createdAt, Instant.now(), aggregationId, aggregateBody);
+        createdAt, Instant.now(), aggregationId, aggregateBody, aggregateSubject);
   }
 
   public boolean canCancel() {
@@ -236,5 +259,9 @@ public final class Notification {
 
   public String getAggregateBody() {
     return aggregateBody;
+  }
+
+  public String getAggregateSubject() {
+    return aggregateSubject;
   }
 }

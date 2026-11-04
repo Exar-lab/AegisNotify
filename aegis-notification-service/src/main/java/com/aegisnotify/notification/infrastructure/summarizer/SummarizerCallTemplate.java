@@ -44,6 +44,7 @@ import reactor.netty.http.client.HttpClient;
  */
 final class SummarizerCallTemplate {
 
+  static final int MAX_SUBJECT_CHARS = 255;
   static final String CIRCUIT_BREAKER_NAME = "aggregation-agent";
   static final String SYSTEM_PROMPT =
       "You merge several short notification messages of the same kind, addressed to the same "
@@ -108,7 +109,7 @@ final class SummarizerCallTemplate {
           ? HtmlUtils.htmlEscape(payload.body()) : payload.body();
       String finalBody = capLength(escapedBody, maxOutputChars);
 
-      return new SummarizedContent(payload.subject(), finalBody);
+      return new SummarizedContent(sanitizeSubject(payload.subject()), finalBody);
     } catch (SummarizerUnavailableException ex) {
       throw ex;
     } catch (RuntimeException ex) {
@@ -143,6 +144,24 @@ final class SummarizerCallTemplate {
       throw new SummarizerUnavailableException("Summarizer produced an empty body");
     }
     return payload;
+  }
+
+  /**
+   * The subject becomes a message header (e.g. an email subject), so line
+   * breaks and other control characters are collapsed to single spaces
+   * (header-injection guard), the result is trimmed and capped to
+   * {@link #MAX_SUBJECT_CHARS}; a blank result is {@code null} so delivery
+   * falls back to the template subject.
+   */
+  private static String sanitizeSubject(String subject) {
+    if (subject == null) {
+      return null;
+    }
+    String collapsed = subject.replaceAll("\\p{Cntrl}+", " ").trim();
+    if (collapsed.isEmpty()) {
+      return null;
+    }
+    return capLength(collapsed, MAX_SUBJECT_CHARS).trim();
   }
 
   private static String capLength(String value, int maxLength) {

@@ -220,6 +220,7 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.priority").value("HIGH"))
         .andExpect(jsonPath("$.correlationId").value(notificationId.toString()))
         .andExpect(jsonPath("$.providerAttempts").isArray())
+        .andExpect(jsonPath("$.aggregation.role").value("NONE"))
         .andExpect(jsonPath("$.auditTrail[0].status").value("PENDING"));
   }
 

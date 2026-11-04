@@ -191,6 +191,75 @@ class AggregationFlushTransactionsTest {
     verifyNoInteractions(auditEventPublisherPort);
   }
 
+  // --- Issue #225: loose release replaces the old poison-row "force DONE" ---
+
+  @Test
+  void releaseLoose_writesSkipAggregationOutboxEventAndResolvesBuffer_notDropped() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "Jane"), Priority.MEDIUM, NotificationStatus.PENDING,
+        null, null, now, now);
+    BufferedNotification claimed = BufferedNotification.create(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Priority.MEDIUM, now.plusSeconds(300), now).claim(now);
+
+    when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
+    when(outboxEventRepository.save(any(OutboxEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    transactions.releaseLoose(claimed, "db write failed");
+
+    ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+    verify(outboxEventRepository).save(outboxCaptor.capture());
+    assertEquals(notificationId, outboxCaptor.getValue().getNotificationId());
+    assertEquals(Boolean.TRUE, outboxCaptor.getValue().getPayload().get("skipAggregation"));
+    verify(aggregationBufferRepository).resolve(claimed.getId());
+    verify(notificationLogRepository, never()).save(any(NotificationLog.class));
+  }
+
+  @Test
+  void releaseLoose_notificationMissing_logsFailedAndResolves() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    BufferedNotification claimed = BufferedNotification.create(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Priority.MEDIUM, now.plusSeconds(300), now).claim(now);
+    when(notificationRepository.findById(notificationId)).thenReturn(Optional.empty());
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    transactions.releaseLoose(claimed, "x");
+
+    verify(outboxEventRepository, never()).save(any(OutboxEvent.class));
+    ArgumentCaptor<NotificationLog> logCaptor = ArgumentCaptor.forClass(NotificationLog.class);
+    verify(notificationLogRepository).save(logCaptor.capture());
+    assertEquals(com.aegisnotify.notification.domain.enums.LogStatus.FAILED,
+        logCaptor.getValue().getStatus());
+    verify(aggregationBufferRepository).resolve(claimed.getId());
+  }
+
+  @Test
+  void recordLooseRelease_writesPendingTraceLogWithAttemptsAndReason() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    BufferedNotification claimed = BufferedNotification.create(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Priority.MEDIUM, now.plusSeconds(300), now).claim(now);
+    when(notificationLogRepository.save(any(NotificationLog.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    transactions.recordLooseRelease(claimed, "db write failed");
+
+    ArgumentCaptor<NotificationLog> logCaptor = ArgumentCaptor.forClass(NotificationLog.class);
+    verify(notificationLogRepository).save(logCaptor.capture());
+    assertEquals(com.aegisnotify.notification.domain.enums.LogStatus.PENDING,
+        logCaptor.getValue().getStatus());
+    assertTrue(logCaptor.getValue().getDetails().contains("db write failed"));
+    assertTrue(logCaptor.getValue().getDetails().contains("individual delivery"));
+  }
+
   private BufferedNotification bufferedRow(UUID notificationId, Instant now,
       Instant createdAt) {
     return BufferedNotification.create(notificationId, Channel.EMAIL, "user@example.com",
@@ -259,11 +328,13 @@ class AggregationFlushTransactionsTest {
         .filter(n -> n.getId().equals(leaderNotificationId)).findFirst().orElseThrow();
     assertNotNull(savedLeader.getAggregationId());
     assertEquals("Two things happened.", savedLeader.getAggregateBody());
+    assertEquals("Update", savedLeader.getAggregateSubject());
 
     Notification savedSibling1 = saved.stream()
         .filter(n -> n.getId().equals(sibling1Id)).findFirst().orElseThrow();
     assertEquals(savedLeader.getAggregationId(), savedSibling1.getAggregationId());
     assertNull(savedSibling1.getAggregateBody());
+    assertNull(savedSibling1.getAggregateSubject());
 
     Notification savedSibling2 = saved.stream()
         .filter(n -> n.getId().equals(sibling2Id)).findFirst().orElseThrow();

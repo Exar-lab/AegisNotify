@@ -186,7 +186,7 @@ class AggregationConfigTest {
 
   private static GroqSummarizerProperties groqWithKey(String apiKey) {
     return new GroqSummarizerProperties(
-        "https://api.groq.com/openai", apiKey, "llama-3.3-70b-versatile");
+        "https://api.groq.com/openai", apiKey, "llama-3.1-8b-instant");
   }
 
   @Test
@@ -275,7 +275,7 @@ class AggregationConfigTest {
     GroqSummarizerProperties properties = new GroqSummarizerProperties(" ", null, "");
 
     assertEquals("https://api.groq.com/openai", properties.baseUrl());
-    assertEquals("llama-3.3-70b-versatile", properties.model());
+    assertEquals("llama-3.1-8b-instant", properties.model());
     assertEquals("", properties.apiKey());
     assertTrue(!properties.hasApiKey());
   }

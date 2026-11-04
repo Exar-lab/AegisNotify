@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
+import com.aegisnotify.notification.application.dto.AggregationInfo;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
 import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.service.GetNotificationStatusService;
+import com.aegisnotify.notification.domain.enums.AggregationRole;
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
@@ -84,6 +86,93 @@ class GetNotificationStatusServiceTest {
     assertEquals(2, response.auditTrail().size());
     assertEquals(LogStatus.PENDING, response.auditTrail().get(0).status());
     assertEquals(LogStatus.QUEUED, response.auditTrail().get(1).status());
+    assertEquals(AggregationInfo.none(), response.aggregation());
+  }
+
+  private Notification aggregated(UUID id, UUID aggregationId, String body, Instant createdAt) {
+    return Notification.reconstitute(id, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of("name", "John"), Priority.MEDIUM, NotificationStatus.QUEUED, null, null,
+        createdAt, createdAt, aggregationId, body);
+  }
+
+  @Test
+  void getStatus_aggregateLeader_reportsLeaderRoleAndGroupSize() {
+    UUID leaderId = UUID.randomUUID();
+    UUID siblingId = UUID.randomUUID();
+    UUID aggregationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification leader = aggregated(leaderId, aggregationId, "Summary", now);
+    Notification sibling = aggregated(siblingId, aggregationId, null, now);
+    when(notificationRepository.findById(leaderId)).thenReturn(Optional.of(leader));
+    when(notificationRepository.findByAggregationId(aggregationId))
+        .thenReturn(List.of(leader, sibling));
+    when(notificationLogRepository.findByNotificationIdOrderByCreatedAt(leaderId))
+        .thenReturn(List.of());
+
+    AggregationInfo info = service.getStatus(leaderId).aggregation();
+
+    assertEquals(AggregationRole.LEADER, info.role());
+    assertEquals(aggregationId, info.aggregationId());
+    assertEquals(2, info.groupSize());
+    assertEquals(leaderId, info.leaderId());
+  }
+
+  @Test
+  void getStatus_aggregateSibling_reportsSiblingRoleAndLeaderId() {
+    UUID leaderId = UUID.randomUUID();
+    UUID siblingId = UUID.randomUUID();
+    UUID aggregationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification leader = aggregated(leaderId, aggregationId, "Summary", now);
+    Notification sibling = aggregated(siblingId, aggregationId, null, now);
+    when(notificationRepository.findById(siblingId)).thenReturn(Optional.of(sibling));
+    when(notificationRepository.findByAggregationId(aggregationId))
+        .thenReturn(List.of(leader, sibling));
+    when(notificationLogRepository.findByNotificationIdOrderByCreatedAt(siblingId))
+        .thenReturn(List.of());
+
+    AggregationInfo info = service.getStatus(siblingId).aggregation();
+
+    assertEquals(AggregationRole.SIBLING, info.role());
+    assertEquals(aggregationId, info.aggregationId());
+    assertEquals(2, info.groupSize());
+    assertEquals(leaderId, info.leaderId());
+  }
+
+  @Test
+  void getStatus_releasedFromBuffer_reportsReleasedIndividually() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of(), Priority.MEDIUM, NotificationStatus.SENT, "SendGrid", null, now, now);
+    when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
+    when(notificationLogRepository.findByNotificationIdOrderByCreatedAt(notificationId))
+        .thenReturn(List.of(
+            NotificationLog.reconstitute(UUID.randomUUID(), notificationId, LogStatus.PENDING,
+                "Held for aggregation", now),
+            NotificationLog.reconstitute(UUID.randomUUID(), notificationId, LogStatus.PENDING,
+                "Released from aggregation buffer for individual delivery", now)));
+
+    AggregationInfo info = service.getStatus(notificationId).aggregation();
+
+    assertEquals(AggregationRole.RELEASED_INDIVIDUALLY, info.role());
+    assertEquals(null, info.aggregationId());
+  }
+
+  @Test
+  void getStatus_heldButNotYetFlushed_reportsNone() {
+    UUID notificationId = UUID.randomUUID();
+    Instant now = Instant.now();
+    Notification notification = Notification.reconstitute(
+        notificationId, Channel.EMAIL, "user@example.com", "welcome",
+        Map.of(), Priority.MEDIUM, NotificationStatus.PENDING, null, null, now, now);
+    when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
+    when(notificationLogRepository.findByNotificationIdOrderByCreatedAt(notificationId))
+        .thenReturn(List.of(NotificationLog.reconstitute(UUID.randomUUID(), notificationId,
+            LogStatus.PENDING, "Held for aggregation", now)));
+
+    assertEquals(AggregationRole.NONE, service.getStatus(notificationId).aggregation().role());
   }
 
   @Test

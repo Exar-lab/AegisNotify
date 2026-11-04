@@ -67,7 +67,7 @@ class GroqChatCompletionsSummarizerAdapterTest {
         "https://unused.example", "", "unused-model", "2023-06-01", 512, timeout,
         maxOutputChars);
     GroqSummarizerProperties groqProperties = new GroqSummarizerProperties(
-        "http://localhost:" + server.getPort(), "groq-test-key", "llama-3.3-70b-versatile");
+        "http://localhost:" + server.getPort(), "groq-test-key", "llama-3.1-8b-instant");
     return new GroqChatCompletionsSummarizerAdapter(
         WebClient.builder(), summarizerProperties, groqProperties, circuitBreakerRegistry);
   }
@@ -115,7 +115,7 @@ class GroqChatCompletionsSummarizerAdapterTest {
     adapter().summarize(requestWith(Channel.SMS));
 
     JsonNode body = new ObjectMapper().readTree(server.takeRequest().getBody().readUtf8());
-    assertThat(body.get("model").asText()).isEqualTo("llama-3.3-70b-versatile");
+    assertThat(body.get("model").asText()).isEqualTo("llama-3.1-8b-instant");
     assertThat(body.get("max_completion_tokens").asInt()).isEqualTo(512);
     assertThat(body.has("max_tokens")).isFalse();
     assertThat(body.has("system")).isFalse();
@@ -174,6 +174,37 @@ class GroqChatCompletionsSummarizerAdapterTest {
         adapter(Duration.ofSeconds(5), 5).summarize(requestWith(Channel.SMS));
 
     assertThat(result.body()).isEqualTo("01234");
+  }
+
+  @Test
+  void summarize_subjectWithLineBreaks_isCollapsedToSingleLine() {
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"  Hello\\\\r\\\\nBcc: x@evil.com  \\\",\\\"body\\\":\\\"B\\\"}\""));
+
+    SummarizedContent result = adapter().summarize(requestWith(Channel.EMAIL));
+
+    assertThat(result.subject()).isEqualTo("Hello Bcc: x@evil.com");
+  }
+
+  @Test
+  void summarize_subjectLongerThanLimit_isCappedAt255() {
+    String longSubject = "s".repeat(400);
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"" + longSubject + "\\\",\\\"body\\\":\\\"B\\\"}\""));
+
+    SummarizedContent result = adapter().summarize(requestWith(Channel.SMS));
+
+    assertThat(result.subject()).hasSize(255);
+  }
+
+  @Test
+  void summarize_blankOrMissingSubject_isReturnedAsNull() {
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"   \\\",\\\"body\\\":\\\"B\\\"}\""));
+    server.enqueue(completionWithContent("\"{\\\"body\\\":\\\"B\\\"}\""));
+
+    assertThat(adapter().summarize(requestWith(Channel.SMS)).subject()).isNull();
+    assertThat(adapter().summarize(requestWith(Channel.SMS)).subject()).isNull();
   }
 
   /**
