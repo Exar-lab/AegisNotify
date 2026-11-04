@@ -19,7 +19,7 @@ Keep summarization behind an outbound port, `AggregationSummarizerPort`, and sel
 configuration (`88cca45`):
 
 - `notification.aggregation.summarizer.vendor` is `anthropic` (default) or `groq`. Groq uses its
-  Chat Completions API, default model `llama-3.3-70b-versatile`.
+  Chat Completions API, default model `llama-3.1-8b-instant`.
 - `AggregationConfig` returns the adapter for the selected vendor. If aggregation is off or the
   selected vendor has no API key, it returns `UnavailableSummarizerAdapter` instead of failing
   startup. This mirrors the EMAIL and WHATSAPP vendor selectors in `ProviderConfig`.

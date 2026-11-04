@@ -67,7 +67,7 @@ class GroqChatCompletionsSummarizerAdapterTest {
         "https://unused.example", "", "unused-model", "2023-06-01", 512, timeout,
         maxOutputChars);
     GroqSummarizerProperties groqProperties = new GroqSummarizerProperties(
-        "http://localhost:" + server.getPort(), "groq-test-key", "llama-3.3-70b-versatile");
+        "http://localhost:" + server.getPort(), "groq-test-key", "llama-3.1-8b-instant");
     return new GroqChatCompletionsSummarizerAdapter(
         WebClient.builder(), summarizerProperties, groqProperties, circuitBreakerRegistry);
   }
@@ -115,7 +115,7 @@ class GroqChatCompletionsSummarizerAdapterTest {
     adapter().summarize(requestWith(Channel.SMS));
 
     JsonNode body = new ObjectMapper().readTree(server.takeRequest().getBody().readUtf8());
-    assertThat(body.get("model").asText()).isEqualTo("llama-3.3-70b-versatile");
+    assertThat(body.get("model").asText()).isEqualTo("llama-3.1-8b-instant");
     assertThat(body.get("max_completion_tokens").asInt()).isEqualTo(512);
     assertThat(body.has("max_tokens")).isFalse();
     assertThat(body.has("system")).isFalse();

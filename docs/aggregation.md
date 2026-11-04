@@ -161,7 +161,7 @@ Groq-specific keys under `notification.aggregation.summarizer.groq`:
 |---|---|---|---|
 | `base-url` | `AGGREGATION_LLM_GROQ_BASE_URL` | `https://api.groq.com/openai` | Groq OpenAI-compatible API base URL. |
 | `api-key` | `AGGREGATION_LLM_GROQ_API_KEY` | empty | Groq API key, sent as a Bearer token. |
-| `model` | `AGGREGATION_LLM_GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model identifier. |
+| `model` | `AGGREGATION_LLM_GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model identifier. |
 
 `max-tokens`, `timeout` and `max-output-chars` must be positive; a blank `base-url`, `model` or
 `anthropic-version` falls back to the default.
