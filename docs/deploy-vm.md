@@ -1,5 +1,9 @@
 # Deploy the full stack on a single VM (portfolio demo)
 
+> AWS provisioning is automated by `scripts/aws-demo/aws_demo.py`, and the stack can run published
+> images instead of building. See [`deploy-aws.md`](deploy-aws.md) for what was verified on a real
+> instance, including why building on the host can fail.
+
 This guide deploys AegisNotify, Keycloak and the admin frontend on **one virtual machine** with
 Docker Compose and HTTPS, so the demo can be opened from any computer. It is written for a
 cost-bounded, stoppable demo, not for production traffic (issue #236).
