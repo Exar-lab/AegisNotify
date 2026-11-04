@@ -296,7 +296,7 @@ Template cache and aggregation:
 | `AGGREGATION_LLM_MAX_OUTPUT_CHARS` | `2000` | Maximum summary length | no |
 | `AGGREGATION_LLM_GROQ_BASE_URL` | `https://api.groq.com/openai` | Groq base URL | no |
 | `AGGREGATION_LLM_GROQ_API_KEY` | empty | Groq API key | yes |
-| `AGGREGATION_LLM_GROQ_MODEL` | `llama-3.1-8b-instant` | Groq model name | no |
+| `AGGREGATION_LLM_GROQ_MODEL` | `qwen/qwen3.8-27b` | Groq model name | no |
 
 Kafka and outbox:
 
