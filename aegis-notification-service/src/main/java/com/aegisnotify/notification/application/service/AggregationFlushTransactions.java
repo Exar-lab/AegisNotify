@@ -124,7 +124,7 @@ public class AggregationFlushTransactions {
   public void recordLooseRelease(BufferedNotification claimed, String failureReason) {
     notificationLogRepository.save(NotificationLog.create(
         claimed.getNotificationId(), LogStatus.PENDING,
-        "Released from aggregation buffer for individual delivery after "
+        AggregationLogMessages.RELEASED_INDIVIDUALLY_PREFIX + " after "
             + claimed.getAttempts() + " failed attempts (" + failureReason + ")"));
   }
 
@@ -132,7 +132,7 @@ public class AggregationFlushTransactions {
     outboxEventRepository.save(buildOutboxEvent(notification));
 
     notificationLogRepository.save(NotificationLog.create(notification.getId(),
-        LogStatus.PENDING, "Released from aggregation buffer for individual delivery"));
+        LogStatus.PENDING, AggregationLogMessages.RELEASED_INDIVIDUALLY_PREFIX));
   }
 
   /**

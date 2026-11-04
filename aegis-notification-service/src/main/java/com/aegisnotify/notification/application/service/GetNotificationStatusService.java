@@ -1,11 +1,14 @@
 package com.aegisnotify.notification.application.service;
 
+import com.aegisnotify.notification.application.dto.AggregationInfo;
 import com.aegisnotify.notification.application.dto.NotificationLogEntry;
 import com.aegisnotify.notification.application.dto.NotificationStatusResponse;
 import com.aegisnotify.notification.application.port.in.GetNotificationStatusUseCase;
 import com.aegisnotify.notification.application.port.out.DeliveryAttemptRepository;
 import com.aegisnotify.notification.application.port.out.NotificationLogRepository;
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
+import com.aegisnotify.notification.domain.enums.AggregationRole;
+import com.aegisnotify.notification.domain.enums.LogStatus;
 import com.aegisnotify.notification.domain.exception.NotificationNotFoundException;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
@@ -55,7 +58,37 @@ public class GetNotificationStatusService implements GetNotificationStatusUseCas
         auditTrail,
         notification.getPriority(),
         notification.getId(),
-        deliveryAttemptRepository.findByNotificationId(notificationId)
+        deliveryAttemptRepository.findByNotificationId(notificationId),
+        resolveAggregation(notification, logs)
     );
+  }
+
+  /**
+   * Derives the aggregation state on read (issue #225): a notification with an
+   * {@code aggregationId} is the LEADER when it carries the summarized body
+   * and a SIBLING otherwise; one without it that has an "individual delivery"
+   * release log entry was released loose from the buffer.
+   */
+  private AggregationInfo resolveAggregation(Notification notification,
+      List<NotificationLog> logs) {
+    UUID aggregationId = notification.getAggregationId();
+    if (aggregationId == null) {
+      boolean releasedIndividually = logs.stream().anyMatch(entry ->
+          entry.getStatus() == LogStatus.PENDING && entry.getDetails() != null
+              && entry.getDetails().startsWith(
+                  AggregationLogMessages.RELEASED_INDIVIDUALLY_PREFIX));
+      return releasedIndividually ? AggregationInfo.releasedIndividually()
+          : AggregationInfo.none();
+    }
+
+    List<Notification> group = notificationRepository.findByAggregationId(aggregationId);
+    boolean leader = notification.getAggregateBody() != null;
+    UUID leaderId = leader ? notification.getId() : group.stream()
+        .filter(member -> member.getAggregateBody() != null)
+        .map(Notification::getId)
+        .findFirst()
+        .orElse(null);
+    return new AggregationInfo(leader ? AggregationRole.LEADER : AggregationRole.SIBLING,
+        aggregationId, group.size(), leaderId);
   }
 }
