@@ -274,6 +274,7 @@ Template cache and aggregation:
 | `NOTIFICATION_TEMPLATE_CACHE_TTL` | `PT1H` | Template cache expire-after-write | no |
 | `NOTIFICATION_AGGREGATION_ENABLED` | `false` | Enables notification aggregation | no |
 | `NOTIFICATION_AGGREGATION_WINDOW` | `PT5M` | Aggregation window | no |
+| `NOTIFICATION_AGGREGATION_MODEL_PRIORITY_ENABLED` | `false` | Let the summarizer assign the aggregate priority | no |
 | `NOTIFICATION_AGGREGATION_POLL_INTERVAL` | `PT10S` | Aggregation poll interval | no |
 | `NOTIFICATION_AGGREGATION_REQUIRE_SAME_TEMPLATE` | `true` | Group only notifications sharing a template | no |
 | `NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE` | `20` | Maximum notifications per group | no |
