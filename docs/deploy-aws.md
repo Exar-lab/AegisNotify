@@ -77,6 +77,20 @@ Things to know before enabling it on a public demo:
   (five minutes by default) and merged by the model before delivery. See
   [`aggregation.md`](aggregation.md).
 
+## Demo data
+
+`python scripts/aws-demo/aws_demo.py seed` loads `scripts/aws-demo/seed-demo-data.sql` into the
+notification service database: six templates (one inactive) and 160 synthetic notifications with
+their status timelines and provider attempts, spread over the last 14 days (60 in the last 24 hours,
+40 in the 24 hours before). The Dashboard compares the last 24 hours with the previous day, so it
+shows figures straight away. Ids are derived from a hash, so running it again adds nothing;
+`unseed` removes exactly those rows and the six template names, and keeps real notifications.
+
+The rows were never sent to anyone: emails use `example.com`, phone numbers and device ids are
+fictional. Do not press Retry on them. The Audit screen stays empty until real notifications are
+processed (its events are encrypted and live in MongoDB), and the circuit breaker table shows live
+state, so neither is seeded.
+
 ## Findings from the first deployment
 
 - **Only `us-east-2` allows EC2.** The account sits in an AWS Organization whose service control

@@ -3,11 +3,12 @@
 This script only creates and guards the machine. The stack itself (docker-compose.prod.yml, Caddy,
 Keycloak realm, `scripts/deploy`) is the one from issue #236; the instance runs it on first boot.
 
-Actions: plan | up | providers | start | stop | status | destroy
+Actions: plan | up | providers | seed | unseed | start | stop | status | destroy
 
     python scripts/aws-demo/aws_demo.py plan
     python scripts/aws-demo/aws_demo.py up --frontend-origin https://my-demo.vercel.app --acme-email you@example.com
     python scripts/aws-demo/aws_demo.py providers     # load Mailtrap/Vonage/Groq settings from SSM
+    python scripts/aws-demo/aws_demo.py seed          # synthetic templates and history (unseed removes it)
     python scripts/aws-demo/aws_demo.py stop          # stop paying for compute
     python scripts/aws-demo/aws_demo.py start
     python scripts/aws-demo/aws_demo.py destroy --yes # deletes the instance, its disk and all data
@@ -254,7 +255,7 @@ async def run_on_instance(command, timeout=45):
     if not inst:
         raise SystemExit("No demo instance. Run `up` first.")
     sent = await CALL("ssm", "SendCommand", REGION, {"InstanceIds": [inst["InstanceId"]], "DocumentName": "AWS-RunShellScript",
-                      "Parameters": {"commands": [command]}, "TimeoutSeconds": 600})
+                      "Parameters": {"commands": ["bash <<'AEGIS_EOF'\n" + command + "\nAEGIS_EOF\n"]}, "TimeoutSeconds": 600})
     command_id = sent["Command"]["CommandId"]
     out = None
     for _ in range(timeout // 3):
@@ -275,6 +276,18 @@ async def providers():
     status_, output = await run_on_instance(
         "cd /opt/aegisnotify && git pull -q --ff-only origin \"$(git rev-parse --abbrev-ref HEAD)\" "
         "&& bash scripts/aws-demo/load-ssm-env.sh && AEGIS_IMAGES=ghcr bash scripts/deploy up 2>&1 | tail -n 15")
+    return {"status": status_, "output": output}
+
+async def seed(remove=False):
+    """Load (or remove) the synthetic demo data in the notification service database."""
+    name = "unseed" if remove else "seed"
+    psql = 'docker exec -i aegisnotify-prod-postgres-1 psql -U "${U:-aegis}" -d "${D:-aegisnotify}" -v ON_ERROR_STOP=1 -q'
+    status_, output = await run_on_instance(
+        'cd /opt/aegisnotify && git pull -q --ff-only origin "$(git rev-parse --abbrev-ref HEAD)" </dev/null\n'
+        "U=$(grep '^POSTGRES_USER=' .env.prod | cut -d= -f2- | tr -d \"'\")\n"
+        "D=$(grep '^POSTGRES_DB=' .env.prod | cut -d= -f2- | tr -d \"'\")\n"
+        + psql + f" < scripts/aws-demo/{name}-demo-data.sql\n"
+        + psql + ' -tA -c "select \'notifications=\' || count(*) from notifications" </dev/null')
     return {"status": status_, "output": output}
 
 # ---------------------------------------------------------------- start / stop / destroy
@@ -334,6 +347,8 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
         return await up()
     if action == "providers":
         return await providers()
+    if action in ("seed", "unseed"):
+        return await seed(remove=action == "unseed")
     if action in ("start", "stop"):
         return await power(action)
     if action == "destroy":
@@ -345,7 +360,7 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("action", choices=["plan", "up", "providers", "start", "stop", "status", "destroy"])
+    parser.add_argument("action", choices=["plan", "up", "providers", "seed", "unseed", "start", "stop", "status", "destroy"])
     parser.add_argument("--frontend-origin", help="Vercel origin allowed by CORS and Keycloak, e.g. https://my-demo.vercel.app")
     parser.add_argument("--repo-ref", default="main", help="Git ref of the repository to deploy from")
     parser.add_argument("--acme-email", help="Address for Let's Encrypt/ZeroSSL certificate expiry notices")
