@@ -27,7 +27,7 @@ import re
 REGION = "us-east-2"  # the only region the account's organization policy allows EC2 in
 PREFIX = "aegis-demo"
 PROJECT_TAG = {"Key": "Project", "Value": "aegisnotify-demo"}
-INSTANCE_TYPE = "t3.large"  # 8 GiB, the size docker-compose.prod.yml memory limits are written for
+INSTANCE_TYPE = "m7i-flex.large"  # 8 GiB (the size docker-compose.prod.yml is written for); eligible on AWS free-plan accounts
 VOLUME_GB = 30
 REPO = "Exar-lab/AegisNotify"
 AMI_PARAM = "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
@@ -187,8 +187,8 @@ async def up():
                 run = await ec2(
                     "RunInstances", ImageId=ami, InstanceType=CFG["instance_type"], MinCount=1, MaxCount=1,
                     IamInstanceProfile={"Name": NAMES["profile"]}, SecurityGroupIds=[sg["GroupId"]],
-                    # `unlimited` lets the first image builds burst; idle use stays within the baseline.
-                    CreditSpecification={"CpuCredits": "unlimited"},
+                    # Burstable T types only: `unlimited` lets the first image builds burst.
+                    **({"CreditSpecification": {"CpuCredits": "unlimited"}} if CFG["instance_type"].startswith("t") else {}),
                     MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2},
                     BlockDeviceMappings=[{"DeviceName": "/dev/sda1", "Ebs": {
                         "VolumeSize": VOLUME_GB, "VolumeType": "gp3", "Encrypted": True, "DeleteOnTermination": True}}],
