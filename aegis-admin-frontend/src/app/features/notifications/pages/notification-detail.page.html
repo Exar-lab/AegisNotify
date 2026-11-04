@@ -87,6 +87,28 @@
             <dt>Correlation ID</dt>
             <dd class="identifier">{{ item.correlationId }}</dd>
           </div>
+          @if (aggregation(); as agg) {
+            <div class="aggregation">
+              <dt>Aggregation</dt>
+              <dd>
+                <span class="badge" data-tone="neutral">{{ agg.label }}</span>
+                <p class="hint">{{ agg.detail }}</p>
+                @if (agg.info.role === 'SIBLING' && agg.info.leaderId) {
+                  <p class="hint">
+                    Leader:
+                    <a class="identifier" [routerLink]="['/notifications', agg.info.leaderId]">{{
+                      agg.info.leaderId
+                    }}</a>
+                  </p>
+                }
+                @if (agg.info.aggregationId) {
+                  <p class="hint">
+                    Aggregation ID: <span class="identifier">{{ agg.info.aggregationId }}</span>
+                  </p>
+                }
+              </dd>
+            </div>
+          }
           <div>
             <dt>Created at</dt>
             <dd>{{ item.createdAt | date: 'medium' }}</dd>

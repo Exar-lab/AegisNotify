@@ -58,6 +58,30 @@ export class NotificationDetailPage {
   });
   readonly timeline = computed(() => chronologicalLogs(this.notification()?.auditTrail ?? []));
   readonly attempts = computed(() => this.notification()?.providerAttempts ?? []);
+  /** Aggregation summary for the details panel; null when the notification was never aggregated. */
+  readonly aggregation = computed(() => {
+    const info = this.notification()?.aggregation;
+    if (!info || info.role === 'NONE') {
+      return null;
+    }
+    const size = info.groupSize === null ? '' : ` of ${info.groupSize} notifications`;
+    switch (info.role) {
+      case 'LEADER':
+        return { label: 'Aggregate leader', detail: `Delivered on behalf of a group${size}.`, info };
+      case 'SIBLING':
+        return {
+          label: 'Folded into an aggregate',
+          detail: `Part of a group${size}; it is not sent on its own.`,
+          info,
+        };
+      default:
+        return {
+          label: 'Released individually',
+          detail: 'Left the aggregation buffer and was delivered as its own notification.',
+          info,
+        };
+    }
+  });
 
   /** Timeline step under hover/focus, and the step the user pinned by clicking. */
   readonly hoveredIndex = signal<number | null>(null);

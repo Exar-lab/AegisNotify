@@ -21,6 +21,17 @@ export interface NotificationDetail {
   priority: Priority;
   correlationId: string;
   providerAttempts: ProviderAttempt[];
+  /** Additive field; absent on responses from older backends. */
+  aggregation?: AggregationInfo;
+}
+
+export type AggregationRole = 'NONE' | 'LEADER' | 'SIBLING' | 'RELEASED_INDIVIDUALLY';
+
+export interface AggregationInfo {
+  role: AggregationRole;
+  aggregationId: string | null;
+  groupSize: number | null;
+  leaderId: string | null;
 }
 
 export interface ProviderAttempt {

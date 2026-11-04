@@ -138,4 +138,58 @@ describe('NotificationDetailPage', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No individual provider attempts');
   });
+
+  describe('aggregation state', () => {
+    const render = (aggregation: NotificationDetail['aggregation']) => {
+      const fixture = TestBed.createComponent(NotificationDetailPage);
+      http.expectOne(url('test-id')).flush({ ...notification, aggregation });
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    };
+
+    it('shows nothing for a notification that was never aggregated', () => {
+      expect(render(undefined).querySelector('.aggregation')).toBeNull();
+      http.verify();
+    });
+
+    it('shows nothing when the role is NONE', () => {
+      const element = render({ role: 'NONE', aggregationId: null, groupSize: null, leaderId: null });
+      expect(element.querySelector('.aggregation')).toBeNull();
+    });
+
+    it('shows the leader with its group size', () => {
+      const element = render({
+        role: 'LEADER',
+        aggregationId: 'agg-1',
+        groupSize: 3,
+        leaderId: 'test-id',
+      });
+      const row = element.querySelector('.aggregation') as HTMLElement;
+      expect(row.textContent).toContain('Aggregate leader');
+      expect(row.textContent).toContain('3 notifications');
+      expect(row.textContent).toContain('agg-1');
+    });
+
+    it('shows a sibling with a link to its leader', () => {
+      const element = render({
+        role: 'SIBLING',
+        aggregationId: 'agg-1',
+        groupSize: 3,
+        leaderId: 'leader-9',
+      });
+      const row = element.querySelector('.aggregation') as HTMLElement;
+      expect(row.textContent).toContain('Folded into an aggregate');
+      expect(row.querySelector('a')?.getAttribute('href')).toBe('/notifications/leader-9');
+    });
+
+    it('shows a notification released individually from the buffer', () => {
+      const element = render({
+        role: 'RELEASED_INDIVIDUALLY',
+        aggregationId: null,
+        groupSize: null,
+        leaderId: null,
+      });
+      expect(element.querySelector('.aggregation')?.textContent).toContain('Released individually');
+    });
+  });
 });
