@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.19.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.18.0...aegisnotify-v0.19.0) (2026-11-04)
+
+
+### Features
+
+* **frontend:** show aggregation state in the notification detail screen ([3341926](https://github.com/Exar-lab/AegisNotify/commit/3341926ea7f7e15a6dc3d617d6190fdc13efd7c6)), closes [#225](https://github.com/Exar-lab/AegisNotify/issues/225)
+* **notification:** add priority to the summarizer contract ([265d052](https://github.com/Exar-lab/AegisNotify/commit/265d052e15f98f8defb29669abb1969008b6ec52))
+* **notification:** expose aggregation state in the status response ([fd8b4ad](https://github.com/Exar-lab/AegisNotify/commit/fd8b4ad1fdd82e44e767e8fa58ea5a206f0dad36)), closes [#225](https://github.com/Exar-lab/AegisNotify/issues/225)
+* **notification:** let the aggregation agent assign the aggregate priority ([e2e7273](https://github.com/Exar-lab/AegisNotify/commit/e2e727345d80e173ca311103ec3458e6d5f8cac9))
+* **notification:** let the aggregation agent assign the priority of aggregated messages ([7d3858f](https://github.com/Exar-lab/AegisNotify/commit/7d3858fd19380e7a9421f6b09fc29f77a14dd838))
+
+
+### Bug Fixes
+
+* **notification:** close the known gaps in the aggregation agent ([eb2d74a](https://github.com/Exar-lab/AegisNotify/commit/eb2d74acab0882d4b5099df41a59871c348cce8d))
+* **notification:** default the Groq summarizer model to llama-3.1-8b-instant ([2e1c470](https://github.com/Exar-lab/AegisNotify/commit/2e1c4706fa7fff3ddde05e2a1d0551e9c0244e41)), closes [#225](https://github.com/Exar-lab/AegisNotify/issues/225)
+* **notification:** enforce max-group-size and deliver poison rows individually ([a41dbf6](https://github.com/Exar-lab/AegisNotify/commit/a41dbf67b61cc22a6aa653e22015849a302fb3cc)), closes [#225](https://github.com/Exar-lab/AegisNotify/issues/225)
+* **notification:** store and deliver the summarizer subject for aggregates ([8a1208a](https://github.com/Exar-lab/AegisNotify/commit/8a1208ae2a30eaf857f7aaca9b6dcf219839f371)), closes [#225](https://github.com/Exar-lab/AegisNotify/issues/225)
+
+
+### Documentation
+
+* **deploy:** add VM deployment guide ([31feb98](https://github.com/Exar-lab/AegisNotify/commit/31feb98174b4c592a69e76d27753390032fbb977))
+* **deploy:** make Elastic IP and Vercel the default path ([5d78565](https://github.com/Exar-lab/AegisNotify/commit/5d78565216fc9041b581d29007050fec9eb079be))
+* **notification:** document model-assigned aggregate priority ([ee6a560](https://github.com/Exar-lab/AegisNotify/commit/ee6a5602266a0cd098b1f79dfe66eb06cc5ade8e))
+* update aggregation guide for the closed agent gaps ([0a7b122](https://github.com/Exar-lab/AegisNotify/commit/0a7b1225f963b149081ee965de46714d6fb7fd16))
+
 ## [0.18.0](https://github.com/Exar-lab/AegisNotify/compare/aegisnotify-v0.17.0...aegisnotify-v0.18.0) (2026-11-03)
 
 
