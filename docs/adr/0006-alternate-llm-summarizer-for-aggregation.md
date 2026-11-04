@@ -59,8 +59,9 @@ the buffer was re-held on every outbox poll indefinitely. Resolved events now ca
 
 - Message content is sent to an external LLM vendor when aggregation is enabled.
 - Only one vendor is active at a time; there is no automatic failover between Anthropic and Groq.
-- Shared parsing assumes both vendors honor the `{"subject","body"}` JSON instruction; non-conforming
-  output falls back to individual delivery.
+- Shared parsing assumes both vendors honor the `{"subject","body"}` JSON instruction (plus an
+  optional `priority` when `model-priority-enabled` is on, issue #227; an invalid or missing value
+  falls back to the leader's priority); non-conforming output falls back to individual delivery.
 - A group larger than `max-group-size` is split into several aggregates, so a recipient may get more
   than one aggregated message per window (issue #225 enforces the cap; the summarizer subject is now
   stored and used for delivery, and a row that keeps failing release is delivered individually).

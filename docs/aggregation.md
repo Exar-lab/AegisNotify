@@ -16,6 +16,7 @@ disabled, no notification is held and no summarizer call is made.
 - [Which notifications are held](#which-notifications-are-held)
 - [Configuration reference](#configuration-reference)
 - [Provider selection](#provider-selection)
+- [Model-assigned priority](#model-assigned-priority)
 - [API keys and secrets](#api-keys-and-secrets)
 - [Limits](#limits)
 - [Failure and fallback behavior](#failure-and-fallback-behavior)
@@ -75,6 +76,8 @@ Step by step:
 6. **Summarize.** For a group of two or more, each member's template body is rendered at flush time
    (not at hold time). The summarizer is then called with no database transaction open. The prompt
    asks for a JSON object `{"subject", "body"}` and gives a soft length hint of 480 characters.
+   With `model-priority-enabled` it also asks for a `priority` (see
+   [Model-assigned priority](#model-assigned-priority)).
 7. **Leader and siblings.** On success, `AggregationFlushTransactions.flushAggregate` runs in one
    transaction:
    - the leader is the oldest member by notification creation time; it gets the new `aggregation_id`,
@@ -138,6 +141,7 @@ variable with the default shown. Durations use ISO-8601 format (for example `PT5
 | `max-group-size` | `NOTIFICATION_AGGREGATION_MAX_GROUP_SIZE` | `20` | Maximum notifications summarized into one aggregate. Larger claimable groups are split across chunks in the same poll. See [Limits](#limits). |
 | `claim-lease` | `NOTIFICATION_AGGREGATION_CLAIM_LEASE` | `PT2M` | How long a row may stay `CLAIMED` before a later poll may re-claim it. |
 | `max-attempts` | `NOTIFICATION_AGGREGATION_MAX_ATTEMPTS` | `3` | Claim attempts tolerated before a row that keeps failing individual release is released loose as its own notification. See [Failure and fallback behavior](#failure-and-fallback-behavior). |
+| `model-priority-enabled` | `NOTIFICATION_AGGREGATION_MODEL_PRIORITY_ENABLED` | `false` | Lets the summarizer assign the priority of the aggregated message. Off: behavior is unchanged. See [Model-assigned priority](#model-assigned-priority). |
 | `excluded-templates` | `NOTIFICATION_AGGREGATION_EXCLUDED_TEMPLATES` | empty | Comma-separated template names that always bypass aggregation. |
 | `excluded-channels` | `NOTIFICATION_AGGREGATION_EXCLUDED_CHANNELS` | empty | Comma-separated channels (`EMAIL`, `SMS`, `WHATSAPP`, `PUSH`) that always bypass aggregation. |
 
@@ -206,9 +210,51 @@ export AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
 ```
 
 Both vendors share one system prompt and one response-handling path (`SummarizerCallTemplate`): the
-completion text is parsed as `{"subject": ..., "body": ...}`, the body is HTML-escaped for `EMAIL`
+completion text is parsed as `{"subject": ..., "body": ...}` (plus `"priority"` when
+[requested](#model-assigned-priority)), the body is HTML-escaped for `EMAIL`
 and then capped to `max-output-chars`. Escaping happens before the cap so the stored body can never
 exceed the cap.
+
+## Model-assigned priority
+
+By default the released aggregate keeps the leader's priority. With
+`notification.aggregation.model-priority-enabled=true` (env
+`NOTIFICATION_AGGREGATION_MODEL_PRIORITY_ENABLED`, default `false`) the summarizer also judges how
+urgent the group is, and that priority is applied when the group is released.
+
+**Contract.** The prompt asks for `{"subject": string, "body": string, "priority": string}` where
+`priority` is `HIGH`, `MEDIUM` or `LOW`. Both vendors use the same prompt and parsing. The value is
+trimmed, matched case-insensitively against the `Priority` enum, and any other value (or none) is
+treated as no suggestion. With the flag off, the prompt is the original one and a `priority` in the
+reply is ignored.
+
+**Applying it.** In `flushAggregate` the leader is saved with the applied priority and its outbox
+event carries it, so the relay publishes to the matching topic (`high-priority-topic`,
+`medium-priority-topic` or `low-priority-topic`). The audit event for the leader reports the
+applied priority too. The leader's notification log entry records both values, for example
+`Aggregated as leader of a 3-notification group (aggregation <id>); priority: suggested HIGH,
+applied HIGH`, or `priority: no valid suggestion, applied MEDIUM`.
+
+**Safeguards.**
+
+- The model can only keep or raise the priority. The applied value is never lower than the highest
+  priority among the group's members; a reply of `LOW` for a group containing a `MEDIUM` member is
+  applied as `MEDIUM`. Without a valid suggestion, the leader's priority is kept (also never below
+  that floor).
+- Notification content is untrusted. In this mode each rendered body is wrapped in
+  `<message index="N">...</message>` and the system prompt tells the model to treat those tags as
+  data, to ignore instructions inside them, and to choose the priority only from how urgent the
+  events are. A body that contains its own `<message>` or `</message>` tag has it replaced by
+  square brackets, so it cannot close the data block.
+- Only rendered bodies reach the model (no recipient, ids or raw parameters), as before.
+
+**Limits.** Prompt wording reduces, but cannot eliminate, prompt injection: a crafted notification
+can still push the model to raise the priority, because raising is allowed. The priority can
+never fall, so the worst effect of such a bump is routing to a more urgent topic. `HIGH`
+notifications are still never held (they bypass aggregation), so a group's members are `MEDIUM` or
+`LOW`; the model can promote the aggregate to `HIGH`, and the aggregate is not re-held
+(`skipAggregation`). Siblings keep their own stored priority; only the leader, which is the one
+delivered, changes. The flag is global, not per template or channel.
 
 ## API keys and secrets
 
@@ -385,8 +431,11 @@ export AGGREGATION_LLM_GROQ_API_KEY=<your Groq key>
 ./mvnw -pl aegis-notification-service test -Dtest=GroqSummarizerLiveSmokeTest
 ```
 
+A second test in the same class requests the priority (the flag-on prompt) and asserts that the
+reply carries a valid `HIGH`, `MEDIUM` or `LOW`.
+
 A passing run confirms that the configured model accepts `response_format: json_object` and returns
-the `{"subject","body"}` shape the adapter parses. Without the key the test is reported as skipped.
+the `{"subject","body"}` shape (and `priority` when requested) the adapter parses. Without the key the test is reported as skipped.
 
 ## Known gaps
 
