@@ -1,0 +1,2 @@
+# Default issuer policy: intentionally empty. Caddy's automatic HTTPS then uses
+# Let's Encrypt first and falls back to ZeroSSL when issuance fails.

@@ -1,0 +1,490 @@
+# Single-VM deployment of the full AegisNotify stack for portfolio demos
+# (issue #236). Standalone file, NOT an override of docker-compose.full.yml:
+#
+#   * full.yml pulls Keycloak in with `include:` as `start-dev` and publishes
+#     8088:8080, and publishes every other service on 127.0.0.1. An override
+#     cannot cleanly remove published ports (it needs the `!reset` tag, which
+#     older Compose versions do not understand) and cannot change an included
+#     service's command safely.
+#   * Production values differ in almost every service (profiles, limits,
+#     restart policy, required secrets), so an override would restate most of
+#     the file anyway.
+#
+# The price is that service definitions are duplicated from docker-compose.full.yml.
+# When a service changes there (image, env var), mirror it here.
+#
+# Usage (see docs/deploy-vm.md; `scripts/deploy` wraps these commands):
+#
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#
+# Only the Caddy reverse proxy publishes host ports (80 and 443). Everything
+# else, including Keycloak, is reachable only on the Compose network.
+#
+# Hostnames are derived from one variable, PUBLIC_HOST (for example
+# 203-0-113-10.sslip.io):
+#
+#   https://app.${PUBLIC_HOST}   admin frontend
+#   https://api.${PUBLIC_HOST}   API gateway
+#   https://auth.${PUBLIC_HOST}  Keycloak
+#
+# Memory limits are ESTIMATES sized for an 8 GiB host. Measure with
+# `docker stats --no-stream` on the real VM and adjust (docs/deploy-vm.md).
+name: aegisnotify-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# JVM sizing for the Spring Boot services. The container memory limit is the
+# hard cap; the heap gets a fraction of it and the rest is left for metaspace,
+# thread stacks, code cache and direct buffers. SerialGC keeps the footprint
+# small on the 1 to 2 vCPU hosts this targets.
+x-jvm: &jvm
+  JAVA_TOOL_OPTIONS: >-
+    -XX:MaxRAMPercentage=60
+    -XX:+UseSerialGC
+    -XX:MaxMetaspaceSize=160m
+    -XX:ReservedCodeCacheSize=64m
+    -Xss512k
+
+x-eureka-client-env: &eureka-client-env
+  EUREKA_HOST: aegis-eureka-server
+  EUREKA_SECURITY_USER: ${EUREKA_SECURITY_USER:-eureka}
+  EUREKA_SECURITY_PASSWORD: ${EUREKA_SECURITY_PASSWORD:?set EUREKA_SECURITY_PASSWORD in .env.prod}
+
+x-app-env: &app-env
+  <<: [*jvm, *eureka-client-env]
+  SPRING_CLOUD_CONFIG_URI: http://aegis-config-server:8888
+  SPRING_CLOUD_CONFIG_USERNAME: ${CONFIG_SERVER_USER:-config}
+  SPRING_CLOUD_CONFIG_PASSWORD: ${CONFIG_SERVER_PASSWORD:?set CONFIG_SERVER_PASSWORD in .env.prod}
+  # Service-to-service traffic stays on the Compose network. The gateway does
+  # not validate the token issuer (only the JWKS signature), so the public
+  # Keycloak hostname in the tokens does not need to match this URL.
+  JWKS_URI: http://keycloak:8080/realms/aegis/protocol/openid-connect/certs
+
+x-app-healthcheck: &app-healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 12
+  start_period: 90s
+
+services:
+  # --- Reverse proxy: the only service with published host ports ---
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST in .env.prod, e.g. 203-0-113-10.sslip.io}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+      # Source range allowed to reach the Keycloak admin console. The default
+      # (a TEST-NET address) denies everyone.
+      ADMIN_ALLOWED_CIDR: ${ADMIN_ALLOWED_CIDR:-192.0.2.1/32}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # ACME_DIR selects the issuer policy: acme-default (Let's Encrypt, then
+      # ZeroSSL) or acme-staging (Let's Encrypt staging). See docs/deploy-vm.md.
+      - ${ACME_DIR:-./docker/caddy/acme-default}:/etc/caddy/acme.d:ro
+      # Certificates and ACME account: keep this volume across redeploys or the
+      # same names are re-issued and the Let's Encrypt duplicate limit applies.
+      - aegis-caddy-data:/data
+      - aegis-caddy-config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    logging: *default-logging
+
+  # --- Admin frontend (optional profile, OFF by default) ---
+  # The default deployment hosts the SPA on Vercel (docs/deploy-vm.md). To serve
+  # it from this VM instead, set COMPOSE_PROFILES=frontend and
+  # FRONTEND_ORIGIN=https://app.<PUBLIC_HOST> in .env.prod.
+  aegis-admin-frontend:
+    profiles: ["frontend"]
+    build:
+      context: ./aegis-admin-frontend
+      dockerfile: ../docker/frontend/Dockerfile
+    image: aegis-admin-frontend:local
+    restart: unless-stopped
+    environment:
+      # Served to the browser as /config.json (runtime configuration, #171).
+      API_BASE_URL: https://api.${PUBLIC_HOST:?set PUBLIC_HOST in .env.prod}
+      KEYCLOAK_URL: https://auth.${PUBLIC_HOST}
+    volumes:
+      - ./docker/frontend/Caddyfile:/etc/caddy/Caddyfile:ro
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+    logging: *default-logging
+
+  # --- Keycloak ---
+  # Renders the realm template (public URLs and secrets) into a volume that
+  # Keycloak imports on first start. Plain sed keeps it dependency-free.
+  keycloak-realm-init:
+    image: alpine:3.20
+    restart: "no"
+    environment:
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env.prod (the Vercel URL)}
+      USER_SERVICE_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET in .env.prod}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?set DEMO_USER_PASSWORD in .env.prod}
+    volumes:
+      - ./docker/keycloak/prod:/template:ro
+      - aegis-keycloak-realm:/out
+    command:
+      - sh
+      - -c
+      - >-
+        sed
+        -e "s|__FRONTEND_ORIGIN__|$$FRONTEND_ORIGIN|g"
+        -e "s|__USER_SERVICE_SECRET__|$$USER_SERVICE_SECRET|g"
+        -e "s|__DEMO_USER_PASSWORD__|$$DEMO_USER_PASSWORD|g"
+        /template/aegis-realm.json.tpl > /out/aegis-realm.json
+    deploy:
+      resources:
+        limits:
+          memory: 16M
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    # Production mode (`start`), behind TLS-terminating Caddy. The realm is
+    # imported only when it does not exist yet; later edits in the admin
+    # console persist in the volume below.
+    command: ["start", "--import-realm"]
+    restart: unless-stopped
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?set KC_BOOTSTRAP_ADMIN_PASSWORD in .env.prod}
+      # Public URL that goes into issued tokens, discovery and login redirects.
+      KC_HOSTNAME: https://auth.${PUBLIC_HOST}
+      # Caddy terminates TLS and talks plain HTTP to Keycloak on the Compose network.
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: "-XX:MaxRAMPercentage=65 -XX:InitialRAMPercentage=30"
+      # Keycloak keeps its state in a dedicated `keycloak` database on the
+      # shared PostgreSQL container (created by docker/postgres/init-keycloak.sql
+      # the first time the PostgreSQL volume is initialised). This avoids a
+      # writable-volume permission problem with the embedded H2 files and puts
+      # users and realm edits in the same backup as the application data.
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-aegis}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - aegis-keycloak-realm:/opt/keycloak/data/import:ro
+      - ./docker/keycloak/themes/aegis:/opt/keycloak/themes/aegis:ro
+    depends_on:
+      keycloak-realm-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # The image ships no curl; probe the management port (9000) with bash.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q UP <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    logging: *default-logging
+
+  # --- Infrastructure (no host ports) ---
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aegisnotify}
+      POSTGRES_USER: ${POSTGRES_USER:-aegis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - aegis-postgres-data:/var/lib/postgresql/data
+      # Runs only when the data volume is empty (first start).
+      - ./docker/postgres/init-keycloak.sql:/docker-entrypoint-initdb.d/init-keycloak.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aegis} -d ${POSTGRES_DB:-aegisnotify}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    # No authentication, matching the audit service default MONGODB_URI. Safe
+    # here only because no port is published; see docs/deploy-vm.md.
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    volumes:
+      - aegis-mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+      # Same fixed single-node cluster ID as docker-compose.full.yml.
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+    volumes:
+      - aegis-kafka-data:/var/lib/kafka/data
+    healthcheck:
+      # A TCP probe instead of `kafka-broker-api-versions`: that tool starts a
+      # whole JVM every interval, which is too heavy for a memory-capped broker.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/29092'"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Only the gateway rate-limiter counters live here; no persistence needed.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+    logging: *default-logging
+
+  # --- Spring Boot services (images built on the VM from the repository) ---
+  aegis-eureka-server:
+    build:
+      context: .
+      dockerfile: aegis-eureka-server/Dockerfile
+    image: aegis-eureka-server:local
+    restart: unless-stopped
+    environment:
+      <<: *jvm
+      EUREKA_SECURITY_USER: ${EUREKA_SECURITY_USER:-eureka}
+      EUREKA_SECURITY_PASSWORD: ${EUREKA_SECURITY_PASSWORD:?set EUREKA_SECURITY_PASSWORD in .env.prod}
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging: *default-logging
+
+  aegis-config-server:
+    build:
+      context: .
+      dockerfile: aegis-config-server/Dockerfile
+    image: aegis-config-server:local
+    restart: unless-stopped
+    environment:
+      <<: [*jvm, *eureka-client-env]
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: file:/config-repo
+      CONFIG_SERVER_USER: ${CONFIG_SERVER_USER:-config}
+      CONFIG_SERVER_PASSWORD: ${CONFIG_SERVER_PASSWORD:?set CONFIG_SERVER_PASSWORD in .env.prod}
+    volumes:
+      - ./docker/config-repo:/config-repo:ro
+    depends_on:
+      aegis-eureka-server:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging: *default-logging
+
+  aegis-api-gateway:
+    build:
+      context: .
+      dockerfile: aegis-api-gateway/Dockerfile
+    image: aegis-api-gateway:local
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      REDIS_HOST: redis
+      # The gateway accepts exactly ONE origin (SecurityConfig wraps the value
+      # in a single-element list). Keep it equal to the origin that serves the
+      # SPA, and to the redirect URI origin rendered into the Keycloak realm.
+      CORS_ALLOWED_ORIGINS: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN in .env.prod (the Vercel URL)}
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+  aegis-notification-service:
+    build:
+      context: .
+      dockerfile: aegis-notification-service/Dockerfile
+    image: aegis-notification-service:local
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      # No `local` profile here (it enables Swagger UI and a dev-only audit
+      # key). The single Kafka broker needs replication 1 instead, which the
+      # `local` profile would otherwise supply.
+      NOTIFICATION_KAFKA_TOPIC_REPLICATION_FACTOR: "1"
+      NOTIFICATION_KAFKA_TOPIC_MIN_IN_SYNC_REPLICAS: "1"
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-aegisnotify}
+      DB_USERNAME: ${POSTGRES_USER:-aegis}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      NOTIFICATION_KAFKA_RELAY_ENABLED: "true"
+      NOTIFICATION_KAFKA_CONSUMER_ENABLED: "true"
+      # ProviderConfig fails fast on blank primary credentials. The
+      # placeholders let the service start; real sends fail against the vendor
+      # APIs until real values are set in .env.prod.
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-local-placeholder}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-local-placeholder}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-local-placeholder}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-local-placeholder}
+      FCM_ACCESS_TOKEN: ${FCM_ACCESS_TOKEN:-local-placeholder}
+      NOTIFICATION_AGGREGATION_ENABLED: ${NOTIFICATION_AGGREGATION_ENABLED:-false}
+      NOTIFICATION_AGGREGATION_WINDOW: ${NOTIFICATION_AGGREGATION_WINDOW:-PT5M}
+      NOTIFICATION_AGGREGATION_MODEL_PRIORITY_ENABLED: ${NOTIFICATION_AGGREGATION_MODEL_PRIORITY_ENABLED:-false}
+      AGGREGATION_LLM_VENDOR: ${AGGREGATION_LLM_VENDOR:-anthropic}
+      AGGREGATION_LLM_API_KEY: ${AGGREGATION_LLM_API_KEY:-}
+      AGGREGATION_LLM_MODEL: ${AGGREGATION_LLM_MODEL:-claude-sonnet-4-5}
+      AGGREGATION_LLM_BASE_URL: ${AGGREGATION_LLM_BASE_URL:-https://api.anthropic.com}
+      AGGREGATION_LLM_GROQ_API_KEY: ${AGGREGATION_LLM_GROQ_API_KEY:-}
+      AGGREGATION_LLM_GROQ_MODEL: ${AGGREGATION_LLM_GROQ_MODEL:-llama-3.1-8b-instant}
+      AGGREGATION_LLM_GROQ_BASE_URL: ${AGGREGATION_LLM_GROQ_BASE_URL:-https://api.groq.com/openai}
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging: *default-logging
+
+  aegis-audit-service:
+    build:
+      context: .
+      dockerfile: aegis-audit-service/Dockerfile
+    image: aegis-audit-service:local
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      # Required outside the `local` profile: base64 of 32 random bytes.
+      # Losing or changing it makes previously stored recipients unreadable.
+      AUDIT_ENCRYPTION_KEY: ${AUDIT_ENCRYPTION_KEY:?set AUDIT_ENCRYPTION_KEY in .env.prod (openssl rand -base64 32)}
+      MONGODB_URI: mongodb://mongo:27017/aegisnotify-audit
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: *default-logging
+
+  aegis-user-service:
+    build:
+      context: .
+      dockerfile: aegis-user-service/Dockerfile
+    image: aegis-user-service:local
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_REALM: aegis
+      # Rendered into the realm by keycloak-realm-init from the same variable.
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?set KEYCLOAK_ADMIN_CLIENT_SECRET in .env.prod}
+    depends_on:
+      aegis-config-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+    deploy:
+      resources:
+        limits:
+          memory: 448M
+    logging: *default-logging
+
+volumes:
+  aegis-postgres-data:
+  aegis-mongo-data:
+  aegis-kafka-data:
+  aegis-keycloak-realm:
+  aegis-caddy-data:
+  aegis-caddy-config:

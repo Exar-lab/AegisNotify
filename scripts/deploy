@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Helper for the single-VM deployment (docs/deploy-vm.md, issue #236).
+#
+#   scripts/deploy init <public-ipv4> <acme-email> [frontend-origin]
+#                                                    create .env.prod with generated secrets
+#   scripts/deploy check                             validate .env.prod and the Compose file
+#   scripts/deploy up                                check, build and start the stack
+#   scripts/deploy status                            show container state
+#   scripts/deploy down                              stop and remove containers (volumes kept)
+#
+# Run from any directory; it always operates on the repository it lives in.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$ROOT/.env.prod"
+EXAMPLE="$ROOT/.env.prod.example"
+COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/docker-compose.prod.yml")
+
+die() { echo "error: $*" >&2; exit 1; }
+
+# Secrets generated as hex (URL-safe, safe for the sed-rendered realm).
+HEX_SECRETS=(
+  KC_BOOTSTRAP_ADMIN_PASSWORD KEYCLOAK_ADMIN_CLIENT_SECRET DEMO_USER_PASSWORD
+  POSTGRES_PASSWORD EUREKA_SECURITY_PASSWORD CONFIG_SERVER_PASSWORD
+)
+
+cmd_init() {
+  local ip="${1:-}" email="${2:-}" origin="${3:-}"
+  [[ -n "$ip" && -n "$email" ]] || die "usage: scripts/deploy init <public-ipv4> <acme-email> [frontend-origin]"
+  [[ -z "$origin" || "$origin" =~ ^https://[A-Za-z0-9.-]+$ ]] \
+    || die "frontend-origin must look like https://name.vercel.app (no path, no trailing slash)"
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || die "'$ip' is not an IPv4 address"
+  [[ ! -e "$ENV_FILE" ]] || die "$ENV_FILE already exists; edit it or delete it first"
+  command -v openssl >/dev/null || die "openssl is required to generate secrets"
+
+  local host="${ip//./-}.sslip.io" line key
+  (
+    umask 077
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      key="${line%%=*}"
+      if [[ "$line" == "PUBLIC_HOST=CHANGE_ME" ]]; then
+        line="PUBLIC_HOST=$host"
+      elif [[ "$line" == "ACME_EMAIL=CHANGE_ME" ]]; then
+        line="ACME_EMAIL=$email"
+      elif [[ -n "$origin" && "$key" == "FRONTEND_ORIGIN" ]]; then
+        line="FRONTEND_ORIGIN=$origin"
+      elif [[ "$line" == "AUDIT_ENCRYPTION_KEY=CHANGE_ME" ]]; then
+        line="AUDIT_ENCRYPTION_KEY=$(openssl rand -base64 32)"
+      elif [[ "$line" == "$key=CHANGE_ME" ]] && [[ " ${HEX_SECRETS[*]} " == *" $key "* ]]; then
+        line="$key=$(openssl rand -hex 12)"
+      fi
+      printf '%s\n' "$line"
+    done < "$EXAMPLE" > "$ENV_FILE"
+  )
+  echo "Created $ENV_FILE (mode 600). PUBLIC_HOST=$host"
+  echo "Demo login: aegis-dev / $(grep_value DEMO_USER_PASSWORD)"
+  if [[ -z "$origin" ]]; then
+    echo "Set FRONTEND_ORIGIN in $ENV_FILE to your Vercel URL before 'scripts/deploy up'."
+  fi
+  echo "Back this file up somewhere safe: it holds the only copy of the secrets."
+}
+
+# Print the value of KEY from .env.prod (last assignment wins, like Compose).
+grep_value() {
+  local key="$1" line value=""
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" == "$key="* ]] && value="${line#*=}"
+  done < "$ENV_FILE"
+  printf '%s' "$value"
+}
+
+cmd_check() {
+  [[ -f "$ENV_FILE" ]] || die "$ENV_FILE not found; run: scripts/deploy init <public-ip> <email>"
+  command -v docker >/dev/null || die "docker is not installed"
+
+  local line bad=0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^[A-Z_]+=.*CHANGE_ME ]]; then
+      echo "error: ${line%%=*} still has a CHANGE_ME placeholder" >&2
+      bad=1
+    fi
+  done < "$ENV_FILE"
+  ((bad == 0)) || exit 1
+
+  local host
+  host="$(grep_value PUBLIC_HOST)"
+  [[ "$host" =~ ^[a-z0-9.-]+\.[a-z]+$ ]] || die "PUBLIC_HOST '$host' does not look like a hostname"
+
+  "${COMPOSE[@]}" config --quiet
+  echo "OK: $ENV_FILE and docker-compose.prod.yml are consistent (PUBLIC_HOST=$host)"
+}
+
+cmd_up() {
+  cmd_check
+  # Building six JVM images in parallel can exhaust an 8 GiB host.
+  COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-2}" "${COMPOSE[@]}" up -d --build
+  "${COMPOSE[@]}" ps
+}
+
+case "${1:-}" in
+  init) shift; cmd_init "$@" ;;
+  check) cmd_check ;;
+  up) cmd_up ;;
+  status) "${COMPOSE[@]}" ps ;;
+  down) "${COMPOSE[@]}" down ;;
+  *)
+    echo "usage: scripts/deploy {init <public-ipv4> <acme-email> [frontend-origin]|check|up|status|down}" >&2
+    exit 2
+    ;;
+esac

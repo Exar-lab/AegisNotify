@@ -28,6 +28,7 @@ default; see [Current implementation status](#current-implementation-status) and
 - [Project scope](#project-scope)
 - [Installation](#installation)
 - [Deployment and configuration guide](docs/deployment.md)
+- [Deploy on a single VM with HTTPS (portfolio demo)](docs/deploy-vm.md)
 - [Services and HTTP API](#services)
 - [Security](#security)
 - [Configuration](#configuration)

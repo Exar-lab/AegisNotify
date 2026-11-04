@@ -26,8 +26,11 @@ release.properties
 Thumbs.db
 desktop.ini
 
-# Env
+# Env (real secrets never get committed; only the *.example templates do)
 .env
+.env.*
+!.env.example
+!.env.prod.example
 *.env.local
 *.env.development
 

@@ -1,0 +1,47 @@
+# Reverse proxy for the single-VM deployment (docker-compose.prod.yml, issue #236).
+# Caddy obtains and renews TLS certificates automatically for the three
+# hostnames below; ports 80 and 443 must be reachable from the internet.
+#
+# PUBLIC_HOST and ACME_EMAIL come from the container environment.
+{
+	# Required for the ZeroSSL fallback and for expiry notices.
+	email {$ACME_EMAIL}
+
+	# Issuer policy. With no extra directive Caddy tries Let's Encrypt and
+	# falls back to ZeroSSL. ACME_DIR in .env.prod swaps in another snippet
+	# (for example the Let's Encrypt staging CA); see docs/deploy-vm.md.
+	import /etc/caddy/acme.d/*
+}
+
+# Keycloak. Caddy sets X-Forwarded-For/Proto/Host, which Keycloak trusts
+# through KC_PROXY_HEADERS=xforwarded.
+auth.{$PUBLIC_HOST} {
+	encode zstd gzip
+
+	# The admin console, the Admin REST API and the master realm are not
+	# reachable from the internet. Only the `aegis` realm endpoints that login
+	# needs are public. ADMIN_ALLOWED_CIDR (compose default 192.0.2.1/32, a
+	# documentation address that matches no real client) opens the blocked paths
+	# to one address range, for example your own IP as x.x.x.x/32.
+	@admin_blocked {
+		path /admin /admin/* /realms/master /realms/master/*
+		not remote_ip {$ADMIN_ALLOWED_CIDR:192.0.2.1/32}
+	}
+	respond @admin_blocked 404
+
+	reverse_proxy keycloak:8080
+}
+
+# API gateway. CORS and JWT validation are handled by the gateway itself.
+api.{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy aegis-api-gateway:8080
+}
+
+# Admin frontend (optional compose profile `frontend`, off by default). The
+# default deployment hosts the SPA on Vercel, so this name answers 502 and its
+# certificate is requested but unused. Remove the block to avoid that.
+app.{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy aegis-admin-frontend:80
+}
