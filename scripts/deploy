@@ -5,6 +5,7 @@
 #                                                    create .env.prod with generated secrets
 #   scripts/deploy check                             validate .env.prod and the Compose file
 #   scripts/deploy up                                check, build and start the stack
+#                                                    (AEGIS_IMAGES=ghcr pulls the published images instead)
 #   scripts/deploy status                            show container state
 #   scripts/deploy down                              stop and remove containers (volumes kept)
 #
@@ -15,6 +16,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT/.env.prod"
 EXAMPLE="$ROOT/.env.prod.example"
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$ROOT/docker-compose.prod.yml")
+# AEGIS_IMAGES=ghcr runs the images CI publishes to GHCR instead of building them (issue #238).
+if [[ -n "${AEGIS_IMAGES:-}" ]]; then
+  COMPOSE+=(-f "$ROOT/docker-compose.prod.images.yml")
+fi
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -92,8 +97,13 @@ cmd_check() {
 
 cmd_up() {
   cmd_check
-  # Building six JVM images in parallel can exhaust an 8 GiB host.
-  COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-2}" "${COMPOSE[@]}" up -d --build
+  if [[ -n "${AEGIS_IMAGES:-}" ]]; then
+    "${COMPOSE[@]}" pull --ignore-buildable
+    "${COMPOSE[@]}" up -d --no-build
+  else
+    # Building six JVM images in parallel can exhaust an 8 GiB host.
+    COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-2}" "${COMPOSE[@]}" up -d --build
+  fi
   "${COMPOSE[@]}" ps
 }
 

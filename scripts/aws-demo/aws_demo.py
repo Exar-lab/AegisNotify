@@ -147,7 +147,7 @@ async def ensure_iam():
                             "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}}]})})
 
 def user_data(public_ip):
-    """First-boot script: Docker, swap, the repository, then the issue #236 stack."""
+    """First-boot script: Docker, swap, the repository, then the issue #236 stack (published images)."""
     return f"""#!/bin/bash
 set -euxo pipefail
 install -m 600 /dev/null /var/log/aegis-bootstrap.log
@@ -159,7 +159,7 @@ systemctl enable --now docker
 git clone --branch {CFG["repo_ref"]} https://github.com/{REPO}.git /opt/aegisnotify
 cd /opt/aegisnotify
 bash scripts/deploy init {public_ip} {CFG["acme_email"]} {CFG["frontend_origin"].rstrip("/")}
-bash scripts/deploy up
+AEGIS_IMAGES=ghcr bash scripts/deploy up
 """
 
 async def up():

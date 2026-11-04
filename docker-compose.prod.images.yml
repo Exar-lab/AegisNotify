@@ -1,0 +1,23 @@
+# Optional override for docker-compose.prod.yml (issue #238): run the six service images that CI
+# publishes to GHCR instead of building them on the host.
+#
+# Why: building needs Maven Central, which rate-limits or blocks many cloud IP ranges, and it takes
+# 15-30 minutes. Pulling takes about a minute.
+#
+#   AEGIS_IMAGES=ghcr scripts/deploy up
+#
+# AEGIS_VERSION picks the tag. `0.18.1-SNAPSHOT` follows the latest build of main (CI pushes it on
+# every merge); a release tag such as `0.18.0` or a `sha-<commit>` tag pins an exact build.
+services:
+  aegis-eureka-server:
+    image: ghcr.io/exar-lab/aegis-eureka-server:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
+  aegis-config-server:
+    image: ghcr.io/exar-lab/aegis-config-server:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
+  aegis-api-gateway:
+    image: ghcr.io/exar-lab/aegis-api-gateway:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
+  aegis-notification-service:
+    image: ghcr.io/exar-lab/aegis-notification-service:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
+  aegis-audit-service:
+    image: ghcr.io/exar-lab/aegis-audit-service:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
+  aegis-user-service:
+    image: ghcr.io/exar-lab/aegis-user-service:${AEGIS_VERSION:-0.18.1-SNAPSHOT}
