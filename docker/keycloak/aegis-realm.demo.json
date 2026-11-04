@@ -1,0 +1,124 @@
+{
+  "realm": "aegis",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginTheme": "aegis",
+  "clientScopes": [
+    {
+      "name": "notification:write",
+      "description": "Submit notifications for delivery (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "notification:read",
+      "description": "Read notification delivery status (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "audit:read",
+      "description": "Read the audit trail (docs/security/scopes.md)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user:read",
+      "description": "List/query managed users (docs/security/scopes.md, forward-looking)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "user:admin",
+      "description": "Create/update/disable managed users (docs/security/scopes.md, forward-looking)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "aegis-user-service",
+      "name": "aegis-user-service Admin REST client",
+      "description": "Confidential service-account client used by aegis-user-service to call the Keycloak Admin REST API (AWS demo).",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${KEYCLOAK_ADMIN_CLIENT_SECRET}",
+      "defaultClientScopes": []
+    },
+    {
+      "clientId": "aegis-admin-frontend",
+      "name": "Aegis Admin Frontend",
+      "description": "Public OpenID Connect client for the Angular admin frontend hosted on Vercel (AWS demo). Read-only scopes only.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${FRONTEND_ORIGIN}/*",
+        "${FRONTEND_ORIGIN}"
+      ],
+      "webOrigins": [
+        "${FRONTEND_ORIGIN}"
+      ],
+      "defaultClientScopes": [
+        "notification:read",
+        "audit:read",
+        "user:read"
+      ],
+      "optionalClientScopes": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-aegis-user-service",
+      "enabled": true,
+      "serviceAccountClientId": "aegis-user-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "manage-users"
+        ]
+      }
+    },
+    {
+      "username": "demo",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "demo@example.local",
+      "firstName": "Demo",
+      "lastName": "Visitor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${DEMO_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
