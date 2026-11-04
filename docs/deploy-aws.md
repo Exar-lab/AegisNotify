@@ -39,6 +39,44 @@ python scripts/aws-demo/aws_demo.py destroy --yes
 `--frontend-origin` must be the final production origin before the first `up`: Keycloak imports the
 realm once, so the redirect URIs cannot be changed by re-running it.
 
+## Email, WhatsApp and the Groq summarizer
+
+By default the stack starts with placeholder provider credentials, so real sends fail. To send for
+real, the demo uses Mailtrap (email), Vonage (WhatsApp) and Groq (aggregation summarizer). The
+secrets never go through the repository or the chat: create them as **SecureString** parameters in
+AWS Systems Manager, Parameter Store, in the demo region:
+
+| Parameter (under `/aegis-demo/`) | Value |
+| --- | --- |
+| `SENDGRID_API_KEY` | Mailtrap Send API token (the service reuses the SendGrid settings for Mailtrap) |
+| `SENDGRID_FROM_ADDRESS` | A sender on a domain verified in Mailtrap |
+| `VONAGE_WHATSAPP_API_KEY` | Vonage API key |
+| `VONAGE_WHATSAPP_API_SECRET` | Vonage API secret |
+| `VONAGE_WHATSAPP_FROM_NUMBER` | The Vonage WhatsApp sandbox number, digits only |
+| `AGGREGATION_LLM_GROQ_API_KEY` | Groq API key |
+
+Optional: `AGGREGATION_LLM_GROQ_MODEL`, `NOTIFICATION_AGGREGATION_WINDOW`.
+
+Then run `python scripts/aws-demo/aws_demo.py providers`. It grants the instance role read access to
+`/aegis-demo/*` only, runs `scripts/aws-demo/load-ssm-env.sh` on the instance and restarts the
+stack. The loader is all-or-nothing: if a required parameter is missing it changes nothing and lists
+what is missing, because selecting a vendor without its credentials stops the notification service
+from starting. It only writes the keys listed above plus the non-secret settings in
+`scripts/aws-demo/demo-providers.env` (`NOTIFICATION_EMAIL_PROVIDER=mailtrap`,
+`SENDGRID_BASE_URL=https://send.api.mailtrap.io`, `NOTIFICATION_WHATSAPP_PROVIDER=vonage`,
+`NOTIFICATION_AGGREGATION_ENABLED=true`, `AGGREGATION_LLM_VENDOR=groq`), so a parameter cannot
+override the database or Keycloak passwords.
+
+Things to know before enabling it on a public demo:
+
+- Anyone who can sign in with write permission can send real messages. Keep the administrator
+  password private and share a read-only user instead.
+- Vonage's sandbox only delivers to numbers that joined the sandbox allow-list; Mailtrap's Send API
+  delivers to any address once the sender domain is verified.
+- With aggregation on, notifications that are not high priority are held for the aggregation window
+  (five minutes by default) and merged by the model before delivery. See
+  [`aggregation.md`](aggregation.md).
+
 ## Findings from the first deployment
 
 - **Only `us-east-2` allows EC2.** The account sits in an AWS Organization whose service control
@@ -71,6 +109,8 @@ realm once, so the redirect URIs cannot be changed by re-running it.
 
 ## Not verified yet
 
+- Real sends: email through Mailtrap, WhatsApp through Vonage and the Groq summarizer have not been
+  exercised on the instance yet. The loader and the Compose variables were tested with fake values.
 - A real browser login and a notification submitted from the UI.
 - That the idle alarm and the nightly stop actually stop the instance. CPU was about 10 % shortly
   after startup; check the idle level and adjust `IDLE_CPU_PERCENT` if it never falls below it.

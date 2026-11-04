@@ -3,10 +3,11 @@
 This script only creates and guards the machine. The stack itself (docker-compose.prod.yml, Caddy,
 Keycloak realm, `scripts/deploy`) is the one from issue #236; the instance runs it on first boot.
 
-Actions: plan | up | start | stop | status | destroy
+Actions: plan | up | providers | start | stop | status | destroy
 
     python scripts/aws-demo/aws_demo.py plan
     python scripts/aws-demo/aws_demo.py up --frontend-origin https://my-demo.vercel.app --acme-email you@example.com
+    python scripts/aws-demo/aws_demo.py providers     # load Mailtrap/Vonage/Groq settings from SSM
     python scripts/aws-demo/aws_demo.py stop          # stop paying for compute
     python scripts/aws-demo/aws_demo.py start
     python scripts/aws-demo/aws_demo.py destroy --yes # deletes the instance, its disk and all data
@@ -26,6 +27,7 @@ import re
 
 REGION = "us-east-2"  # the only region the account's organization policy allows EC2 in
 PREFIX = "aegis-demo"
+PARAM_PATH = "/aegis-demo"  # SecureString parameters holding the provider secrets
 PROJECT_TAG = {"Key": "Project", "Value": "aegisnotify-demo"}
 INSTANCE_TYPE = "m7i-flex.large"  # 8 GiB (the size docker-compose.prod.yml is written for); eligible on AWS free-plan accounts
 VOLUME_GB = 30
@@ -146,6 +148,15 @@ async def ensure_iam():
                             "Effect": "Allow", "Action": "ec2:StopInstances", "Resource": f"arn:aws:ec2:{REGION}:*:instance/*",
                             "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}}]})})
 
+async def ensure_ssm_read():
+    """Let the instance read the provider secrets (and only those) from Parameter Store."""
+    await CALL("iam", "PutRolePolicy", None, {"RoleName": NAMES["role"], "PolicyName": "read-demo-parameters",
+                    "PolicyDocument": json.dumps({"Version": "2012-10-17", "Statement": [
+                        {"Effect": "Allow", "Action": ["ssm:GetParametersByPath", "ssm:GetParameter"],
+                         "Resource": f"arn:aws:ssm:{REGION}:*:parameter{PARAM_PATH}/*"},
+                        {"Effect": "Allow", "Action": "kms:Decrypt", "Resource": "*",
+                         "Condition": {"StringEquals": {"kms:ViaService": f"ssm.{REGION}.amazonaws.com"}}}]})})
+
 def user_data(public_ip):
     """First-boot script: Docker, swap, the repository, then the issue #236 stack (published images)."""
     return f"""#!/bin/bash
@@ -237,6 +248,35 @@ async def ensure_guardrails(instance_id):
                     raise
                 await asyncio.sleep(5)
 
+async def run_on_instance(command, timeout=45):
+    """Run a shell command on the instance through SSM and return (status, output)."""
+    inst = await find_instance()
+    if not inst:
+        raise SystemExit("No demo instance. Run `up` first.")
+    sent = await CALL("ssm", "SendCommand", REGION, {"InstanceIds": [inst["InstanceId"]], "DocumentName": "AWS-RunShellScript",
+                      "Parameters": {"commands": [command]}, "TimeoutSeconds": 600})
+    command_id = sent["Command"]["CommandId"]
+    out = None
+    for _ in range(timeout // 3):
+        await asyncio.sleep(3)
+        try:
+            out = await CALL("ssm", "GetCommandInvocation", REGION, {"CommandId": command_id, "InstanceId": inst["InstanceId"]})
+        except Exception:
+            continue
+        if out["Status"] in ("Success", "Failed", "Cancelled", "TimedOut"):
+            break
+    if out is None:
+        return "Pending", f"command {command_id} still running; check it with GetCommandInvocation"
+    return out["Status"], (out["StandardOutputContent"] + out["StandardErrorContent"])[-1500:]
+
+async def providers():
+    """Load Mailtrap, Vonage and Groq settings from SSM into .env.prod and restart the stack."""
+    await ensure_ssm_read()
+    status_, output = await run_on_instance(
+        "cd /opt/aegisnotify && git pull -q --ff-only origin \"$(git rev-parse --abbrev-ref HEAD)\" "
+        "&& bash scripts/aws-demo/load-ssm-env.sh && AEGIS_IMAGES=ghcr bash scripts/deploy up 2>&1 | tail -n 15")
+    return {"status": status_, "output": output}
+
 # ---------------------------------------------------------------- start / stop / destroy
 async def power(action):
     inst = await find_instance()
@@ -271,6 +311,7 @@ async def destroy():
     sg = await find_sg()
     if sg:
         await attempt("security group", "ec2", "DeleteSecurityGroup", REGION, GroupId=sg["GroupId"])
+    await attempt("EC2 role parameter policy", "iam", "DeleteRolePolicy", None, RoleName=NAMES["role"], PolicyName="read-demo-parameters")
     await attempt("EC2 role policy attachment", "iam", "DetachRolePolicy", None, RoleName=NAMES["role"],
                   PolicyArn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore")
     await attempt("profile role", "iam", "RemoveRoleFromInstanceProfile", None, InstanceProfileName=NAMES["profile"], RoleName=NAMES["role"])
@@ -291,6 +332,8 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
         return await status()
     if action == "up":
         return await up()
+    if action == "providers":
+        return await providers()
     if action in ("start", "stop"):
         return await power(action)
     if action == "destroy":
@@ -302,7 +345,7 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("action", choices=["plan", "up", "start", "stop", "status", "destroy"])
+    parser.add_argument("action", choices=["plan", "up", "providers", "start", "stop", "status", "destroy"])
     parser.add_argument("--frontend-origin", help="Vercel origin allowed by CORS and Keycloak, e.g. https://my-demo.vercel.app")
     parser.add_argument("--repo-ref", default="main", help="Git ref of the repository to deploy from")
     parser.add_argument("--acme-email", help="Address for Let's Encrypt/ZeroSSL certificate expiry notices")

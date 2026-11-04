@@ -394,6 +394,16 @@ services:
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-local-placeholder}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-local-placeholder}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-local-placeholder}
+      # Provider selection and sender identity (issue #238). Defaults match application.yml, so
+      # nothing changes unless these are set in .env.prod.
+      NOTIFICATION_EMAIL_PROVIDER: ${NOTIFICATION_EMAIL_PROVIDER:-sendgrid}
+      SENDGRID_BASE_URL: ${SENDGRID_BASE_URL:-https://api.sendgrid.com}
+      SENDGRID_FROM_ADDRESS: ${SENDGRID_FROM_ADDRESS:-noreply@aegisnotify.com}
+      NOTIFICATION_WHATSAPP_PROVIDER: ${NOTIFICATION_WHATSAPP_PROVIDER:-twilio}
+      VONAGE_WHATSAPP_BASE_URL: ${VONAGE_WHATSAPP_BASE_URL:-https://messages-sandbox.nexmo.com}
+      VONAGE_WHATSAPP_API_KEY: ${VONAGE_WHATSAPP_API_KEY:-}
+      VONAGE_WHATSAPP_API_SECRET: ${VONAGE_WHATSAPP_API_SECRET:-}
+      VONAGE_WHATSAPP_FROM_NUMBER: ${VONAGE_WHATSAPP_FROM_NUMBER:-}
       FCM_PROJECT_ID: ${FCM_PROJECT_ID:-local-placeholder}
       FCM_ACCESS_TOKEN: ${FCM_ACCESS_TOKEN:-local-placeholder}
       NOTIFICATION_AGGREGATION_ENABLED: ${NOTIFICATION_AGGREGATION_ENABLED:-false}
@@ -404,7 +414,7 @@ services:
       AGGREGATION_LLM_MODEL: ${AGGREGATION_LLM_MODEL:-claude-sonnet-4-5}
       AGGREGATION_LLM_BASE_URL: ${AGGREGATION_LLM_BASE_URL:-https://api.anthropic.com}
       AGGREGATION_LLM_GROQ_API_KEY: ${AGGREGATION_LLM_GROQ_API_KEY:-}
-      AGGREGATION_LLM_GROQ_MODEL: ${AGGREGATION_LLM_GROQ_MODEL:-llama-3.1-8b-instant}
+      AGGREGATION_LLM_GROQ_MODEL: ${AGGREGATION_LLM_GROQ_MODEL:-qwen/qwen3.8-27b}
       AGGREGATION_LLM_GROQ_BASE_URL: ${AGGREGATION_LLM_GROQ_BASE_URL:-https://api.groq.com/openai}
     depends_on:
       aegis-config-server:
