@@ -3,13 +3,14 @@
 This script only creates and guards the machine. The stack itself (docker-compose.prod.yml, Caddy,
 Keycloak realm, `scripts/deploy`) is the one from issue #236; the instance runs it on first boot.
 
-Actions: plan | up | providers | seed | unseed | start | stop | status | destroy
+Actions: plan | up | providers | seed | unseed | schedule-start | start | stop | status | destroy
 
     python scripts/aws-demo/aws_demo.py plan
     python scripts/aws-demo/aws_demo.py up --frontend-origin https://my-demo.vercel.app --acme-email you@example.com
     python scripts/aws-demo/aws_demo.py providers     # load Mailtrap/Vonage/Groq settings from SSM
     python scripts/aws-demo/aws_demo.py seed          # synthetic templates and history (unseed removes it)
     python scripts/aws-demo/aws_demo.py stop          # stop paying for compute
+    python scripts/aws-demo/aws_demo.py schedule-start --at 2026-11-05T16:00:00 --timezone America/Costa_Rica
     python scripts/aws-demo/aws_demo.py start
     python scripts/aws-demo/aws_demo.py destroy --yes # deletes the instance, its disk and all data
 
@@ -144,10 +145,13 @@ async def ensure_iam():
     if not await exists("iam", "GetRole", None, RoleName=NAMES["sched_role"]):
         await CALL("iam", "CreateRole", None, {"RoleName": NAMES["sched_role"], "Tags": tags,
                         "AssumeRolePolicyDocument": trust("scheduler.amazonaws.com")})
-        await CALL("iam", "PutRolePolicy", None, {"RoleName": NAMES["sched_role"], "PolicyName": "stop-demo-instance",
-                        "PolicyDocument": json.dumps({"Version": "2012-10-17", "Statement": [{
-                            "Effect": "Allow", "Action": "ec2:StopInstances", "Resource": f"arn:aws:ec2:{REGION}:*:instance/*",
-                            "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}}]})})
+    # Start and stop, only for instances tagged with this project. Applied on every run so roles
+    # created by older versions pick it up too.
+    await CALL("iam", "PutRolePolicy", None, {"RoleName": NAMES["sched_role"], "PolicyName": "start-stop-demo-instance",
+                    "PolicyDocument": json.dumps({"Version": "2012-10-17", "Statement": [{
+                        "Effect": "Allow", "Action": ["ec2:StartInstances", "ec2:StopInstances"],
+                        "Resource": f"arn:aws:ec2:{REGION}:*:instance/*",
+                        "Condition": {"StringEquals": {"ec2:ResourceTag/Project": PROJECT_TAG["Value"]}}}]})})
 
 async def ensure_ssm_read():
     """Let the instance read the provider secrets (and only those) from Parameter Store."""
@@ -290,6 +294,21 @@ async def seed(remove=False):
         + psql + ' -tA -c "select \'notifications=\' || count(*) from notifications" </dev/null')
     return {"status": status_, "output": output}
 
+async def schedule_start(at, timezone):
+    """Start the instance once at `at` (YYYY-MM-DDTHH:MM:SS, local to `timezone`); the schedule deletes itself."""
+    inst = await find_instance()
+    if not inst:
+        raise SystemExit("No demo instance. Run `up` first.")
+    await ensure_iam()  # keeps the role policies current; harmless if unchanged
+    role = await CALL("iam", "GetRole", None, {"RoleName": NAMES["sched_role"]})
+    name = f"{PREFIX}-start-" + re.sub(r"[^0-9]", "", at)
+    await CALL("scheduler", "CreateSchedule", REGION, {
+        "Name": name, "Description": "Starts the AegisNotify demo once.", "ScheduleExpression": f"at({at})",
+        "ScheduleExpressionTimezone": timezone, "FlexibleTimeWindow": {"Mode": "OFF"}, "ActionAfterCompletion": "DELETE",
+        "Target": {"Arn": "arn:aws:scheduler:::aws-sdk:ec2:startInstances", "RoleArn": role["Role"]["Arn"],
+                   "Input": json.dumps({"InstanceIds": [inst["InstanceId"]]})}})
+    return {"schedule": name, "starts": f"{at} {timezone}"}
+
 # ---------------------------------------------------------------- start / stop / destroy
 async def power(action):
     inst = await find_instance()
@@ -307,7 +326,13 @@ async def destroy():
         except Exception as error:
             if not is_missing(error):
                 removed.append(f"FAILED {label}: {str(error)[:120]}")
-    await attempt("schedule", "scheduler", "DeleteSchedule", REGION, Name=NAMES["schedule"])
+    try:
+        listed = await CALL("scheduler", "ListSchedules", REGION, {"NamePrefix": PREFIX + "-"})
+        names = [x["Name"] for x in listed.get("Schedules", [])]
+    except Exception:
+        names = [NAMES["schedule"]]
+    for name in names:
+        await attempt("schedule " + name, "scheduler", "DeleteSchedule", REGION, Name=name)
     await attempt("alarm", "cloudwatch", "DeleteAlarms", REGION, AlarmNames=[NAMES["alarm"]])
     inst = await find_instance()
     if inst:
@@ -330,12 +355,13 @@ async def destroy():
     await attempt("profile role", "iam", "RemoveRoleFromInstanceProfile", None, InstanceProfileName=NAMES["profile"], RoleName=NAMES["role"])
     await attempt("instance profile", "iam", "DeleteInstanceProfile", None, InstanceProfileName=NAMES["profile"])
     await attempt("EC2 role", "iam", "DeleteRole", None, RoleName=NAMES["role"])
-    await attempt("scheduler role policy", "iam", "DeleteRolePolicy", None, RoleName=NAMES["sched_role"], PolicyName="stop-demo-instance")
+    await attempt("scheduler role policy", "iam", "DeleteRolePolicy", None, RoleName=NAMES["sched_role"], PolicyName="start-stop-demo-instance")
     await attempt("scheduler role", "iam", "DeleteRole", None, RoleName=NAMES["sched_role"])
     return {"removed": removed, "kept": "AWS Budget aegis-demo-credits (created separately)"}
 
 
-async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="main", instance_type=INSTANCE_TYPE, yes=False):
+async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="main", instance_type=INSTANCE_TYPE, yes=False,
+               start_at=None, timezone="UTC"):
     global CALL
     CALL = call
     CFG.update(frontend_origin=frontend_origin, acme_email=acme_email, repo_ref=repo_ref, instance_type=instance_type)
@@ -349,6 +375,8 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
         return await providers()
     if action in ("seed", "unseed"):
         return await seed(remove=action == "unseed")
+    if action == "schedule-start":
+        return await schedule_start(start_at, timezone)
     if action in ("start", "stop"):
         return await power(action)
     if action == "destroy":
@@ -360,11 +388,13 @@ async def main(call, action, frontend_origin=None, acme_email=None, repo_ref="ma
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("action", choices=["plan", "up", "providers", "seed", "unseed", "start", "stop", "status", "destroy"])
+    parser.add_argument("action", choices=["plan", "up", "providers", "seed", "unseed", "schedule-start", "start", "stop", "status", "destroy"])
     parser.add_argument("--frontend-origin", help="Vercel origin allowed by CORS and Keycloak, e.g. https://my-demo.vercel.app")
     parser.add_argument("--repo-ref", default="main", help="Git ref of the repository to deploy from")
     parser.add_argument("--acme-email", help="Address for Let's Encrypt/ZeroSSL certificate expiry notices")
     parser.add_argument("--instance-type", default=INSTANCE_TYPE)
     parser.add_argument("--yes", action="store_true", help="Confirm destroy")
+    parser.add_argument("--at", dest="start_at", help="schedule-start: local date and time, e.g. 2026-11-05T16:00:00")
+    parser.add_argument("--timezone", default="UTC", help="schedule-start: IANA time zone, e.g. America/Costa_Rica")
     args = parser.parse_args()
-    print(json.dumps(asyncio.run(main(boto3_call, args.action, args.frontend_origin, args.acme_email, args.repo_ref, args.instance_type, args.yes)), indent=2))
+    print(json.dumps(asyncio.run(main(boto3_call, args.action, args.frontend_origin, args.acme_email, args.repo_ref, args.instance_type, args.yes, args.start_at, args.timezone)), indent=2))
