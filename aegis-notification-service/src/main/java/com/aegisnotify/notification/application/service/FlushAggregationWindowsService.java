@@ -217,7 +217,8 @@ public class FlushAggregationWindowsService implements FlushAggregationWindowsUs
     SummarizedContent summary;
     try {
       summary = summarizerPort.summarize(
-          new SummarizationRequest(channel, templateName, bodies, SUMMARY_MAX_LENGTH_HINT));
+          new SummarizationRequest(channel, templateName, bodies, SUMMARY_MAX_LENGTH_HINT,
+              settings.modelPriorityEnabled()));
     } catch (SummarizerUnavailableException ex) {
       log.warn("aggregation_summarizer_unavailable groupSize={} reason={}",
           memberRows.size(), ex.getMessage());

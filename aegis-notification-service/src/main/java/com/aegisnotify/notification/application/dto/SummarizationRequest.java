@@ -22,14 +22,24 @@ import java.util.List;
  * @param maxLength      a soft hint to the summarizer on the desired output
  *                        length; the summarizer's own configured
  *                        max-output-chars is the actually enforced cap (L4)
+ * @param requestPriority whether the summarizer should also suggest a
+ *                        priority for the aggregate (issue #227, driven by
+ *                        {@code notification.aggregation.model-priority-enabled})
  */
 public record SummarizationRequest(
     Channel channel,
     String templateName,
     List<String> renderedBodies,
-    int maxLength) {
+    int maxLength,
+    boolean requestPriority) {
 
   public SummarizationRequest {
     renderedBodies = renderedBodies == null ? List.of() : List.copyOf(renderedBodies);
+  }
+
+  /** Request that does not ask for a priority (the pre-#227 shape). */
+  public SummarizationRequest(Channel channel, String templateName,
+      List<String> renderedBodies, int maxLength) {
+    this(channel, templateName, renderedBodies, maxLength, false);
   }
 }

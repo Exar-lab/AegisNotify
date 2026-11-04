@@ -59,7 +59,7 @@ public final class GroqChatCompletionsSummarizerAdapter implements AggregationSu
   private String complete(SummarizationRequest request) {
     ChatCompletionRequest body = new ChatCompletionRequest(
         groqProperties.model(),
-        List.of(new ChatMessage("system", SummarizerCallTemplate.SYSTEM_PROMPT),
+        List.of(new ChatMessage("system", SummarizerCallTemplate.systemPrompt(request)),
             new ChatMessage("user", SummarizerCallTemplate.buildUserContent(request))),
         properties.maxTokens(),
         JSON_OBJECT_FORMAT);

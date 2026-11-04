@@ -8,6 +8,8 @@ import com.aegisnotify.notification.application.port.out.NotificationLogReposito
 import com.aegisnotify.notification.application.port.out.NotificationRepository;
 import com.aegisnotify.notification.application.port.out.OutboxEventRepository;
 import com.aegisnotify.notification.domain.enums.LogStatus;
+import com.aegisnotify.notification.domain.enums.Priority;
+import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.domain.model.BufferedNotification;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
@@ -43,12 +45,15 @@ public class AggregationFlushTransactions {
   private final OutboxEventRepository outboxEventRepository;
   private final NotificationLogRepository notificationLogRepository;
   private final AuditEventPublisherPort auditEventPublisherPort;
+  private final AggregationSettings settings;
 
   public AggregationFlushTransactions(AggregationBufferRepository aggregationBufferRepository,
       NotificationRepository notificationRepository,
       OutboxEventRepository outboxEventRepository,
       NotificationLogRepository notificationLogRepository,
-      AuditEventPublisherPort auditEventPublisherPort) {
+      AuditEventPublisherPort auditEventPublisherPort,
+      AggregationSettings settings) {
+    this.settings = settings;
     this.aggregationBufferRepository = aggregationBufferRepository;
     this.notificationRepository = notificationRepository;
     this.outboxEventRepository = outboxEventRepository;
@@ -208,6 +213,31 @@ public class AggregationFlushTransactions {
   }
 
   /**
+   * Issue #227 safeguard: the model may only keep or raise the priority. The
+   * floor is the highest priority among the group's members (the leader's own
+   * priority is among them); without a valid suggestion the leader's own
+   * priority is kept, still never below that floor. {@link Priority} declares
+   * HIGH first, so a lower ordinal means a higher priority.
+   */
+  private static Priority appliedPriority(List<BufferedNotification> members,
+      Priority leaderPriority, Priority suggested) {
+    Priority floor = leaderPriority;
+    for (BufferedNotification member : members) {
+      floor = moreUrgent(floor, member.getPriority());
+    }
+    return moreUrgent(floor, suggested == null ? leaderPriority : suggested);
+  }
+
+  private static Priority moreUrgent(Priority first, Priority second) {
+    return first.ordinal() <= second.ordinal() ? first : second;
+  }
+
+  private static String priorityDetail(Priority suggested, Priority applied) {
+    return (suggested == null ? "priority: no valid suggestion" : "priority: suggested "
+        + suggested) + ", applied " + applied;
+  }
+
+  /**
    * Aggregate-success half of the flush phase (B3, Slice 2/3): links every
    * group member to a new aggregation id and persists the summarized body on
    * the leader only (X2), writes exactly ONE outbox event carrying the
@@ -255,11 +285,18 @@ public class AggregationFlushTransactions {
 
     Notification aggregatedLeader =
         leaderNotification.markAggregated(aggregationId, summary.body(), summary.subject());
+    String priorityDetail = null;
+    if (settings.modelPriorityEnabled()) {
+      Priority applied = appliedPriority(members, aggregatedLeader.getPriority(),
+          summary.priority());
+      priorityDetail = priorityDetail(summary.priority(), applied);
+      aggregatedLeader = aggregatedLeader.withPriority(applied);
+    }
     notificationRepository.save(aggregatedLeader);
     outboxEventRepository.save(buildOutboxEvent(aggregatedLeader));
     String leaderDetail =
         "Aggregated as leader of a " + members.size() + "-notification group (aggregation "
-            + aggregationId + ")";
+            + aggregationId + ")" + (priorityDetail == null ? "" : "; " + priorityDetail);
     notificationLogRepository.save(
         NotificationLog.create(leaderRow.getNotificationId(), LogStatus.PENDING, leaderDetail));
     aggregationBufferRepository.resolve(leaderRow.getId());

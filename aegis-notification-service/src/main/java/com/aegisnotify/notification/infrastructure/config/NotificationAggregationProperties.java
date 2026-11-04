@@ -42,6 +42,9 @@ import org.springframework.context.annotation.Configuration;
  *                             aggregation (D13); empty when unconfigured
  * @param excludedChannels     channels that must always bypass aggregation
  *                             (D13); empty when unconfigured
+ * @param modelPriorityEnabled whether the summarizer may assign the priority
+ *                             of an aggregated message (issue #227); off by
+ *                             default
  */
 @ConfigurationProperties(prefix = "notification.aggregation")
 public record NotificationAggregationProperties(
@@ -53,7 +56,8 @@ public record NotificationAggregationProperties(
     Duration claimLease,
     int maxAttempts,
     Set<String> excludedTemplates,
-    Set<Channel> excludedChannels) {
+    Set<Channel> excludedChannels,
+    boolean modelPriorityEnabled) {
 
   private static final Duration DEFAULT_WINDOW = Duration.ofMinutes(5);
   private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(10);
@@ -76,6 +80,14 @@ public record NotificationAggregationProperties(
     requirePositive(maxAttempts, "notification.aggregation.max-attempts");
   }
 
+  /** Pre-#227 shape: model-assigned priority off. */
+  public NotificationAggregationProperties(boolean enabled, Duration window,
+      Duration pollInterval, boolean requireSameTemplate, int maxGroupSize, Duration claimLease,
+      int maxAttempts, Set<String> excludedTemplates, Set<Channel> excludedChannels) {
+    this(enabled, window, pollInterval, requireSameTemplate, maxGroupSize, claimLease,
+        maxAttempts, excludedTemplates, excludedChannels, false);
+  }
+
   /**
    * Back-compat convenience constructor: pre-D13 7-arg shape, both exclusion
    * sets default to empty (i.e. "nothing configured as excluded") — avoids
@@ -88,13 +100,13 @@ public record NotificationAggregationProperties(
       Duration pollInterval, boolean requireSameTemplate, int maxGroupSize, Duration claimLease,
       int maxAttempts) {
     this(enabled, window, pollInterval, requireSameTemplate, maxGroupSize, claimLease,
-        maxAttempts, Set.of(), Set.of());
+        maxAttempts, Set.of(), Set.of(), false);
   }
 
   /** Default-config convenience constructor: disabled, safe defaults throughout. */
   public NotificationAggregationProperties() {
     this(false, DEFAULT_WINDOW, DEFAULT_POLL_INTERVAL, true, DEFAULT_MAX_GROUP_SIZE,
-        DEFAULT_CLAIM_LEASE, DEFAULT_MAX_ATTEMPTS, Set.of(), Set.of());
+        DEFAULT_CLAIM_LEASE, DEFAULT_MAX_ATTEMPTS, Set.of(), Set.of(), false);
   }
 
   private static void requirePositiveDuration(Duration value, String propertyName) {

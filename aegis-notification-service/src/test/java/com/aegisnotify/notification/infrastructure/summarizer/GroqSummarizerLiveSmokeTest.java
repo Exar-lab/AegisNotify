@@ -30,8 +30,12 @@ class GroqSummarizerLiveSmokeTest {
 
   private static final int MAX_OUTPUT_CHARS = 2000;
 
-  @Test
-  void summarize_realGroqCall_returnsNonEmptyBodyAndSubjectWithinLimits() {
+  private static final List<String> ORDER_UPDATES = List.of(
+      "Your order #1042 has been packed and will ship tomorrow.",
+      "Your order #1042 has left our warehouse.",
+      "Your order #1042 is out for delivery today between 2pm and 6pm.");
+
+  private static GroqChatCompletionsSummarizerAdapter liveAdapter() {
     // Blank/unset base URL and model fall back to the production defaults.
     GroqSummarizerProperties groqProperties = new GroqSummarizerProperties(
         System.getenv("AGGREGATION_LLM_GROQ_BASE_URL"),
@@ -40,19 +44,30 @@ class GroqSummarizerLiveSmokeTest {
     SummarizerProperties summarizerProperties = new SummarizerProperties(
         "https://unused.example", "", "unused-model", "2023-06-01", 512,
         Duration.ofSeconds(20), MAX_OUTPUT_CHARS);
-    GroqChatCompletionsSummarizerAdapter adapter = new GroqChatCompletionsSummarizerAdapter(
+    return new GroqChatCompletionsSummarizerAdapter(
         WebClient.builder(), summarizerProperties, groqProperties,
         CircuitBreakerRegistry.ofDefaults());
+  }
 
-    SummarizedContent result = adapter.summarize(new SummarizationRequest(
-        Channel.EMAIL, "order-update",
-        List.of(
-            "Your order #1042 has been packed and will ship tomorrow.",
-            "Your order #1042 has left our warehouse.",
-            "Your order #1042 is out for delivery today between 2pm and 6pm."),
-        480));
+  /** Issue #227: with the priority requested, the live reply carries a valid priority. */
+  @Test
+  void summarize_realGroqCallWithPriorityRequested_returnsValidPriority() {
+    SummarizedContent result = liveAdapter().summarize(new SummarizationRequest(
+        Channel.EMAIL, "order-update", ORDER_UPDATES, 480, true));
 
     assertThat(result).isNotNull();
+    assertThat(result.body()).isNotBlank();
+    // Priority is the enum type, so a non-null value is already a valid HIGH/MEDIUM/LOW.
+    assertThat(result.priority()).isNotNull();
+  }
+
+  @Test
+  void summarize_realGroqCall_returnsNonEmptyBodyAndSubjectWithinLimits() {
+    SummarizedContent result = liveAdapter().summarize(new SummarizationRequest(
+        Channel.EMAIL, "order-update", ORDER_UPDATES, 480));
+
+    assertThat(result).isNotNull();
+    assertThat(result.priority()).isNull();
     assertThat(result.body()).isNotBlank();
     assertThat(result.body().length()).isLessThanOrEqualTo(MAX_OUTPUT_CHARS);
     assertThat(result.subject()).isNotBlank();

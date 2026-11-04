@@ -64,7 +64,7 @@ public final class AnthropicMessagesSummarizerAdapter implements AggregationSumm
 
   private String complete(SummarizationRequest request) {
     AnthropicMessageRequest body = new AnthropicMessageRequest(
-        properties.model(), properties.maxTokens(), SummarizerCallTemplate.SYSTEM_PROMPT,
+        properties.model(), properties.maxTokens(), SummarizerCallTemplate.systemPrompt(request),
         List.of(new AnthropicMessage("user", SummarizerCallTemplate.buildUserContent(request))));
     AnthropicMessageResponse response = webClient.post()
         .uri(MESSAGES_PATH)

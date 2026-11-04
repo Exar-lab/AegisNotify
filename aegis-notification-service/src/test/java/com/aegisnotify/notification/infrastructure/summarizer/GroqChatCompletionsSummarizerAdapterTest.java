@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.aegisnotify.notification.application.dto.SummarizationRequest;
 import com.aegisnotify.notification.application.dto.SummarizedContent;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.SummarizerUnavailableException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -128,6 +129,25 @@ class GroqChatCompletionsSummarizerAdapterTest {
     assertThat(messages.get(1).get("role").asText()).isEqualTo("user");
     assertThat(messages.get(1).get("content").asText())
         .contains("Body one.").contains("Body two.");
+  }
+
+  @Test
+  void summarize_priorityRequested_sendsPriorityPromptAndReturnsParsedPriority()
+      throws Exception {
+    server.enqueue(completionWithContent(
+        "\"{\\\"subject\\\":\\\"S\\\",\\\"body\\\":\\\"B\\\",\\\"priority\\\":\\\"HIGH\\\"}\""));
+    SummarizationRequest request = new SummarizationRequest(
+        Channel.SMS, "welcome", List.of("Body one.", "Body two."), 500, true);
+
+    SummarizedContent result = adapter().summarize(request);
+
+    assertThat(result.priority()).isEqualTo(Priority.HIGH);
+    JsonNode body = new ObjectMapper().readTree(server.takeRequest().getBody().readUtf8());
+    assertThat(body.get("messages").get(0).get("content").asText())
+        .isEqualTo(SummarizerCallTemplate.systemPrompt(request))
+        .contains("priority");
+    assertThat(body.get("messages").get(1).get("content").asText())
+        .contains("<message index=\"1\">Body one.</message>");
   }
 
   @Test

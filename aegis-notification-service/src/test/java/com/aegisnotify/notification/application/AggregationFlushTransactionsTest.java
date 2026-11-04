@@ -22,6 +22,7 @@ import com.aegisnotify.notification.application.service.AggregationFlushTransact
 import com.aegisnotify.notification.domain.enums.Channel;
 import com.aegisnotify.notification.domain.enums.NotificationStatus;
 import com.aegisnotify.notification.domain.enums.Priority;
+import com.aegisnotify.notification.domain.model.AggregationSettings;
 import com.aegisnotify.notification.domain.model.BufferedNotification;
 import com.aegisnotify.notification.domain.model.Notification;
 import com.aegisnotify.notification.domain.model.NotificationLog;
@@ -69,7 +70,9 @@ class AggregationFlushTransactionsTest {
   void setUp() {
     transactions = new AggregationFlushTransactions(aggregationBufferRepository,
         notificationRepository, outboxEventRepository, notificationLogRepository,
-        auditEventPublisherPort);
+        auditEventPublisherPort,
+        new AggregationSettings(true, java.time.Duration.ofMinutes(5), true, 20,
+            java.util.Set.of(), java.util.Set.of(), java.time.Duration.ofMinutes(2), 3));
   }
 
   @Test

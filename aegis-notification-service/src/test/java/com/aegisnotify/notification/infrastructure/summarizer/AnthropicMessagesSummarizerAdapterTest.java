@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.aegisnotify.notification.application.dto.SummarizationRequest;
 import com.aegisnotify.notification.application.dto.SummarizedContent;
 import com.aegisnotify.notification.domain.enums.Channel;
+import com.aegisnotify.notification.domain.enums.Priority;
 import com.aegisnotify.notification.domain.exception.SummarizerUnavailableException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -92,6 +93,29 @@ class AnthropicMessagesSummarizerAdapterTest {
     assertThat(recorded.getHeader("x-api-key")).isEqualTo("test-api-key");
     assertThat(recorded.getHeader("anthropic-version")).isEqualTo("2023-06-01");
     assertThat(recorded.getPath()).isEqualTo("/v1/messages");
+  }
+
+  @Test
+  void summarize_priorityRequested_sendsPriorityPromptAndReturnsParsedPriority()
+      throws Exception {
+    server.enqueue(new MockResponse()
+        .setResponseCode(200)
+        .addHeader("Content-Type", "application/json")
+        .setBody("{\"content\":[{\"type\":\"text\",\"text\":"
+            + "\"{\\\"subject\\\":\\\"S\\\",\\\"body\\\":\\\"B\\\","
+            + "\\\"priority\\\":\\\"LOW\\\"}\"}]}"));
+    SummarizationRequest request = new SummarizationRequest(
+        Channel.SMS, "welcome", List.of("Body one.", "Body two."), 500, true);
+
+    SummarizedContent result = adapter().summarize(request);
+
+    assertThat(result.priority()).isEqualTo(Priority.LOW);
+    com.fasterxml.jackson.databind.JsonNode body = new com.fasterxml.jackson.databind
+        .ObjectMapper().readTree(server.takeRequest().getBody().readUtf8());
+    assertThat(body.get("system").asText())
+        .isEqualTo(SummarizerCallTemplate.systemPrompt(request)).contains("priority");
+    assertThat(body.get("messages").get(0).get("content").asText())
+        .contains("<message index=\"2\">Body two.</message>");
   }
 
   @Test
